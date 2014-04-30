@@ -1,0 +1,1752 @@
+/******************************************************************************
+ * Flytrace, online viewer for GPS trackers.
+ * Copyright (C) 2011-2014 Mikhail Karmazin
+ * 
+ * This file is part of Flytrace.
+ * 
+ * Flytrace is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * Flytrace is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
+
+using System;
+using System.Collections.Generic;
+using System.Web;
+using System.IO;
+using System.Diagnostics;
+using System.Threading;
+using System.Linq;
+
+using log4net;
+
+using FlyTrace.LocationLib;
+using System.Text;
+using FlyTrace.Service.Properties;
+using System.Data.SqlClient;
+using FlyTrace.LocationLib.Data;
+
+namespace FlyTrace.Service
+{
+  internal class TrackerDataManager
+  {
+    /// <summary>
+    /// If all trackers required by a call to the web service are presented in the main dictionary, then 
+    /// the call returns immediately (after reading DB for group info). But if not all trackers been there 
+    /// at the moment of call, then it waits for the required trackers to be retrieved. This wait has timeout
+    /// which is defined by this constant. Timed out trackers returned with "wait" type.
+    /// </summary>
+    private const int MaxSecondsToDelayReturn = 20;
+
+    /// <summary>
+    /// Time between wake-ups of refresh worker. But it actually refreshes not more than Settings.RefreshChunk
+    /// which have oldest RefreshTime that is greater than RefreshThresholdSec
+    /// </summary>
+    private const int RefreshMs = 3000;
+
+    /// <summary>
+    /// Trackers updated longer than that number of seconds ago are considered as requiring update.
+    /// </summary>
+    private const int RefreshThresholdSec = 15;
+
+    /// <summary>In minutes. A tracker that has not been accessed for more than the number of minutes 
+    /// specified by this constant is considered as "old" (see other properties and methods) and is subject 
+    /// to remove from <see cref="this.trackers"/></summary>
+    private const int TrackerLifetimeWithoutAccess = 20;
+
+    /// <summary>Trackers is killed under following condition:
+    /// - All trackers in <see cref="this.trackers"/> are "old" (see <see cref="TrackerLifetimeWithoutAccess"/> constant)
+    /// OR
+    /// - A number of trackers in the this.trackers that is equal or greater than this constant is old.
+    /// </summary>
+    private const int TrackersKillChunk = 5;
+
+    private static ILog Log = LogManager.GetLogger( "TDM" );
+
+    /// <summary>
+    /// Supposed to be always in at least for INFO level, i.e. don't use it too often. E.g. start/stop messages could go there.
+    /// </summary>
+    private static ILog InfoLog = LogManager.GetLogger( "InfoLog" );
+
+    private static ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
+
+    static TrackerDataManager( )
+    {
+      Log.InfoFormat(
+        "AvgAllowedMsBetweenCalls at the moment of this instance start: {0}",
+        Settings.Default.AvgAllowedMsBetweenCalls
+      );
+    }
+
+    // It could be just a static class, but I don't want to bother with 'static' everywhere.
+    // So making it just a singleton. Note that initializing of this field shouldn't be 
+    // protected by 'lock', 'volatile' or whatever, because it's guaranteed by CLR to be 
+    // atomic set. No thread can use it until it's set & initialized.
+    public static readonly TrackerDataManager Singleton = new TrackerDataManager( );
+
+    public AdminAlerts AdminAlerts = new AdminAlerts( );
+
+    /// <summary>Constructor is private to make the instance accessible only via the <see cref="Singleton"/> field.</summary>
+    private TrackerDataManager( )
+    {
+      try
+      {
+        InitRevisionGenerator( );
+
+        this.timer = new Timer( TimerCallback );
+        this.timer.Change( RefreshMs, RefreshMs ); // just sets this.refreshThreadEvent every RefreshMs milliseconds
+
+        this.refreshThread = new Thread( RefreshThreadWorker );
+        this.refreshThread.Name = "LocWorker";
+        this.refreshThread.IsBackground = true;
+        this.refreshThread.Start( ); // it waits until refreshThreadEvent set.
+      }
+      catch ( Exception exc )
+      {
+        Log.Error( "Error on start", exc );
+        throw;
+      }
+
+      InfoLog.Info( "Started." );
+    }
+
+    private bool isAlwaysFullGroup;
+
+    private void InitRevisionGenerator( )
+    {
+      if ( !Settings.Default.AllowIncrementalUpdates )
+      {
+        this.isAlwaysFullGroup = true;
+        IncrLog.Info( "Starting in 'always full group' mode" );
+        return;
+      }
+
+      try
+      {
+
+        string revisionFilePath = HttpContext.Current.Server.MapPath( @"~/App_Data/revision.bin" );
+        string initWarnings;
+
+        if ( RevisionGenerator.Init( revisionFilePath, out initWarnings ) )
+        {
+          // Log it as an error (while it's actually not) to make sure it's logged:
+          IncrLog.InfoFormat(
+            "Revgen restored from '{0}' successfuly: current value is {1}",
+            revisionFilePath,
+            RevisionGenerator.Revision
+          );
+        }
+        else
+        {
+          IncrLog.ErrorFormat(
+            "Revgen failed to restore from '{0}', so re-init it starting from {1}, and will try now to update all group versions in DB",
+            revisionFilePath,
+            RevisionGenerator.Revision
+          );
+
+          string connString = Data.GetConnectionString( );
+
+          SqlConnection sqlConn = new SqlConnection( connString );
+          sqlConn.Open( );
+          // Can't wrap sqlCmd into using because it's asynchronous
+          SqlCommand sqlCmd = new SqlCommand( "UPDATE [Group] SET [Version] = [Version] + 1", sqlConn );
+
+          sqlCmd.ExecuteNonQuery( );
+
+          IncrLog.Warn( "All groups versions increased after restarting Revgen." );
+        }
+
+        if ( initWarnings != null )
+        {
+          AdminAlerts["Revgen init warning"] = initWarnings;
+        }
+
+        AdminAlerts["Revgen initialised at"] = RevisionGenerator.Revision.ToString( );
+      }
+      catch ( Exception exc )
+      {
+        IncrLog.ErrorFormat( "Can't init Revgen properly or update all groups versions: {0}", exc );
+
+        this.isAlwaysFullGroup = true;
+
+        if ( RevisionGenerator.IsActive )
+          RevisionGenerator.Shutdown( );
+
+        AdminAlerts["Revgen Init Error"] = exc.Message;
+      }
+    }
+
+    public void Stop( )
+    {
+      this.isStoppingWorkerThread = true;
+
+      int closingRevision = -1;
+      if ( RevisionGenerator.IsActive )
+        closingRevision = RevisionGenerator.Shutdown( );
+
+      this.refreshThreadEvent.Set( );
+      if ( this.refreshThread.Join( 30000 ) )
+      {
+        // Log it as error to make sure it's logged
+        InfoLog.InfoFormat( "Worker thread stopped, closing revision {0}.", closingRevision );
+      }
+      else
+      {
+        Log.Error( "Can't stop the worker thread" );
+      }
+    }
+
+    // Making CallData a type parameter for AsyncChainedState<> seems to be the easiest way 
+    // to pass CallData to End* methods (note there are more than one End method returning 
+    // different types). Alternative would be passing a separate class having both Names and 
+    // TrackerStateHolder collections, which means additional "new" operation etc.
+    private class CallData : AsyncChainedState<CallData>
+    {
+      private static long idSource = 0;
+
+      public CallData( int group, string clientSeed, AsyncCallback outerCallback, Object outerAsyncState )
+        : base( outerCallback, outerAsyncState )
+      {
+        Group = group;
+        TrackRequests = null;
+        SourceSeed = clientSeed;
+        CallId = Interlocked.Increment( ref idSource );
+      }
+
+      public readonly long CallId;
+
+      public CallData( int group, TrackRequestItem[] trackRequests, AsyncCallback outerCallback, Object outerAsyncState )
+        : base( outerCallback, outerAsyncState )
+      {
+        Group = group;
+        TrackRequests = trackRequests;
+        CallId = Interlocked.Increment( ref idSource );
+      }
+
+      public readonly DateTime CallStartTime = DateTime.Now;
+      public readonly int Group;
+      public readonly string SourceSeed;
+      public readonly GroupFacade GroupFacade = new GroupFacade( );
+
+      /// <summary>Used only for GetFullTrack</summary>
+      public readonly TrackRequestItem[] TrackRequests;
+
+      public List<TrackerId> TrackerIds;
+      public TrackerStateHolder[] TrackerStateHolders;
+
+      public int ActualGroupVersion;
+
+      public bool ShowUserMessages;
+
+      public DateTime? StartTs;
+
+      public bool IsReady
+      {
+        get
+        {
+          for ( int i = 0; i < TrackerStateHolders.Length; i++ )
+          {
+            // Snapshot is not volatile, but this method is called inside lock() whose boundaries have full 
+            // fence semantics. Reordering inside the lock is not a problem.
+            if ( TrackerStateHolders[i].Snapshot == null )
+              return false;
+          }
+
+          return true;
+        }
+      }
+
+      /// <summary>
+      /// A valid client seed looks like that: "25;54215" where 1st value is the group version,
+      /// and 2nd value is the maximum client tracker revision, both received by the client earlier by
+      /// a similar call to this web service. Result is not null only if the group version from client seed 
+      /// is equal to the current actual group version kept in Seed.ActualGroupVersion. There are also some other
+      /// checks to ensure that the extracted revision is healthy. If anything's wrong then null returned,
+      /// and as a result the client receives a full actual group info.
+      /// </summary>
+      /// <returns></returns>
+      public int? TryParseThresholdRevision( )
+      {
+        if ( SourceSeed == null )
+          return null;
+
+        if ( !TrackerIds.Any( ) ) // if group is empty it should be full update
+          return null;
+
+        string[] elements = SourceSeed.Split( ';' );
+        if ( elements == null || elements.Length != 2 )
+          return null;
+
+        {
+          int clientGroupVersion;
+
+          if ( !int.TryParse( elements[0], out clientGroupVersion ) )
+            return null;
+
+          if ( clientGroupVersion < 0 )
+            return null;
+
+          if ( clientGroupVersion != ActualGroupVersion )
+          {
+            if ( TrackerDataManager.IncrLog.IsInfoEnabled )
+            {
+              TrackerDataManager.IncrLog.InfoFormat
+              (
+                "Call id {0}, actual group version ({1}) is different from one came from the client ({2}), so this call is not incremental",
+                CallId,
+                ActualGroupVersion,
+                clientGroupVersion
+              );
+            }
+
+            return null;
+          }
+        }
+
+        {
+          int thresholdRevision;
+
+          if ( !int.TryParse( elements[1], out thresholdRevision ) )
+            return null;
+
+          if ( thresholdRevision < 0 )
+            return null;
+
+          return thresholdRevision;
+        }
+      }
+    }
+
+    private int simultaneousCallCount = 0;
+
+    public IAsyncResult BeginGetCoordinates( int group, string clientSeed, AsyncCallback callback, object state )
+    {
+      int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
+
+      try
+      {
+        /* TODO
+         * A bottleneck: too many object are created during the call. Object pools should be used instead of "new".
+         * But not right now :)
+         */
+
+        CallData callData = new CallData( group, clientSeed, callback, state );
+
+        if ( IncrLog.IsInfoEnabled )
+          IncrLog.InfoFormat( "Call id {0}, for group {1}, client seed is \"{2}\"", callData.CallId, callData.Group, clientSeed );
+
+        LogCallCount( callCount );
+
+        if ( Log.IsDebugEnabled )
+        {
+          string testId = "";
+          string[] val = HttpContext.Current.Request.Headers.GetValues( "User-Agent" );
+          if ( val != null &&
+               val.Length == 1 &&
+               val[0].Contains( "FtTickle_" ) )
+          {
+            testId = val[0];
+          }
+
+          Log.DebugFormat( "Getting coordinates for group {0}, client seed \"{1}\", call id {2} ({3}), call count: {4}",
+                              group, callData.SourceSeed, callData.CallId, testId, callCount );
+        }
+
+        callData.GroupFacade.BeginGetGroupTrackerIds( group, GetTrackerIdResponseForCoords, callData );
+
+        return callData.FinalAsyncResult;
+      }
+      catch ( Exception exc )
+      {
+        Log.ErrorFormat( "Error in BeginGetCoordinates: {0}", exc.ToString( ) );
+        Interlocked.Decrement( ref this.simultaneousCallCount );
+        throw;
+      }
+    }
+
+    private static void LogCallCount( int callCount )
+    {
+      if ( !Log.IsDebugEnabled ) return;
+
+      if ( callCount > 100 )
+      {
+        Log.DebugFormat( "Got callCount > 100 , i.e. {0}", callCount );
+      }
+      else if ( callCount > 10 )
+      {
+        Log.DebugFormat( "Got callCount > 10 , i.e. {0}", callCount );
+      }
+      else if ( callCount > 5 )
+      {
+        Log.DebugFormat( "Got callCount > 5 , i.e. {0}", callCount );
+      }
+      else if ( callCount > 3 )
+      {
+        Log.DebugFormat( "Got callCount > 3 , i.e. {0}", callCount );
+      }
+    }
+
+    private void GetTrackerIdResponseForCoords( IAsyncResult ar )
+    {
+      if ( Log.IsDebugEnabled )
+        Log.DebugFormat( "Finishing getting group trackers id, sync flag {0}...", ar.CompletedSynchronously );
+
+      CallData callData = ( CallData ) ar.AsyncState;
+
+      if ( Log.IsDebugEnabled )
+        Log.DebugFormat( "Finishing getting group trackers ids with call id {0}, group {1}...", callData.CallId, callData.Group );
+
+      callData.CheckSynchronousFlag( ar.CompletedSynchronously );
+
+      try
+      {
+        List<TrackerId> trackerIds =
+          callData.GroupFacade.EndGetGroupTrackerIds
+          (
+            ar,
+            out callData.ActualGroupVersion,
+            out callData.ShowUserMessages,
+            out callData.StartTs
+           );
+        callData.TrackerIds = trackerIds;
+
+        if ( Log.IsDebugEnabled )
+        {
+          TimeSpan timespan = DateTime.Now - callData.CallStartTime;
+          Log.DebugFormat(
+            "Got {0} trackers ids for call id {1}, group {2} with version {3} in {4} ms, getting their data now...",
+            callData.TrackerIds.Count,
+            callData.CallId,
+            callData.Group,
+            callData.ActualGroupVersion,
+            ( int ) timespan.TotalMilliseconds
+          );
+        }
+
+        TrackerIdsReady( callData );
+      }
+      catch ( Exception exc )
+      {
+        Log.ErrorFormat( "GetTrackerIdResponseForCoords: call id {0}: {1}", callData.CallId, exc.ToString( ) );
+        callData.SetAsCompleted( exc );
+      }
+    }
+
+    /// <summary>
+    /// Called when callData.TrackerIds list is ready. Gets existing or add new TrackerStateHolder for each tracker.
+    /// If there are only existing trackers, calls <see cref="FinishGetCoordsCall"/> immediately.
+    /// Otherwise returns and lets main working thread to fill newly added TrackerStateHolder and call 
+    /// FinishGetCoordsCall when everything's ready.
+    /// </summary>
+    /// <param name="callData"></param>
+    private void TrackerIdsReady( CallData callData )
+    {
+      callData.TrackerStateHolders = new TrackerStateHolder[callData.TrackerIds.Count];
+
+      // Pick up corresponding TrackerStateHolder from the main dictionary.
+      // If it's absent, add it to the dic and set the flag that we need to wait for the added tracker retrieve.
+      bool shouldWait = false;
+
+      if ( Log.IsDebugEnabled )
+        Log.DebugFormat( "Acquiring lock in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
+
+      lock ( this.trackers )
+      {
+        if ( Log.IsDebugEnabled )
+          Log.DebugFormat( "Inside lock in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
+
+        for ( int i = 0; i < callData.TrackerIds.Count; i++ )
+        {
+          TrackerId trackerId = callData.TrackerIds[i];
+
+          TrackerStateHolder trackerStateHolder;
+          if ( !this.trackers.TryGetValue( trackerId.ForeignId, out trackerStateHolder ) )
+          {
+            trackerStateHolder = new TrackerStateHolder( ); // no data yet, so leave its Snapshot field null for the moment.
+            this.trackers.Add( trackerId.ForeignId, trackerStateHolder );
+          }
+
+          callData.TrackerStateHolders[i] = trackerStateHolder;
+
+          // Snapshot is not volatile, but it's not a problem. If trackerStateHolder was just created above, then there 
+          // is really null. If it was created earlier and still reads as null then callData is added to 
+          // waitingToRetrieveList and sooner or later this call will be finished.
+          if ( trackerStateHolder.Snapshot == null )
+          {
+            shouldWait = true;
+          }
+        }
+      } // lock ( this.trackers )
+
+      if ( Log.IsDebugEnabled )
+        Log.DebugFormat( "Lock has been released in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
+
+      FinishGetCoordsCall( callData );
+
+      // Below is obsolete. Do not wait for update for "wait" trackers, return immediately.
+      //// If all data already presented in the dictionary, just set it as the result in asyncChainedState.
+      //// Otherwise add the call to the waiting list, kick the retrieve thread, and return imediately.
+      //if ( !shouldWait )
+      //{
+      //  FinishGetCoordsCall( callData );
+      //}
+      //else
+      //{
+      //  if ( Log.IsDebugEnabled )
+      //    Log.DebugFormat( "Acquiring lock #2 in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
+
+      //  lock ( this.waitingToRetrieveList )
+      //  {
+      //    if ( Log.IsDebugEnabled )
+      //      Log.DebugFormat( "Inside lock #2 in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
+
+      //    this.waitingToRetrieveList.Add( callData );
+      //  }
+
+      //  if ( Log.IsDebugEnabled )
+      //    Log.DebugFormat( "Out of lock #2 in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
+
+      //  this.refreshThreadEvent.Set( );
+      //}
+    }
+
+    private void FinishGetCoordsCall( CallData callData )
+    {
+      try
+      {
+        if ( Log.IsDebugEnabled )
+          Log.DebugFormat( "Call id {0}, group {1}: setting callData.SetAsCompleted", callData.CallId, callData.Group );
+
+        callData.SetAsCompleted( callData );
+
+        if ( Log.IsDebugEnabled )
+          Log.DebugFormat( "Call id {0}, group {1}: done setting callData.SetAsCompleted", callData.CallId, callData.Group );
+      }
+      catch ( Exception e )
+      {
+        Log.ErrorFormat(
+          "Call id {0}, group {1}: error: {2}", callData.CallId, callData.Group, e.ToString( )
+        );
+      }
+    }
+
+    #region Incremental update algorithm explanation
+    /* 
+     * Returning full data for all requested trackers from EndGetCoordinates doesn't make much sense for a client that 
+     * already received exactly the same data. It generates too much traffic for mobile clients with bad and/or expensive 
+     * connection, which became especially important after introducing UsrMsg field containing custom user text that could
+     * be quite long.
+     * 
+     * Incremental update was introduced to solve this problem. On the first request a client receives full actual data for 
+     * the requested group from the server. This includes a "seed", a string that the client should pass back to the server 
+     * with its next request (in first request client just passes a null string, so the server knows that it's a first request 
+     * for that client). It is basically a version that allows the server to filter out only those trackers on next request
+     * that have "newer" verions than the one of the previous request. So if no change happens then the client receieves just a 
+     * small response data saying "no change". But if there is a change to some trackers then in the incremental update server 
+     * returns only those trackers that have changed after the client's seed version.
+     * 
+     * Figuring out an actual response for incremental update has several steps.
+     * 
+     * First, the server should know if the set of trackers on the client is the same as it is now in DB for the group the 
+     * client is requesting. A new tracker could be added to the group, or another could be removed, or renamed, or many of 
+     * these happened to several of the group's trackers at the same time. To check that, any of those actions increment the 
+     * corresponding group version. This group version is returned as a part of the database request to get a set of tracker 
+     * IDs for the group (see CallData.ActualGroupVersion and how it's set). And the group version is also a separate part of 
+     * the seed. If a group version from the seed is not equal to CallData.ActualGroupVersion then it's not an incremental
+     * update and full actual group data is returned with value of GroupData.IsIncr to false, thus forcing the client to update 
+     * its set of trackers.
+     * 
+     * Next, a version data for actual trackers needs to be specified in a seed. A trivial solution would be to choose time
+     * of a tracker creation, and then take a maximum time of trackers returning in the call. However, a time on the computer can 
+     * be adjusted which would mess things. So instead of time a revision number is used. This is a singleton number that 
+     * increments with each update to any tracker. When all trackers are ready to be returned, a maximum revison number of returned
+     * trackers is written to the call returning seed. On subsequent calls, revision number from client is compared with actual
+     * (potentially changed) revisions of trackers ready to be returned, and only fresh updates are returned.
+     * 
+     */
+    #endregion
+
+    private object snapshotAccessSync = new object( );
+
+    private Random debugRnd = new Random( );
+
+    public GroupData EndGetCoordinates( IAsyncResult asyncResult )
+    {
+      if ( Log.IsDebugEnabled )
+        Log.DebugFormat( "Entering EndGetCoordinates..." );
+
+      long callId = -1;
+
+      try
+      {
+        AsyncResult<CallData> finalAsyncResult = ( AsyncResult<CallData> ) asyncResult;
+
+        CallData callData = finalAsyncResult.EndInvoke( );
+
+        callId = callData.CallId;
+
+        DateTime? dtNewestForeignTime = null;
+        double newestLat = 0;
+        double newestLon = 0;
+
+        List<CoordResponseItem> resultTrackers = new List<CoordResponseItem>( callData.TrackerStateHolders.Length );
+
+        List<RevisedTrackerState> snapshots;
+
+        lock ( this.snapshotAccessSync )
+        { /* lock to make sure that following situation is avoided in incremental update:
+           * 
+           * Read | Write
+           *      |
+           * A1   | 
+           * B2   | 
+           * C3   | 
+           *      | C4
+           *      | D5
+           * D5   |
+           * 
+           * Here Read is this thread; Write is thread where Snapshot is set; A,B,C,etc are trackers; and 1,2,3,etc 
+           * are revisions. If this happens, maximum revision of snapshots collectons would be 5, so newer C4 
+           * position snapshot (missed in this call where C3 is returned) will be missed on next incremental 
+           * updates call from the same client.
+           * 
+           * In other words, reading of several Snapshot has to be atomic here.
+           */
+
+          snapshots =
+            callData
+            .TrackerStateHolders
+            .Select( tsh => tsh.Snapshot )
+            .ToList( );
+        }
+
+        // If the client seed is valid for incremental update, call below extracts a time threshold 
+        // from there to compare with snapshot.ModificationTime. Otherwise null is returned:
+        int? thresholdRevision = null;
+
+        // If any DataRevision is null it's an emergency mode and isAlwaysFullGroup should be true anyway. 
+        // But make sure it really true.
+        int nullSnapshotsCount = snapshots.Count( sn => sn == null || sn.DataRevision == null );
+
+        // if any snaphot is null then hold incremental stuff for the moment. 
+        bool isFullGroup = this.isAlwaysFullGroup || nullSnapshotsCount > 0;
+
+        bool isDebugFullGroup = false;
+
+        double incrDebugRatio = Settings.Default.IncrDebugRatio;
+
+        if ( incrDebugRatio > 0.0 )
+        {
+          if ( incrDebugRatio >= 1.0 )
+            isDebugFullGroup = true;
+          else
+          {
+            lock ( debugRnd )
+            {
+              isDebugFullGroup = debugRnd.NextDouble( ) <= incrDebugRatio;
+            }
+          }
+        }
+
+        Thread.MemoryBarrier( ); // make sure isAlwaysFullGroup read once only, because it might be set in another thread
+
+        if ( !isFullGroup )
+          thresholdRevision = callData.TryParseThresholdRevision( );
+
+        if ( IncrLog.IsInfoEnabled )
+        {
+          IncrLog.InfoFormat(
+            "Call id {0}, input threshold revision {1}, isFullGroup {2}, null snapshots count {3}",
+            callData.CallId,
+            thresholdRevision == null ? "null" : thresholdRevision.ToString( ),
+            isFullGroup,
+            nullSnapshotsCount
+          );
+        }
+
+        int nextThresholdRevision = 0;
+
+        int incrLogicIncludeCount = 0;
+
+        for ( int i = 0; i < callData.TrackerStateHolders.Length; i++ )
+        {
+          string trackerName = callData.TrackerIds[i].Name;
+          TrackerStateHolder trackerStateHolder = callData.TrackerStateHolders[i];
+
+          RevisedTrackerState nullableSnapshot = snapshots[i]; // null means that position is not retrieved yet from the SPOT server 
+
+          if ( nullableSnapshot != null && nullableSnapshot.DataRevision != null )
+            nextThresholdRevision = Math.Max( nextThresholdRevision, nullableSnapshot.DataRevision.Value );
+
+          bool isIncluded = false;
+
+          bool includeByNormalIncrLogic =
+            nullableSnapshot == null ||
+            nullableSnapshot.DataRevision == null ||
+            thresholdRevision == null ||
+            nullableSnapshot.DataRevision.Value > thresholdRevision.Value;
+
+          if ( includeByNormalIncrLogic )
+            incrLogicIncludeCount++;
+
+          if ( includeByNormalIncrLogic || isDebugFullGroup )
+          {
+            CoordResponseItem coordResponseItem =
+              TrackerFromTrackerSnapshot
+              (
+                trackerName,
+                nullableSnapshot,
+                includeByNormalIncrLogic,
+                callData.ShowUserMessages,
+                callData.StartTs
+              );
+
+            resultTrackers.Add( coordResponseItem );
+            isIncluded = true;
+
+            if ( coordResponseItem.ShouldSerializeTs( ) )
+            {
+              if ( dtNewestForeignTime == null ||
+                   dtNewestForeignTime.Value < coordResponseItem.Ts )
+              {
+                dtNewestForeignTime = coordResponseItem.Ts;
+                newestLat = coordResponseItem.Lat;
+                newestLon = coordResponseItem.Lon;
+              }
+            }
+
+            // Interlocked used to make sure the operation is atomic:
+            Interlocked.Exchange( ref trackerStateHolder.AccessTimestamp, DateTime.Now.ToFileTime( ) );
+          }
+
+          #region Log
+
+          if ( IncrLog.IsInfoEnabled )
+          {
+            if ( nullableSnapshot == null )
+            {
+              // DebugFormat is not a mistake here despite IsInfoEnabled above
+              IncrLog.DebugFormat( "Call id {0}, got NULL tracker {1} - {2} (included as it's null)", callData.CallId, callData.TrackerIds[i].Name, callData.TrackerIds[i].ForeignId );
+            }
+            else if ( thresholdRevision.HasValue && ( IncrLog.IsDebugEnabled || includeByNormalIncrLogic ) )
+            { // should be InfoFormat despite IsDebugEnabled above
+              IncrLog.InfoFormat
+              (
+                "Call id {0}, got tracker {1} - {2} with foreign time {3}, refresh time {4}, revision {5} ({6}), included: {7}",
+                callData.CallId,
+                callData.TrackerIds[i].Name,
+                callData.TrackerIds[i].ForeignId,
+                nullableSnapshot.Position != null ? nullableSnapshot.Position.CurrPoint.ForeignTime.ToString( ) : null,
+                nullableSnapshot.RefreshTime,
+                nullableSnapshot.DataRevision,
+                nullableSnapshot.UpdatedPart,
+                isIncluded
+              );
+            }
+          }
+          #endregion
+        }
+
+        // Update statistics for the group: number of calls, latest coords
+        UpdateStatFields( callData.Group, dtNewestForeignTime, newestLat, newestLon );
+
+        GroupData result;
+
+        result.Trackers = resultTrackers.Count > 0 ? resultTrackers : null;
+
+        result.IncrSurr = isDebugFullGroup;
+
+        if ( isFullGroup )
+        {
+          result.Res = null;
+          result.Src = null;
+        }
+        else
+        {
+          result.Res = GetResultSeed( callData, nextThresholdRevision );
+
+          if ( thresholdRevision == null )
+          {
+            result.Src = null;
+          }
+          else
+          {
+            result.Src = callData.SourceSeed;
+
+            if ( incrLogicIncludeCount == 0 || result.Src == result.Res )
+            {
+              if ( !isDebugFullGroup )
+              {
+                // In "no update case" both and any of the checks above should be true.
+                // At this point's it that case, so check that none of them is false:
+                if ( incrLogicIncludeCount != 0 || result.Src != result.Res )
+                {
+                  string errMessage =
+                    string.Format(
+                      "Incremental update error, reverting to full groups. Group id {0}, call id {1}, {2} tracker(s) in total, and returning {3} in this call, src seed is {4}, res seed is {5}",
+                      callData.Group,
+                      callData.CallId,
+                      callData.TrackerStateHolders.Length,
+                      resultTrackers.Count,
+                      result.Src,
+                      result.Res
+                    );
+                  IncrLog.Fatal( errMessage );
+
+                  AdminAlerts["Incremental Logic Error"] = errMessage;
+
+                  this.isAlwaysFullGroup = true;
+                  throw new ApplicationException( "Incremental updates error" ); // will go to map page status string, so don't make it lengthy
+                }
+              }
+
+              // reduce data in result struct to save amount of data returned in most cases:
+              result.Src = null;
+              result.Res = "NIL";
+            }
+          }
+        }
+
+        if ( result.Src == null )
+        {
+          result.StartTs = callData.StartTs;
+        }
+        else
+        {
+          result.StartTs = null;
+        }
+
+        if ( IncrLog.IsInfoEnabled )
+        {
+          IncrLog.InfoFormat(
+            "Call id {0}, {1} tracker(s) in total, and returning {2} in this call ({3} by incr.logic). Res.seed is \"{4}\"",
+            callData.CallId,
+            callData.TrackerStateHolders.Length,
+            resultTrackers.Count,
+            incrLogicIncludeCount,
+            result.Res
+          );
+        }
+
+        if ( Log.IsDebugEnabled )
+        {
+          TimeSpan timespan = DateTime.Now - callData.CallStartTime;
+          Log.DebugFormat(
+            "Finishing EndGetCoordinates, call id {0}, got {1} trackers, took {2} ms.",
+            callId,
+            resultTrackers.Count,
+            ( int ) timespan.TotalMilliseconds
+          );
+        }
+
+        result.Ver = Settings.Default.Version;
+
+        result.CallId = callData.CallId;
+
+        return result;
+      }
+      catch ( Exception exc )
+      {
+        Log.ErrorFormat( "Error in EndGetCoordinates, call id {0}: {1}", callId, exc.ToString( ) );
+        throw;
+      }
+      finally
+      {
+        Interlocked.Decrement( ref this.simultaneousCallCount );
+      }
+    }
+
+    private string GetResultSeed( CallData callData, int nextThresholdRevision )
+    {
+      return
+        callData.ActualGroupVersion.ToString( )
+         + ";"
+         + nextThresholdRevision.ToString( );
+    }
+
+    private void UpdateStatFields( int groupId, DateTime? dtNewestForeignTime, double newestLat, double newestLon )
+    {
+      Interlocked.Increment( ref AdminAlerts.CoordAccessCount );
+
+      DateTime updateStart = DateTime.Now;
+
+      string sql;
+      if ( dtNewestForeignTime == null )
+      {
+        sql =
+          "UPDATE [Group] SET " +
+          "         [PageUpdatesNum] = [PageUpdatesNum] + 1" +
+          " WHERE [Id] = @GroupId";
+      }
+      else
+      {
+        sql =
+          "UPDATE [Group] SET " +
+          "         [NewestCoordTs] = @NewestCoordTime, " +
+          "         [NewestLat] = @NewestLat, " +
+          "         [NewestLon] = @NewestLon, " +
+          "         [PageUpdatesNum] = [PageUpdatesNum] + 1" +
+          " WHERE [Id] = @GroupId";
+      }
+
+      string connString = Data.GetConnectionString( );
+
+      SqlConnection sqlConn = new SqlConnection( connString );
+      sqlConn.Open( );
+      try
+      {
+        // Can't wrap sqlCmd into using because it's asynchronous
+        SqlCommand sqlCmd = new SqlCommand( sql, sqlConn );
+
+        // Use parameters rather than format params into SQL statement string to allow SQL Server cache 
+        //    execution plan for the query.
+        sqlCmd.Parameters.Add( "@GroupId", System.Data.SqlDbType.Int );
+        sqlCmd.Parameters[0].Value = groupId;
+
+        if ( dtNewestForeignTime != null )
+        {
+          sqlCmd.Parameters.Add( "@NewestCoordTime", System.Data.SqlDbType.DateTime );
+          sqlCmd.Parameters["@NewestCoordTime"].Value = dtNewestForeignTime.Value;
+
+          sqlCmd.Parameters.Add( "@NewestLat", System.Data.SqlDbType.Float );
+          sqlCmd.Parameters["@NewestLat"].Value = newestLat;
+
+          sqlCmd.Parameters.Add( "@NewestLon", System.Data.SqlDbType.Float );
+          sqlCmd.Parameters["@NewestLon"].Value = newestLon;
+        }
+
+        sqlCmd.BeginExecuteNonQuery( UpdateNewestCoordCallback, sqlCmd );
+      }
+      catch
+      {
+        sqlConn.Close( );
+        throw;
+      }
+
+      if ( Log.IsDebugEnabled )
+      {
+        TimeSpan updateTime = DateTime.Now - updateStart;
+        Log.DebugFormat( "Stat fields updated in {0} ms", ( int ) updateTime.TotalMilliseconds );
+      }
+    }
+
+    private void UpdateNewestCoordCallback( IAsyncResult ar )
+    {
+      SqlCommand sqlCmd = ( SqlCommand ) ar.AsyncState;
+
+      // don't need a result, so just finalize call & log an exception if it happens.
+      // VERY IMPORTANT: close the connection when done.
+      try
+      {
+        try
+        {
+          sqlCmd.EndExecuteNonQuery( ar );
+        }
+        finally
+        {
+          sqlCmd.Connection.Close( );
+        }
+      }
+      catch ( Exception exc )
+      {
+        Log.Error( "Can't update Newest* fields & PageUpdatesNum field", exc );
+      }
+    }
+
+    private List<CallData> waitingToRetrieveList = new List<CallData>( );
+
+    private Timer timer;
+
+    private Thread refreshThread;
+
+    private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
+
+    private Dictionary<string, TrackerStateHolder> trackers = new Dictionary<string, TrackerStateHolder>( );
+
+    internal Dictionary<string, TrackerStateHolder> Trackers { get { return this.trackers; } }
+
+    private CoordResponseItem TrackerFromTrackerSnapshot
+    (
+      string trackerName,
+      TrackerState snapshot,
+      bool incrTest,
+      bool showUserMessage,
+      DateTime? startTs
+    )
+    {
+      CoordResponseItem result = default( CoordResponseItem );
+
+      result.Name = trackerName;
+
+      if ( snapshot == null )
+      {
+        result.Type = "wait";
+      }
+      else
+      {
+        if ( snapshot.Position != null )
+        {
+          result.Lat = snapshot.Position.CurrPoint.Latitude;
+          result.Lon = snapshot.Position.CurrPoint.Longitude;
+          result.Type = snapshot.Position.Type;
+          result.Ts = snapshot.Position.CurrPoint.ForeignTime;
+          result.IsOfficial = false; // obsolete field
+          if ( showUserMessage )
+            result.UsrMsg = snapshot.Position.UserMessage;
+          result.Age = CalcAge( snapshot.Position.CurrPoint.ForeignTime );
+
+          if ( snapshot.Position.PreviousPoint != null )
+          {
+            if ( startTs == null ||
+                 snapshot.Position.PreviousPoint.ForeignTime > startTs.Value )
+            {
+              result.PrevLat = snapshot.Position.PreviousPoint.Latitude;
+              result.PrevLon = snapshot.Position.PreviousPoint.Longitude;
+              result.PrevTs = snapshot.Position.PreviousPoint.ForeignTime;
+              result.PrevAge = CalcAge( snapshot.Position.PreviousPoint.ForeignTime );
+            }
+          }
+
+          if ( startTs.HasValue &&
+               snapshot.Position.CurrPoint.ForeignTime < startTs.Value )
+          {
+            result.IsHidden = true;
+          }
+        }
+
+        if ( snapshot.Error != null )
+        {
+          result.Error = snapshot.Error.Message;
+        }
+      }
+
+      result.IncrTest = incrTest;
+
+      return result;
+    }
+
+    public static int CalcAge( DateTime time )
+    {
+      if ( time == default( DateTime ) )
+        return 0;
+
+      TimeSpan locationAge = DateTime.Now.ToUniversalTime( ) - time;
+      return Math.Max( 0, ( int ) locationAge.TotalSeconds ); // to fix potential error in this server time settings
+    }
+
+    private void TimerCallback( object ignored )
+    {
+      // wake up main thread:
+      this.refreshThreadEvent.Set( );
+
+      // Call OnTimeToCheckWaitingList asynchronously to save time in this cycle.
+      // Furthermore, this method has a lock inside so minimize probability of a deadlock by
+      // calling it asynchronously:
+      EventHandler timeToCheckWaitingListEventHandler = OnTimeToCheckWaitingList;
+      timeToCheckWaitingListEventHandler.BeginInvoke( this,
+        EventArgs.Empty,
+        OnTimeToCheckWaitingListAsyncCallback,
+        timeToCheckWaitingListEventHandler );
+    }
+
+    private void OnTimeToCheckWaitingListAsyncCallback( IAsyncResult ar )
+    {
+      // we don't need to do much here, just end the call:
+      EventHandler timeToCheckWaitingListEventHandler = ( EventHandler ) ( ar.AsyncState );
+      timeToCheckWaitingListEventHandler.EndInvoke( ar );
+    }
+
+    private void OnTimeToCheckWaitingList( object sender, EventArgs e )
+    {
+      List<CallData> finishingList = new List<CallData>( );
+
+      lock ( this.waitingToRetrieveList )
+      {
+        foreach ( var asyncState in this.waitingToRetrieveList )
+        {
+          if ( asyncState.IsReady ||
+               asyncState.CallStartTime.AddSeconds( MaxSecondsToDelayReturn ) < DateTime.Now )
+          {
+            finishingList.Add( asyncState );
+          }
+        }
+
+        foreach ( var finishingAsyncChainedState in finishingList )
+        {
+          this.waitingToRetrieveList.Remove( finishingAsyncChainedState );
+        }
+      }
+
+      foreach ( var finishingCallData in finishingList )
+      {
+        // make sure that the result knows that it was completed asynchronously:
+        finishingCallData.CheckSynchronousFlag( false );
+
+        FinishGetCoordsCall( finishingCallData );
+      }
+    }
+
+    private volatile bool isStoppingWorkerThread = false;
+
+    private void RefreshThreadWorker( )
+    {
+      DateTime nextAllowedRequestTime = DateTime.Now;
+
+      // It's OK to use "new" everywhere in this method and in methods it 
+      // calls, because it'srare (usually once on 3 sec) operation.
+      // LINQ and enumerators are safe to use for the same reason.
+
+      while ( true )
+      {
+        try
+        {
+          Dictionary<string, TrackerStateHolder> trackersToUpdate = GetTrackersToUpdate( );
+
+          int maxMsToWait = ( int ) Math.Ceiling( ( nextAllowedRequestTime - DateTime.Now ).TotalMilliseconds );
+          if ( maxMsToWait <= 0 )
+          { // Request is already allowed, so wait until an event happens:
+            maxMsToWait = Timeout.Infinite;
+          }
+
+          if ( trackersToUpdate.Count == 0 ||
+               maxMsToWait > 0 )
+          {
+            trackersToUpdate = null;
+            this.refreshThreadEvent.WaitOne( maxMsToWait );
+          }
+
+          if ( this.isStoppingWorkerThread )
+            break;
+
+          if ( trackersToUpdate == null )
+          { // if it's null, it means that we're just waked up by refreshThreadEvent.
+            trackersToUpdate = GetTrackersToUpdate( );
+          }
+
+          if ( trackersToUpdate.Count > 0 )
+          {
+            if ( DateTime.Now < nextAllowedRequestTime )
+            {
+              Log.InfoFormat(
+                "{0} tracker(s) to update, but need to wait {1} sec, so skipping the cycle this time",
+                trackersToUpdate.Count,
+                ( nextAllowedRequestTime - DateTime.Now ).TotalSeconds
+              );
+            }
+            else
+            {
+              Log.InfoFormat( "Updating {0} trackers...", trackersToUpdate.Count );
+              TrackersListRequest trackersListRequest = new TrackersListRequest( );
+
+              Dictionary<string, TrackerState> trackerRequestResults =
+                  trackersListRequest.GetTrackersLocations( trackersToUpdate.Keys, GetSanitizedAttemptsOrder( ) );
+
+              // calc nextAllowedRequestTime here to prevent tons of exceptions per second in 
+              // case of an unexpected systematic problems with requests:
+              nextAllowedRequestTime =
+                nextAllowedRequestTime.AddMilliseconds( Settings.Default.AvgAllowedMsBetweenCalls * trackersToUpdate.Count );
+
+              Log.InfoFormat(
+                "nextAllowedRequestTime increased to {0} (narTime - Now is {1:N0} sec)",
+                nextAllowedRequestTime,
+                ( nextAllowedRequestTime - DateTime.Now ).TotalSeconds
+              );
+
+              if ( nextAllowedRequestTime < DateTime.Now.AddMinutes( -20 ) )
+              { // Don't let nextAllowedRequestTime go too far to the past
+                nextAllowedRequestTime = DateTime.Now;
+                Log.Info( "Reset nextAllowedRequestTime to Now" );
+              }
+
+              foreach ( KeyValuePair<string, TrackerState> idAndLocation in trackerRequestResults )
+              {
+                // No-lock technique: we just replace Snapshot. 
+                // If a reader has older version, or null - it's ok everywhere.
+                // Note that only this thread sets tracker.Snapshot
+
+                if ( Log.IsDebugEnabled )
+                  Log.DebugFormat( "Got result for {0}: {1}.", idAndLocation.Key, idAndLocation.Value );
+                TrackerStateHolder trackerStateHolder = trackersToUpdate[idAndLocation.Key];
+
+                TrackerState freshResult = idAndLocation.Value;
+
+                if ( freshResult.Error == null )
+                {
+                  {
+                    DateTime otherFeedSuccTime;
+
+                    lock ( this.attemptsStatSync )
+                    {
+                      if ( !feedsSuccTimes.TryGetValue( freshResult.Position.FeedKind, out otherFeedSuccTime ) ||
+                           otherFeedSuccTime < freshResult.RefreshTime )
+                      {
+                        feedsSuccTimes[freshResult.Position.FeedKind] = freshResult.RefreshTime;
+                      }
+                    }
+                  }
+
+                  {
+                    int feedStat;
+                    this.feedsSuccStats.TryGetValue( freshResult.Position.FeedKind, out feedStat );
+                    this.feedsSuccStats[freshResult.Position.FeedKind] = feedStat + 1;
+                  }
+                }
+
+
+                RevisedTrackerState mergedResult;
+
+                { // See "Incremental update algorithm explanation" comment above.
+
+                  // note that only this thread assigns Snapshot field, so reading this field (non-volatile) is ok.
+                  mergedResult = RevisedTrackerState.Merge( trackerStateHolder.Snapshot, freshResult );
+
+                  lock ( this.snapshotAccessSync )
+                  { // See comment in EndGetCoordinated method.
+                    trackerStateHolder.Snapshot = mergedResult;
+                  }
+                }
+
+                if ( Log.IsInfoEnabled )
+                  Log.InfoFormat( "Merged result for {0}: {1}.", idAndLocation.Key, mergedResult );
+              }
+
+              UpdateAttemptsOrder( );
+            }
+          } // if ( trackersToUpdate.Count > 0 )
+
+          lock ( this.trackers )
+          { // Now remove trackers that haven't been accessed for a long time.
+            List<string> oldTrackersIds = new List<string>( );
+            long threshold2Remove = DateTime.Now.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
+            foreach ( var pair in this.trackers )
+            {
+              if ( Interlocked.Read( ref pair.Value.AccessTimestamp ) < threshold2Remove )
+              {
+                oldTrackersIds.Add( pair.Key );
+              }
+            }
+
+            Log.InfoFormat( "Old trackers count: {0}, total trackers count: {1}", oldTrackersIds.Count, trackers.Count );
+
+            if ( this.trackers.Count > 0 &&
+                 ( oldTrackersIds.Count >= TrackersKillChunk ||
+                   oldTrackersIds.Count == this.trackers.Count
+                 )
+               )
+            {
+              Log.InfoFormat( "Removing {0} old trackers...", oldTrackersIds.Count );
+
+              foreach ( string idToRemove in oldTrackersIds )
+              {
+                this.trackers.Remove( idToRemove );
+              }
+
+              Log.InfoFormat( "Total number of trackers: {0}", this.trackers.Count );
+            }
+          }
+        }
+        catch ( Exception exc )
+        {
+          Log.Error( "RefreshThreadWorker", exc );
+        }
+      }
+
+      Log.Info( "Finishing worker thread..." );
+    }
+
+    private void UpdateAttemptsOrder( )
+    {
+      int totalFeedStatCount = this.feedsSuccStats.Values.Sum( );
+      if ( totalFeedStatCount > 100 )
+      {
+        string logString = "";
+        FeedKind defaultFeed = LocationRequest.DefaultAttemptsOrder[0];
+        int bestStat = 0;
+        FeedKind bestFeed = FeedKind.None;
+        foreach ( KeyValuePair<FeedKind, int> kvpFeedStat in this.feedsSuccStats )
+        {
+          if ( logString != "" )
+            logString += ", ";
+          logString += string.Format( "{0}/{1}", kvpFeedStat.Key, kvpFeedStat.Value );
+
+          if ( kvpFeedStat.Value > bestStat )
+          {
+            bestStat = kvpFeedStat.Value;
+            bestFeed = kvpFeedStat.Key;
+          }
+          else if ( kvpFeedStat.Value == bestStat &&
+                    kvpFeedStat.Key == defaultFeed )
+          {
+            bestFeed = defaultFeed;
+          }
+        }
+
+        if ( bestFeed == FeedKind.None )
+        { // should not happen, but let's check
+          Log.ErrorFormat(
+            "NONE obtained as \"best feed\", total number value in feedsSuccStats is {0}",
+            this.feedsSuccStats.Count
+          );
+        }
+        else
+        {
+          FeedKind prevBestFeed = this.attemptsOrder.FirstOrDefault( );
+          if ( bestFeed != prevBestFeed )
+          {
+            Log.Warn( "Log stat for the moment: " + logString );
+            lock ( this.attemptsStatSync )
+            {
+              this.attemptsOrder.RemoveAll( fk => fk == bestFeed );
+              this.attemptsOrder.Insert( 0, bestFeed );
+            }
+            Log.WarnFormat( "Best feed was {0}, now it's {1}", prevBestFeed, bestFeed );
+          }
+        }
+
+        this.feedsSuccStats.Clear( );
+      }
+    }
+
+    /// <summary>
+    /// Normally this.attemptsOrder should have all values from FeedKind enum except None. But it's very 
+    /// important that it's always true, otherwise it could stuck with wrong feed kind(s) or even without 
+    /// any at all. So check that these values are really there, and there is no garbage from any kind of bug.
+    /// </summary>
+    /// <returns></returns>
+    private FeedKind[] GetSanitizedAttemptsOrder( )
+    {
+      bool isOk = false;
+      if ( this.attemptsOrder == null )
+      {
+        Log.Error( "this.attemptsOrder is null" );
+      }
+      else if ( this.attemptsOrder.Count == 0 )
+      {
+        Log.Error( "this.attemptsOrder is empty" );
+      }
+      else if ( this.attemptsOrder.Contains( FeedKind.None ) )
+      {
+        Log.Error( "this.attemptsOrder contains None" );
+      }
+      else
+      {
+        int distinctCount = this.attemptsOrder.Distinct( ).Count( );
+        if ( this.attemptsOrder.Count != distinctCount )
+        {
+          Log.ErrorFormat(
+            "this.attemptsOrder contains non-unique values ({0} total and {1} unique)",
+            this.attemptsOrder.Count,
+            distinctCount
+          );
+        }
+        else
+        {
+          int totalCountOfAvailableFeeds = Enum.GetValues( typeof( FeedKind ) ).Length - 1;
+          if ( this.attemptsOrder.Count != totalCountOfAvailableFeeds )
+          {
+            Log.ErrorFormat( "this.attemptsOrder is not complete or has garbage inside ({0} values)", this.attemptsOrder.Count );
+          }
+          else
+          {
+            isOk = true;
+          }
+        }
+      }
+
+      if ( !isOk )
+      {
+        this.attemptsOrder = new List<FeedKind>( LocationRequest.DefaultAttemptsOrder );
+      }
+
+      return this.attemptsOrder.ToArray( );
+    }
+
+    private object attemptsStatSync = new object( );
+
+    private Dictionary<FeedKind, DateTime> feedsSuccTimes = new Dictionary<FeedKind, DateTime>( );
+
+    private Dictionary<FeedKind, int> feedsSuccStats = new Dictionary<FeedKind, int>( );
+
+    private List<FeedKind> attemptsOrder = new List<FeedKind>( LocationRequest.DefaultAttemptsOrder );
+
+    public AttemptStat[] AttemptStats
+    {
+      get
+      {
+        lock ( this.attemptsStatSync )
+        {
+          AttemptStat[] result = new AttemptStat[this.attemptsOrder.Count];
+
+          for ( int i = 0; i < this.attemptsOrder.Count; i++ )
+          {
+            result[i].FeedKind = this.attemptsOrder[i];
+
+            DateTime dtSucc;
+            if ( this.feedsSuccTimes.TryGetValue( result[i].FeedKind, out dtSucc ) )
+              result[i].SuccTime = dtSucc;
+            else
+              result[i].SuccTime = null;
+          }
+
+          return result;
+        }
+      }
+    }
+
+    private Dictionary<string, TrackerStateHolder> GetTrackersToUpdate( )
+    {
+      int refreshChunk = Settings.Default.RefreshChunk;
+
+      refreshChunk = Math.Max( 1, refreshChunk );
+      refreshChunk = Math.Min( 30, refreshChunk );
+
+      // No need in MemoryBarrier here to access Snapshot because this method runs in 
+      // the same thread that sets these values
+
+      Dictionary<string, TrackerStateHolder> result = new Dictionary<string, TrackerStateHolder>( );
+
+      lock ( this.trackers )
+      {
+        {
+          var newTrackers =
+            ( from pair in this.trackers
+              where pair.Value.Snapshot == null // Snapshot is not volatile but it's the thread that sets this value
+              orderby Interlocked.Read( ref pair.Value.AccessTimestamp )
+              select pair );
+
+          foreach ( var pair in newTrackers )
+          {
+            result.Add( pair.Key, pair.Value );
+            if ( result.Count >= refreshChunk )
+              break;
+          }
+        }
+
+        if ( result.Count < refreshChunk )
+        {
+          DateTime threshold = DateTime.Now.ToUniversalTime( ).AddSeconds( -RefreshThresholdSec );
+
+          // Snapshot is not volatile but it's the thread that sets this value:
+          var expiredTrackers =
+            ( from pair in this.trackers
+              where pair.Value.Snapshot != null &&
+                pair.Value.Snapshot.RefreshTime < threshold
+              orderby pair.Value.Snapshot.RefreshTime
+              select pair );
+
+          foreach ( var pair in expiredTrackers )
+          {
+            result.Add( pair.Key, pair.Value );
+            if ( result.Count >= refreshChunk )
+              break;
+          }
+        }
+      }
+
+      return result;
+    }
+
+    public IAsyncResult BeginGetTracks( int group, TrackRequestItem[] trackRequests, AsyncCallback callback, object asyncState,
+      out long callId // temporary debug thing, to be removed.
+      )
+    {
+      int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
+
+      LogCallCount( callCount );
+
+      try
+      {
+        CallData callData = new CallData( group, trackRequests, callback, asyncState );
+
+        Log.DebugFormat(
+          "Getting tracks for group {0}, call id {1}, tracks requested: {2}, call count: {3}",
+          group,
+          callData.CallId,
+          trackRequests == null ? 0 : trackRequests.Length,
+          callCount
+        );
+
+        callId = callData.CallId;
+
+        if ( trackRequests == null || trackRequests.Length == 0 )
+        {
+          Log.DebugFormat( "Call id {0}: it's zero, so calling SetAsCompleted..." );
+          callData.SetAsCompleted( callData );
+          Log.DebugFormat( "Call id {0}: it's zero, so SetAsCompleted called." );
+        }
+        else
+        {
+          if ( trackRequests.Length > 10 )
+          {
+            throw new ApplicationException( "Number of requested full tracks can't exceed 10" );
+          }
+
+          StringBuilder names = new StringBuilder( 10 * trackRequests.Length );
+          for ( int iReq = 0; iReq < trackRequests.Length; iReq++ ) // avoid "forech" in freq.operation because it means too much "new" operations
+          {
+            TrackRequestItem req = trackRequests[iReq];
+
+            if ( string.IsNullOrEmpty( req.TrackerName ) )
+            {
+              throw new ApplicationException( "Tracker name cannot be empty." );
+            }
+
+            if ( iReq > 0 )
+              names.Append( ", " );
+            names.Append( req.TrackerName );
+          }
+
+          Log.InfoFormat( "Getting full track for trackers for call id {0}, group {1}: {2}", callData.CallId, group, names );
+
+          callData.GroupFacade.BeginGetGroupTrackerIds( group, GetTrackerIdResponseForTracks, callData );
+        }
+
+        return callData.FinalAsyncResult;
+      }
+      catch ( Exception exc )
+      {
+        Log.ErrorFormat( "Error in BeginGetTracks: {0}", exc.ToString( ) );
+        Interlocked.Decrement( ref this.simultaneousCallCount );
+        throw;
+      }
+
+    }
+
+    private void GetTrackerIdResponseForTracks( IAsyncResult ar )
+    {
+      var callData = ( CallData ) ar.AsyncState;
+
+      callData.CheckSynchronousFlag( ar.CompletedSynchronously );
+
+      try
+      {
+        int unusedGroupVersion;
+        bool unusedShowUserMessages;
+
+        List<TrackerId> trackerIds =
+          callData.GroupFacade.EndGetGroupTrackerIds
+          (
+            ar,
+            out unusedGroupVersion,
+            out unusedShowUserMessages,
+            out callData.StartTs
+          );
+
+        callData.TrackerIds = new List<TrackerId>( );
+
+        // We need only those TrackerIds whose names present in TrackRequests array. So intersect both lists.
+        // Avoid "foreach" and LINQ in frequent operation because both use too much "new" operatons
+        for ( int iTrackerId = 0; iTrackerId < trackerIds.Count; iTrackerId++ )
+        {
+          TrackerId trackerId = trackerIds[iTrackerId];
+
+          for ( int iReq = 0; iReq < callData.TrackRequests.Length; iReq++ )
+          {
+            TrackRequestItem req = callData.TrackRequests[iReq];
+
+            if ( string.Equals( req.TrackerName, trackerId.Name, StringComparison.InvariantCultureIgnoreCase ) )
+            {
+              callData.TrackerIds.Add( trackerId );
+              break;
+            }
+          }
+        }
+
+        if ( callData.TrackerIds.Count == 0 )
+        {
+          callData.SetAsCompleted( callData );
+        }
+        else
+        {
+          TrackerIdsReady( callData );
+        }
+      }
+      catch ( Exception exc )
+      {
+        Log.Error( "GetGroupTrackerIdsResponse", exc );
+        callData.SetAsCompleted( exc );
+      }
+    }
+
+    public List<TrackResponseItem> EndGetTracks( IAsyncResult asyncResult )
+    {
+      Log.DebugFormat( "Entering EndGetTracks..." );
+
+      long callId = -1;
+
+      try
+      {
+        // Thread.Sleep( 2000 );
+        AsyncResult<CallData> finalAsyncResult = ( AsyncResult<CallData> ) asyncResult;
+
+        CallData callData = finalAsyncResult.EndInvoke( );
+
+        callId = callData.CallId;
+
+        if ( callData.TrackerIds == null || callData.TrackerIds.Count == 0 )
+        {
+          Log.Warn( "Empty result by GetFullTrack" );
+          return new List<TrackResponseItem>( );
+        }
+
+        List<TrackResponseItem> result = new List<TrackResponseItem>( callData.TrackerStateHolders.Length );
+        for ( int iResult = 0; iResult < callData.TrackerStateHolders.Length; iResult++ )
+        {
+          string trackerName = callData.TrackerIds[iResult].Name;
+          TrackResponseItem trackResponseItem;
+          trackResponseItem.TrackerName = trackerName;
+          trackResponseItem.Track = null;
+
+          string trackerForeignId = callData.TrackerIds[iResult].ForeignId;
+          TrackerStateHolder trackerStateHolder = callData.TrackerStateHolders[iResult];
+
+          bool isReqFound = false;
+          TrackRequestItem req = default( TrackRequestItem );
+          for ( int iReq = 0; iReq < callData.TrackRequests.Length; iReq++ )
+          {
+            if ( string.Equals( callData.TrackRequests[iReq].TrackerName, trackerName, StringComparison.InvariantCultureIgnoreCase ) )
+            {
+              isReqFound = true;
+              req = callData.TrackRequests[iReq];
+              break;
+            }
+          }
+
+          if ( !isReqFound )
+          { // Normally should not happen. All in TrackerIds came from TrackRequests.
+            throw new InvalidOperationException( string.Format( "Can't find track request data for {0}", trackerName ) );
+          }
+
+          // No need to lock on snapshotAccessSync once it's the only snapshot reading here.
+          TrackerState snapshot = trackerStateHolder.Snapshot;
+          Thread.MemoryBarrier( ); // to make sure that Snapshot (non-volatile field) is read only once. 
+
+          if ( snapshot != null && snapshot.Position != null )
+          {
+            for ( int iPoint = 0; iPoint < snapshot.Position.FullTrack.Length; iPoint++ )
+            {
+              TrackPointData trackPointData = snapshot.Position.FullTrack[iPoint];
+              if ( !req.LaterThan.HasValue ||
+                   trackPointData.ForeignTime > req.LaterThan.Value )
+              {
+                TrackPoint trackPoint;
+                trackPoint.Lat = trackPointData.Latitude;
+                trackPoint.Lon = trackPointData.Longitude;
+                trackPoint.Ts = trackPointData.ForeignTime;
+                trackPoint.Age = CalcAge( trackPointData.ForeignTime );
+
+                if ( iPoint == 0 )
+                {
+                  trackPoint.Type = snapshot.Position.Type;
+                }
+                else
+                {
+                  trackPoint.Type = null;
+                }
+
+                if ( trackResponseItem.Track == null )
+                  trackResponseItem.Track = new List<TrackPoint>( snapshot.Position.FullTrack.Length );
+
+                trackResponseItem.Track.Add( trackPoint );
+              }
+            }
+
+
+            if ( trackResponseItem.Track.Count > 0 ) // Ensure that only not-empty tracks go to the result
+            {
+              // note that trackResponseItem is a struct, so changes made to trackResponseItem variable 
+              // after this point wouldn't go anywhere:
+              result.Add( trackResponseItem );
+            }
+          }
+
+          // Interlocked used to make sure the operation is atomic:
+          Interlocked.Exchange( ref trackerStateHolder.AccessTimestamp, DateTime.Now.ToFileTime( ) );
+        }
+
+        Log.DebugFormat( "Finishing EndGetTracks, call id {0}, got {1} tracks", callId, result.Count );
+
+        return result;
+      }
+      catch ( Exception exc )
+      {
+        Log.ErrorFormat( "Error in EndGetTracks, call id {0}: {1}", callId, exc.ToString( ) );
+        throw;
+      }
+      finally
+      {
+        Interlocked.Decrement( ref this.simultaneousCallCount );
+      }
+    }
+
+    internal void ClearCache( )
+    {
+      lock ( this.trackers )
+      {
+        this.trackers.Clear( );
+      }
+    }
+  }
+
+  public class AdminAlerts
+  {
+    private readonly Dictionary<string, string> messages =
+      new Dictionary<string, string>( StringComparer.InvariantCultureIgnoreCase );
+
+    public int CoordAccessCount;
+
+    public readonly DateTime StartTime = DateTime.Now.ToUniversalTime( );
+
+    public List<KeyValuePair<string, string>> GetMessages( )
+    {
+      lock ( this.messages )
+      {
+        return this.messages.ToList( );
+      }
+    }
+
+    /// <summary>
+    /// It's thread-safe so a bit slow. Use specific fields for time-critical access 
+    /// (e.g. Interlocked on <see cref="CoordAccessCount"/> field)
+    /// </summary>
+    /// <param name="key"></param>
+    /// <returns></returns>
+    public string this[string key]
+    {
+      get
+      {
+        lock ( this.messages )
+        {
+          string result;
+          this.messages.TryGetValue( key, out result );
+          return result;
+        }
+      }
+
+      set
+      {
+        lock ( this.messages )
+        {
+          if ( this.messages.ContainsKey( key ) )
+            this.messages[key] = value;
+          else
+            this.messages.Add( key, value );
+        }
+      }
+    }
+  }
+
+  public struct AttemptStat
+  {
+    public FeedKind FeedKind;
+    public DateTime? SuccTime;
+  }
+}

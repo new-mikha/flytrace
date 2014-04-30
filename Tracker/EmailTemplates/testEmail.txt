@@ -1,0 +1,10 @@
+﻿Hello <%UserName%>! Thanks for signing up.
+
+This is a test email sent to you from your profile at FlyTrace.com.
+
+If you have any questions or trouble logging on please contact a site administrator: <%AdminEmail%>
+
+Thank you!
+
+--
+www.flytrace.com

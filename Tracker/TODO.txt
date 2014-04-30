@@ -1,0 +1,36 @@
+﻿Undelivered changes:
+- tracker code
+	* PageSize cookie
+- remove Service/log4net.config file
+- remove log4net.config file
+- changed Service/web.config
+- changed web.config
+
+
+TODOs
+- If track points are too old and not shown - display a valid message
+- Add "Copy group" functionality
+- corrdinate format selector on map page
+- make Begin/End pattern work
+- Clean dropbox and working folders
+- other client: remove unofficial requests
+- add/hide others' groups for logged on user
+- add "reset password" link
+- Add "manage website" link to somewhere
+- IIS activity tools
+- Add tracker id: trim it before verification
+- Move stuff like EmailTemplates to App_Data: "Files stored in the App_Data directory will not be served to the Web." (c) MSDN
+
+Log for "No coordinates found for the tracker"
+	showing the newest leg only
+	add something sensible
+
+"custom" - is it a right status?
+"custom" - make the flag green?
+"Positions refreshed" -> ченить другое. "Data reloaded"
+
+Check following scenario:
+	1. No coordinates found for the tracker.
+	2. "Show all tracks" pressed.
+	3. Corrdinates arrive.
+

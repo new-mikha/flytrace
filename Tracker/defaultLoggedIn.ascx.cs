@@ -1,0 +1,263 @@
+/******************************************************************************
+ * Flytrace, online viewer for GPS trackers.
+ * Copyright (C) 2011-2014 Mikhail Karmazin
+ * 
+ * This file is part of Flytrace.
+ * 
+ * Flytrace is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * Flytrace is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using System.Web.Security;
+using System.Data.SqlClient;
+using System.Data;
+using System.Threading;
+using System.Drawing;
+
+namespace FlyTrace
+{
+  public partial class defaultLoggedIn : System.Web.UI.UserControl
+  {
+    protected void Page_Load( object sender, EventArgs e )
+    {
+    }
+
+    protected void Page_PreRender( object sender, EventArgs e )
+    {
+      if ( Global.IsAdmin )
+      {
+        ShowServiceStatus( );
+      }
+    }
+
+    protected void SignOutLinkButton_Click( object sender, EventArgs e )
+    {
+      Response.Clear( );
+      FormsAuthentication.SignOut( );
+      Response.Redirect( Request.RawUrl, true );
+    }
+
+    protected void events_EventsModelChanged( object sender, EventArgs e )
+    {
+      if ( Global.IsSimpleEventsModel )
+      {
+        this.eventsMultiView.SetActiveView( this.todayTaskView );
+        this.userTodayTask.DataBind( );
+      }
+      else
+      {
+        this.eventsMultiView.SetActiveView( this.eventsGridView );
+        this.userEventsGrid.DataBind( );
+      }
+    }
+
+    protected string GetAdminsList( )
+    {
+      string[] admins = Roles.GetUsersInRole( Global.AdminRole );
+      string result = "";
+      for ( int i = 0; i < admins.Length; i++ )
+      {
+        if ( i > 0 )
+          result += "&nbsp;/&nbsp;";
+
+        result += string.Format( "<a href='Administration/userInformation.aspx?user={0}'>{0}</a>", admins[i] );
+      }
+
+      return result;
+    }
+
+    private readonly static Color okColor = Color.FromArgb( 0x00, 0xCC, 0x00 );
+    private readonly static Color warnColor = Color.FromArgb( 0xFF, 0x99, 0x33 );
+    private readonly static Color errColor = Color.Red;
+
+    protected void ShowServiceStatus( )
+    {
+
+      try
+      { // that's a service feauture, so don't stop if it fails:
+        using ( Mutex serviceMutex = Mutex.OpenExisting( "FlyTraceService" ) )
+        {
+        }
+      }
+      catch
+      {
+        this.serviceStatShortStatus.Visible = true;
+        this.serviceStatShortStatus.Text = "Seems that the service is not running";
+        this.serviceStatShortStatus.ForeColor = warnColor;
+        this.serviceStatDetailsMultiView.Visible = false;
+        return;
+      }
+
+      this.serviceStatDetailsMultiView.Visible = true;
+
+      try
+      {
+        Service.AdminFacade serviceAdminFacade = new Service.AdminFacade( );
+        Service.AdminStat adminStat = serviceAdminFacade.GetAdminStat( );
+
+        if ( this.serviceStatDetailsMultiView.GetActiveView( ) == this.serviceStatDetailsShow )
+        {
+          this.serviceStatShortStatus.Visible = true;
+          ServiceStatToDisplayMode( adminStat.AttemptsOrder );
+        }
+        else
+        {
+          this.serviceStatShortStatus.Visible = false;
+          ServiceStatToEditMode( adminStat.AttemptsOrder );
+        }
+
+        ShowAdminStatMessages( adminStat.Messages );
+
+        AddAdminMessageRow( "Current revision", adminStat.CurrentRevision.ToString( ) );
+        AddAdminMessageRow( "GetCoords calls", adminStat.CoordAccessCount.ToString( ) );
+        AddAdminMessageRow( "Start time (UTC)", adminStat.StartTime.ToString( ) + " UTC" );
+        AddAdminMessageRow( "Uptime", FlyTrace.LocationLib.Tools.GetAgeStr( adminStat.StartTime, false ) );
+      }
+      catch ( Exception exc )
+      {
+        this.serviceStatShortStatus.Visible = true;
+        this.serviceStatShortStatus.Text = exc.Message;
+        this.serviceStatShortStatus.ForeColor = errColor;
+      }
+    }
+
+    private void ShowAdminStatMessages( Service.AdminMessage[] adminMessages )
+    {
+      foreach ( Service.AdminMessage adminMessage in adminMessages )
+      {
+        AddAdminMessageRow( adminMessage.Key, adminMessage.Message );
+      }
+    }
+
+    private void AddAdminMessageRow( string key, string message )
+    {
+      TableRow row = new TableRow( );
+
+      {
+        TableCell keyCell = new TableCell( );
+        keyCell.Text = key + " :";
+        row.Cells.Add( keyCell );
+      }
+
+      {
+        TableCell messageCell = new TableCell( );
+        messageCell.Text = message;
+
+        row.Cells.Add( messageCell );
+      }
+
+      if ( ( message + "_" + key ).ToLower( ).Contains( "error" ) )
+        row.ForeColor = errColor;
+      else if ( ( message + "_" + key ).ToLower( ).Contains( "warning" ) )
+        row.ForeColor = warnColor;
+
+      this.adminStatMessagesTable.Rows.Add( row );
+    }
+
+    private void ServiceStatToEditMode( FlyTrace.Service.AttemptStat[] attemptStats )
+    {
+      int iItem = 0;
+      foreach ( FlyTrace.Service.AttemptStat attemptStat in attemptStats )
+      {
+        TableRow row = new TableRow( );
+
+        TableCell tableCell = new TableCell( );
+
+        DropDownList ddl = new DropDownList( );
+        ddl.Items.AddRange( attemptStats.Select( attStat => new ListItem( attStat.FeedKind.ToString( ) ) ).ToArray( ) );
+        ddl.SelectedIndex = iItem;
+        ddl.ID = "feedKindOrder_" + iItem.ToString( );
+        ddl.Attributes.Add( "onchange", "alert(this.selectedIndex)" );
+        tableCell.Controls.Add( ddl );
+
+        row.Cells.Add( tableCell );
+
+        this.serviceStatEditTable.Rows.Add( row );
+
+        iItem++;
+      }
+    }
+
+    private void ServiceStatToDisplayMode( FlyTrace.Service.AttemptStat[] attemptStats )
+    {
+      foreach ( FlyTrace.Service.AttemptStat attemptStat in attemptStats )
+      {
+        TableRow row = new TableRow( );
+
+        {
+          TableCell feedNameCell = new TableCell( );
+
+          feedNameCell.Text = attemptStat.FeedKind.ToString( ) + " :";
+          feedNameCell.HorizontalAlign = HorizontalAlign.Right;
+          if ( attemptStat.FeedKind.ToString( ) != LocationLib.LocationRequest.DefaultAttemptsOrder[0].ToString( ) )
+            feedNameCell.ForeColor = Color.Gray;
+          row.Cells.Add( feedNameCell );
+        }
+
+        {
+          TableCell feedTimeCell = new TableCell( );
+
+          feedTimeCell.HorizontalAlign = HorizontalAlign.Right;
+          if ( attemptStat.SuccTime.HasValue )
+          {
+            feedTimeCell.Text =
+              FlyTrace.LocationLib.Tools.GetAgeStr( attemptStat.SuccTime.Value );
+          }
+          else
+          {
+            feedTimeCell.Text = "None";
+          }
+
+          row.Cells.Add( feedTimeCell );
+        }
+
+        this.serviceStatDisplayTable.Rows.Add( row );
+      }
+
+      if ( attemptStats.Length == 3 &&
+           attemptStats[0].FeedKind == Service.FeedKind.Feed_2_0 &&
+           attemptStats[1].FeedKind == Service.FeedKind.Feed_1_0_undoc &&
+           attemptStats[2].FeedKind == Service.FeedKind.Feed_1_0 )
+      {
+        this.serviceStatShortStatus.Text = "all good";
+        this.serviceStatShortStatus.ForeColor = okColor;
+      }
+      else
+      {
+        this.serviceStatShortStatus.Text = "NOT ORDERED";
+        this.serviceStatShortStatus.ForeColor = warnColor;
+      }
+    }
+
+    protected void changeAttemptsOrderLinkButton_Click( object sender, EventArgs e )
+    {
+      this.serviceStatDetailsMultiView.SetActiveView( this.serviceStatDetailsEdit );
+    }
+
+    protected void updateAttemptsOrderLinkButton_Click( object sender, EventArgs e )
+    {
+      this.serviceStatDetailsMultiView.SetActiveView( this.serviceStatDetailsShow );
+    }
+
+    protected void cancelAttemptsOrderChangeLinkButton_Click( object sender, EventArgs e )
+    {
+      this.serviceStatDetailsMultiView.SetActiveView( this.serviceStatDetailsShow );
+    }
+  }
+}

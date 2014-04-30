@@ -1,0 +1,9 @@
+﻿According to our records, you have requested to restore your FlyTrace user name.
+Your user name is <%UserName%>
+
+If you have any questions or trouble logging on please contact a site administrator: <%AdminEmail%>
+
+Thank you!
+
+--
+www.flytrace.com

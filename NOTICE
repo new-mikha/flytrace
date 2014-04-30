@@ -1,0 +1,21 @@
+Flytrace
+Copyright 2014 Mikhail Karmazin
+
+IAsyncResult implementations included in this software were 
+developed by Jeffrey Richter and taken from examples in
+MSDN magazine.
+
+Date formatting used in JavaScript code developed by
+Steven Levithan <stevenlevithan.com>
+Includes enhancements by Scott Trenda <scott.trenda.net>
+and Kris Kowal <cixar.com/~kris.kowal/>
+MIT license
+
+log4net
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+Apache License, Version 2.0
+
+jquery
+This product includes jQuery, developed at jquery.com
+Released under MIT license, details at jquery.org/license

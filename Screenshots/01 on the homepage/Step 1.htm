@@ -1,0 +1,72 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!--
+  Flytrace, online viewer for GPS trackers.
+  Copyright (C) 2011-2014 Mikhail Karmazin
+  
+  This file is part of Flytrace.
+  
+  Flytrace is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+  
+  Flytrace is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html>
+<head>
+    <link href="../StyleSheet.css" type="text/css" rel="stylesheet" />
+    <title></title>
+</head>
+<body>
+    <div style="top: 61px; left: 26px; height: 48px; width: 770px;">
+        <img alt="" src="images/updateNow.png" runat="server" style="float: left; margin-top: 0px;
+            margin-right: 8px" />Click it to manually update the page. Note that there is
+        also an automatic update that happens every 30 sec. Pressing this button is 
+        faster than
+        refreshing the whole page in a browser (e.g. by pressing F5).
+    </div>
+    <img alt="" src="images/main.png" runat="server" style="position: absolute; top: 128px;
+        left: 26px;" />
+    <div style="top: 128px; left: 486px; height: 60px; width: 309px;">
+        <img alt="" src="images/refreshTime.png" runat="server" style="float: left; margin-top: 2px;
+            margin-right: 12px" />Shows when the page was updated. It happens either automatically
+        every 30 seconds, or after pressing the &quot;Update Now&quot; link. 
+    </div>
+    <div style="top: 211px; left: 486px; width: 309px;">
+        <img alt="" src="images/marker.png" runat="server" style="float: left; margin-top: 3px;
+            margin-right: 8px" />Inside is the first letter of the marker name. Here the
+        name is James, so the letter is 'J'. For Anna it would be 'A' and so on. If there
+        are James and Jason, there would be two J markers.
+        <br />
+        <br />
+        You could click markers to see their details (coordinates, link to show Full Track
+        etc))</div>
+    <div style="top: 376px; left: 486px; width: 309px; height: 197px;">
+        <img alt="" src="images/markerLabel.png" runat="server" style="float: left; margin-top: 3px;
+            margin-right: 8px" />Shows that 5 minutes ago the tracker has sent a signal
+        from the point where you see the marker now. It is time when the position was SENT,
+        not when it was received. So it means that James has been there 5 minutes ago from
+        NOW.<br />
+        <br />
+        On a real map (this one is just a screenshot) the value would update with a time
+        passing, and after a minute it will automatically change to &#39;6 min&#39;.
+    </div>
+    <div style="top: 393px; left: 25px; width: 432px;">
+        <img alt="" src="images/greenLine.png" runat="server" style="float: left; margin-top: 3px;
+            margin-right: 8px" />The green line is the latest segment of track: it goes
+        from the previous point to the latest position. Note that trackers send coordinates
+        every 10 minutes. So this line gives you an instant idea whether tracker moves or
+        not.<br />
+        <br />
+        For example, if this line is 10 kms long then probably the tracker still moves.
+        But when it's just 10 meters long (and can be seen only at a highest zoom) it means
+        that most likely the tracker has stopped.
+    </div>
+</body>
+</html>

@@ -1,0 +1,166 @@
+﻿body
+{
+    margin: 0;
+    height: 100%;
+}
+
+#content
+{
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: 100%;
+}
+
+#mapPanel
+{
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: inherit;
+}
+
+#listPanel
+{
+    width: 100%;
+    display: none;
+}
+
+#horSplitter
+{
+    background-color: yellow;
+}
+
+.TrackerNameCtl
+{
+}
+
+.TrackerStatusCtl
+{
+}
+
+.TrackerCoordsCtl
+{
+    font-family: 'courier New' , Courier, monospace;
+}
+
+.TrackerAgeCtl
+{
+}
+
+.TrackerTimestampCtl
+{
+}
+
+.TrackerErrorCtl
+{
+}
+
+.TrackerVisibleCheckCtl
+{
+}
+
+.UserInfo
+{
+    font-size: 11px;
+    background-color: #46565F;
+    color: #FFFFFF;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.UserInfo A:link,
+.UserInfo A:visited
+{
+    color: #FFFFFF;
+}
+
+
+.UserInfo2
+{
+    font-size: 11px;
+    background-color: #46565F;
+    color: #FFFFFF;
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0px;
+    padding: 0.27em;
+    white-space: nowrap;
+}
+
+.UserInfo2 A:link,
+.UserInfo2 A:visited
+{
+    color: #FFFFFF;
+}
+
+.VisualGroupTitle
+{
+    background-color: #80BBBA;
+    font-weight: bold;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: left;
+}
+
+.VisualGroupTitle2
+{
+    background-color: #80BBBA;
+    font-weight: bold;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: left;
+}
+
+.WarningGroupTitle
+{
+    background-color: #FFFF66;
+    font-weight: bold;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: left;
+}
+
+
+.InfoMessage
+{
+    background-color: #FFFF66;
+    text-align: justify;
+}
+
+.AlternatingRowStyle
+{
+}
+
+.RowStyle
+{
+    background-color: #DDDDDD;
+}
+
+
+.GroupTable
+{
+    border: 1px solid #CCCCCC;
+}
+
+.GroupTable2
+{
+    border: 1px solid #CCCCCC;
+    padding: 0.1em;
+    margin: 0em;
+}
+
+
+.AlertForeground
+{
+    color: #FF3300;
+}
+
+.SelectedRow
+{
+    background-color: #00CCFF;
+}
+
+.WarningRow
+{
+    background-color: #FF9900;
+}
+
+
+

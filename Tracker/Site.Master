@@ -1,0 +1,147 @@
+﻿<%--
+  Flytrace, online viewer for GPS trackers.
+  Copyright (C) 2011-2014 Mikhail Karmazin
+  
+  This file is part of Flytrace.
+  
+  Flytrace is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+  
+  Flytrace is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
+--%>
+
+<%@ Master Language="C#" AutoEventWireup="true" CodeBehind="Site.master.cs" Inherits="FlyTrace.Site" %>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<script type="text/javascript" src="Scripts/jquery-1.7.1.min.js"></script>
+<script type="text/javascript" src="Scripts/tools.js"></script>
+<script type="text/javascript" src="Scripts/maintainScrollPosition.js"></script>
+<script type="text/javascript">
+    setScrollHiddenInputId('<%= scrollHiddenField.ClientID %>');
+</script>
+<head runat="server">
+    <title></title>
+    <style type="text/css">
+        .loggedInContent
+        {
+            display: inline-block;
+            margin: 0.19em;
+        }
+    </style>
+    <%--Comment below is not a real one but rather an "IE conditional comment", 
+        DO NOT CHANGE OR REMOVE IT. Need it for IE 7 that doesn't understand inline-block. 
+        See http://robertnyman.com/2010/02/24/css-display-inline-block-why-it-rocks-and-why-it-sucks/ for 
+        details, including "zoom: 1" --%>
+    <!--[if lte IE 7]>
+    <comment>
+    </comment>
+<style type="text/css">
+        .loggedInContent
+        {
+            zoom: 1;
+            display:inline;
+        }
+</style>
+<![endif]-->
+    <asp:ContentPlaceHolder ID="Head" runat="server">
+    </asp:ContentPlaceHolder>
+</head>
+<body>
+    <form id="mainForm" runat="server">
+    <asp:HiddenField ID="scrollHiddenField" runat="server" />
+    <%--div class below is 'loggedInContent' if authenticated--%>
+    <div class='<%= RootDivClass %>'>
+        <asp:LoginView runat="server">
+            <AnonymousTemplate>
+                <div class="UserInfo2">
+                    <asp:Login ID="Login1" runat="server">
+                        <LayoutTemplate>
+                            <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0.1em;">
+                                <tr>
+                                    <td>
+                                        <asp:TextBox ID="UserName" runat="server" Font-Size="11px" placeholder='Username'></asp:TextBox>
+                                        <asp:RequiredFieldValidator ID="UserNameRequired" runat="server" ControlToValidate="UserName" ErrorMessage="User Name is required." ToolTip="User Name is required." ValidationGroup="ctl00$Login1">*</asp:RequiredFieldValidator>
+                                    </td>
+                                    <td>
+                                        <asp:TextBox ID="Password" runat="server" Font-Size="11px" TextMode="Password" placeholder='Password'></asp:TextBox>
+                                        <asp:RequiredFieldValidator ID="PasswordRequired" runat="server" ControlToValidate="Password" ErrorMessage="Password is required." ToolTip="Password is required." ValidationGroup="ctl00$Login1">*</asp:RequiredFieldValidator>
+                                    </td>
+                                    <td>
+                                        <asp:CheckBox ID="RememberMe" runat="server" Text="Remember Me" />&nbsp;&nbsp;
+                                    </td>
+                                    <td>
+                                        <asp:Button ID="LoginButton" runat="server" CommandName="Login" Text="Log In" ValidationGroup="ctl00$Login1" />&nbsp;&nbsp;
+                                    </td>
+                                    <td>
+                                        <asp:HyperLink ID="CreateUserLink" runat="server" NavigateUrl="~/register.aspx" ForeColor="#FFFFFF">Create an account</asp:HyperLink>
+                                        &nbsp;&nbsp;
+                                    </td>
+                                    <td>
+                                        <asp:HyperLink ForeColor="#FFFFFF" ID="PasswordRecoveryLink" runat="server" NavigateUrl="~/restorePassword.aspx">Can't access your account?</asp:HyperLink>
+                                        &nbsp;&nbsp;
+                                    </td>
+                                    <tr>
+                                        <td colspan="6" style="color: #FFAAAA;">
+                                            <asp:Literal ID="FailureText" runat="server" EnableViewState="False"></asp:Literal>
+                                        </td>
+                                    </tr>
+                                </tr>
+                            </table>
+                        </LayoutTemplate>
+                    </asp:Login>
+                </div>
+                <asp:ContentPlaceHolder ID="AnonymousContentPlaceHolder" runat="server">
+                </asp:ContentPlaceHolder>
+            </AnonymousTemplate>
+            <LoggedInTemplate>
+                <table class="UserInfo2" width="100%" cellpadding="0" cellspacing="0" style="">
+                    <tr>
+                        <td>
+                            <asp:SiteMapPath ID="SiteMapPath1" runat="server">
+                            </asp:SiteMapPath>
+                        </td>
+                        <td style="text-align: right;">
+                            <span style="padding-left: 3em">&nbsp;</span> <a href="help/commonhelp.aspx">Help</a> <span style="padding-left: 3em">&nbsp;</span> <b>
+                                <asp:LoginName ID="LoginName1" runat="Server"></asp:LoginName>
+                            </b>&nbsp;-&nbsp;<a href="profile.aspx">Settings</a>&nbsp;-&nbsp;
+                            <asp:LinkButton ID="SignOutLinkButton" runat="server" OnClick="SignOutLinkButton_Click">Sign out</asp:LinkButton>
+                        </td>
+                    </tr>
+                </table>
+                <div>
+                    <asp:ContentPlaceHolder ID="LoggedInContentPlaceHolder" runat="server">
+                    </asp:ContentPlaceHolder>
+                </div>
+            </LoggedInTemplate>
+        </asp:LoginView>
+        <div>
+            <asp:ContentPlaceHolder ID="CommonContentPlaceHolder" runat="server">
+            </asp:ContentPlaceHolder>
+        </div>
+        <div class="UserInfo2" style="text-align: right">
+            <a href="privacy-policy.htm">Privacy Policy</a>&nbsp;&nbsp;&nbsp;&nbsp;
+            Contact: <a href='mailto: <%= InfoEmail %> '>
+                <%= InfoEmail %></a>
+        </div>
+        <%--        <asp:LoginView ID="LoginView1" runat="server">
+            <LoggedInTemplate>
+                <div class="UserInfo2" style="text-align: right">
+                    Contact: <a href='mailto: <%= InfoEmail %> '>
+                        <%= InfoEmail %></a>
+                </div>
+            </LoggedInTemplate>
+        </asp:LoginView>
+        --%>
+    </div>
+    </form>
+</body>
+</html>

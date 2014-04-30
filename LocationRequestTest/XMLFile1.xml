@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  Flytrace, online viewer for GPS trackers.
+  Copyright (C) 2011-2014 Mikhail Karmazin
+  
+  This file is part of Flytrace.
+  
+  Flytrace is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Affero General Public License as
+  published by the Free Software Foundation, either version 3 of the
+  License, or (at your option) any later version.
+  
+  Flytrace is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Affero General Public License for more details.
+  
+  You should have received a copy of the GNU Affero General Public License
+  along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<response>
+  <feedMessageResponse>
+    <count>2</count>
+    <feed>
+      <id>0U6G2qZE7s5h3F6kRq6qp8uoTqARPfy03</id>
+      <name>Mikha</name>
+      <description>Mikha</description>
+      <status>ACTIVE</status>
+      <usage>7</usage>
+      <daysRange>7</daysRange>
+      <detailedMessageShown>true</detailedMessageShown>
+    </feed>
+    <totalCount>0</totalCount>
+    <activityCount>0</activityCount>
+    <messages>
+      <message clientUnixTime="0">
+        <id>182024067</id>
+        <messengerId>0-8220745</messengerId>
+        <messengerName>Mikha</messengerName>
+        <unixTime>1357815816</unixTime>
+        <messageType>OK</messageType>
+        <latitude>-34.05087</latitude>
+        <longitude>151.08278</longitude>
+        <showCustomMsg>Y</showCustomMsg>
+        <dateTime>2013-01-10T11:03:36+0000</dateTime>
+        <altitude>0</altitude>
+        <hidden>0</hidden>
+        <messageContent>Michael has landed, needs retrieve</messageContent>
+      </message>
+      <message clientUnixTime="0">
+        <id>182023750</id>
+        <messengerId>0-8220745</messengerId>
+        <messengerName>Mikha</messengerName>
+        <unixTime>1357815508</unixTime>
+        <messageType>TRACK</messageType>
+        <latitude>-34.05087</latitude>
+        <longitude>151.08278</longitude>
+        <showCustomMsg>Y</showCustomMsg>
+        <dateTime>2013-01-10T10:58:28+0000</dateTime>
+        <altitude>0</altitude>
+        <hidden>0</hidden>
+      </message>
+    </messages>
+  </feedMessageResponse>
+</response>

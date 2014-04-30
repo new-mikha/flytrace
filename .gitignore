@@ -1,0 +1,12 @@
+Externals/log4net/
+bin/
+obj/
+*.suo
+*.csproj.user
+*.log
+*.log.*
+Site updates/
+Tracker/Service/logs/*.timestamp
+*.bin
+Temp/
+Site update scripts/Update/
