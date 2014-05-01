@@ -38,6 +38,7 @@ where {
     $_ -like "*.js" -or
     $_ -like "*.Master" -or
     $_ -like "*.sitemap" -or
+    $_ -like "*.xml" -or
     $_ -like "*.sql"
 } | 
 where {
