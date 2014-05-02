@@ -31,14 +31,17 @@ where {
     $_ -like "*.asmx" -or
     $_ -like "*.aspx" -or
     $_ -like "*.ascx" -or
+    $_ -like "*.resx" -or
     $_ -like "*.config" -or
-    $_ -like "*.css" -or
+    $_ -like "*.settings" -or
     $_ -like "*.default" -or
     $_ -like "*.htm" -or
     $_ -like "*.js" -or
     $_ -like "*.Master" -or
     $_ -like "*.sitemap" -or
     $_ -like "*.xml" -or
+    $_ -like "*\EmailTemplates\*.txt" -or
+    $_ -like "*\App_Themes\Default\*" -or
     $_ -like "*.sql"
 } | 
 where {

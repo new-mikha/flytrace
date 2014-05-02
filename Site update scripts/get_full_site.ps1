@@ -11,24 +11,27 @@ where {
     $_.FullName -like $src_dir + "*"
 } |
 where {
-    $_ -notlike "*log4net.xml" -and
-    -not $_.FullName.Contains("\obj\" )
+    $_.FullName -notlike "*log4net.xml" -and
+    $_.FullName -notlike "*\obj\*" 
 } |
 where {
-    $_ -like "*.dll" -or
-    $_ -like "*.pdb" -or
-    $_ -like "*.asax" -or
-    $_ -like "*.asmx" -or
-    $_ -like "*.aspx" -or
-    $_ -like "*.ascx" -or
-    $_ -like "*.config" -or
-    $_ -like "*.css" -or
-    $_ -like "*.default" -or
-    $_ -like "*.htm" -or
-    $_ -like "*.js" -or
-    $_ -like "*.Master" -or
-    $_ -like "*.sitemap" -or
-    $_ -like "*.xml"
+    $_.FullName -like "*.dll" -or
+    $_.FullName -like "*.pdb" -or
+    $_.FullName -like "*.asax" -or
+    $_.FullName -like "*.asmx" -or
+    $_.FullName -like "*.aspx" -or
+    $_.FullName -like "*.ascx" -or
+    $_.FullName -like "*.resx" -or
+    $_.FullName -like "*.config" -or
+    $_.FullName -like "*.settings" -or
+    $_.FullName -like "*.default" -or
+    $_.FullName -like "*.htm" -or
+    $_.FullName -like "*.js" -or
+    $_.FullName -like "*.Master" -or
+    $_.FullName -like "*.sitemap" -or
+    $_.FullName -like "*.xml" -or
+    $_.FullName -like "*\EmailTemplates\*.txt" -or
+    $_.FullName -like "*\App_Themes\Default\*"
 } | 
 Foreach-Object { 
     #Write-Host $_.FullName
