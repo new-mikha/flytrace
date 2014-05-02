@@ -65,15 +65,18 @@
                 <div class="UserInfo2">
                     <asp:Login ID="Login1" runat="server">
                         <LayoutTemplate>
-                            <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin: 0.1em;">
+                            <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse;
+                                margin: 0.1em;">
                                 <tr>
                                     <td>
                                         <asp:TextBox ID="UserName" runat="server" Font-Size="11px" placeholder='Username'></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="UserNameRequired" runat="server" ControlToValidate="UserName" ErrorMessage="User Name is required." ToolTip="User Name is required." ValidationGroup="ctl00$Login1">*</asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator ID="UserNameRequired" runat="server" ControlToValidate="UserName"
+                                            ErrorMessage="User Name is required." ToolTip="User Name is required." ValidationGroup="ctl00$Login1">*</asp:RequiredFieldValidator>
                                     </td>
                                     <td>
                                         <asp:TextBox ID="Password" runat="server" Font-Size="11px" TextMode="Password" placeholder='Password'></asp:TextBox>
-                                        <asp:RequiredFieldValidator ID="PasswordRequired" runat="server" ControlToValidate="Password" ErrorMessage="Password is required." ToolTip="Password is required." ValidationGroup="ctl00$Login1">*</asp:RequiredFieldValidator>
+                                        <asp:RequiredFieldValidator ID="PasswordRequired" runat="server" ControlToValidate="Password"
+                                            ErrorMessage="Password is required." ToolTip="Password is required." ValidationGroup="ctl00$Login1">*</asp:RequiredFieldValidator>
                                     </td>
                                     <td>
                                         <asp:CheckBox ID="RememberMe" runat="server" Text="Remember Me" />&nbsp;&nbsp;
@@ -110,7 +113,8 @@
                             </asp:SiteMapPath>
                         </td>
                         <td style="text-align: right;">
-                            <span style="padding-left: 3em">&nbsp;</span> <a href="help/commonhelp.aspx">Help</a> <span style="padding-left: 3em">&nbsp;</span> <b>
+                            <span style="padding-left: 3em">&nbsp;</span> <a href="help/commonhelp.aspx">Help</a>
+                            <span style="padding-left: 3em">&nbsp;</span> <b>
                                 <asp:LoginName ID="LoginName1" runat="Server"></asp:LoginName>
                             </b>&nbsp;-&nbsp;<a href="profile.aspx">Settings</a>&nbsp;-&nbsp;
                             <asp:LinkButton ID="SignOutLinkButton" runat="server" OnClick="SignOutLinkButton_Click">Sign out</asp:LinkButton>
@@ -128,9 +132,10 @@
             </asp:ContentPlaceHolder>
         </div>
         <div class="UserInfo2" style="text-align: right">
-            <a href="privacy-policy.htm">Privacy Policy</a>&nbsp;&nbsp;&nbsp;&nbsp;
-            Contact: <a href='mailto: <%= InfoEmail %> '>
-                <%= InfoEmail %></a>
+            <span style="padding-left: 2em"><a href="privacy-policy.htm">Privacy Policy</a></span>
+            <span style="padding-left: 2em"><a href="https://github.com/new-mikha/flytrace">Source</a></span>
+            <span style="padding-left: 2em">Contact: <a href='mailto: <%= InfoEmail %> '>
+                <%= InfoEmail %></a></span>
         </div>
         <%--        <asp:LoginView ID="LoginView1" runat="server">
             <LoggedInTemplate>
