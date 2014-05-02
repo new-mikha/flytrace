@@ -1,4 +1,4 @@
-Flytrace, online viewer for SPOT trackers.
+Flytrace, online viewer for SPOT trackers
 ========
 
 Main installation: http://www.flytrace.com/tracker
