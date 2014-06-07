@@ -171,9 +171,9 @@ function initialize() {
 }
 
 function showLogos() {
-    if (_logoSource == null ||
-        screen.width < 700 ||
-        screen.height < 700) return;
+    if (_logoSource == "" ||
+        screen.width < 500 ||
+        screen.height < 500) return;
 
     var homeControlDiv = document.createElement('div');
     homeControlDiv.style.padding = '5px';
