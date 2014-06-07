@@ -162,10 +162,25 @@ function initialize() {
         syncAllTracksButton();
 
         showTask();
+
+        showLogos();
     }
     catch (exc) {
         alert(exc.message);
     }
+}
+
+function showLogos() {
+    if (_logoSource == null ||
+        screen.width < 700 ||
+        screen.height < 700) return;
+
+    var homeControlDiv = document.createElement('div');
+    homeControlDiv.style.padding = '5px';
+    homeControlDiv.innerHTML = "<img src='" + _logoSource + "'/>";
+
+    homeControlDiv.index = 1;
+    _map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(homeControlDiv);
 }
 
 var WpElemNum = 4;

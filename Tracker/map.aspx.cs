@@ -37,11 +37,15 @@ namespace FlyTrace
 
     protected int GroupId;
 
+    protected Guid OwnerId;
+
     protected string GroupName;
 
     protected double? MapCenterLat;
 
     protected double? MapCenterLon;
+
+    public static Guid AdvRiderUserId = new Guid( "4CC933D2-5974-4593-9C1C-6027839456FF" );
 
     protected void Page_Load( object sender, EventArgs e )
     {
@@ -64,6 +68,8 @@ namespace FlyTrace
           TrackerDataSet.GroupRow groupRow = groupTable[0];
 
           GroupName = groupRow.Name;
+
+          OwnerId = groupRow.UserId;
 
           TrackerDataSetTableAdapters.ProcsAdapter procsAdapter = new TrackerDataSetTableAdapters.ProcsAdapter( );
           procsAdapter.UpdateGroupViewsNum( GroupId );

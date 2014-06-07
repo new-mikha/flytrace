@@ -17,7 +17,6 @@
   You should have received a copy of the GNU Affero General Public License
   along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
 --%>
-
 <%@  AutoEventWireup="true" EnableViewState="true" Language="C#" CodeBehind="map.aspx.cs"
     Inherits="FlyTrace.MapForm" %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -34,8 +33,7 @@
         _gaq.push(['_setAllowLinker', true]);
         _gaq.push(['_trackPageview']);
 
-        (function ()
-        {
+        (function () {
             var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
             ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
             var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
@@ -67,6 +65,22 @@
             margin-bottom: 0.5em;
         }
     </style>
+    <% 
+        bool showLogo = false;
+
+        if ( OwnerId == AdvRiderUserId )
+        {
+            bool.TryParse( this.Request.Params["logo_test"], out showLogo );
+        }
+
+        Response.Write(
+            string.Format(
+                "\n\n<script type=\"text/javascript\">\nvar _logoSource='{0}';\n</script>\n",
+                showLogo
+                ? "add/logo1.png"
+                : "" ) );
+
+    %>
     <% 
         bool sensor;
         if ( !bool.TryParse( this.Request.Params["sensor"], out sensor ) )
@@ -115,7 +129,7 @@
     </script>
     <script type="text/javascript" src="Scripts/date.format.js">
     </script>
-    <script type="text/javascript" src="Scripts/main.js?ver=57">
+    <script type="text/javascript" src="Scripts/main.js?ver=58">
     </script>
 </head>
 <body onload="initialize()">
