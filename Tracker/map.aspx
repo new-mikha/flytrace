@@ -66,17 +66,10 @@
         }
     </style>
     <% 
-        bool showLogo = false;
-
-        if ( OwnerId == AdvRiderUserId )
-        {
-            bool.TryParse( this.Request.Params["logo_test"], out showLogo );
-        }
-
         Response.Write(
             string.Format(
                 "\n\n<script type=\"text/javascript\">\nvar _logoSource='{0}';\n</script>\n",
-                showLogo
+                OwnerId == AdvRiderUserId
                 ? "add/logo1.png"
                 : "" ) );
 
@@ -129,7 +122,7 @@
     </script>
     <script type="text/javascript" src="Scripts/date.format.js">
     </script>
-    <script type="text/javascript" src="Scripts/main.js?ver=58">
+    <script type="text/javascript" src="Scripts/main.js?ver=61">
     </script>
 </head>
 <body onload="initialize()">
