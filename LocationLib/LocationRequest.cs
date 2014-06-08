@@ -80,7 +80,7 @@ namespace FlyTrace.LocationLib
     /// That's needed for logging purposes. It could be null, or e.g. 
     /// value of Path.Combine( HttpRuntime.AppDomainAppPath , "logs" ).
     /// </param>
-    public LocationRequest( string trackerForeignId, string appAuxLogFolder, IEnumerable<FeedKind> attemptsOrder )
+    public LocationRequest( ForeignId trackerForeignId, string appAuxLogFolder, IEnumerable<FeedKind> attemptsOrder )
     {
       TrackerForeignId = trackerForeignId;
       this.appAuxLogFolder = appAuxLogFolder;
@@ -100,7 +100,7 @@ namespace FlyTrace.LocationLib
 
     public LocationRequest
     (
-      string testForeignId,
+      ForeignId testForeignId,
       string testXml,
       FeedKind requestType,
       string appAuxLogFolder
@@ -112,7 +112,7 @@ namespace FlyTrace.LocationLib
       this.attemptsOrder = new FeedKind[] { requestType };
     }
 
-    public readonly string TrackerForeignId;
+    public readonly ForeignId TrackerForeignId;
 
     /// <summary>Number of attempt for this request (where 0 is first attempt), corresponds to an element 
     /// in <see cref="feedsPriorities"/>.</summary>
@@ -171,7 +171,7 @@ namespace FlyTrace.LocationLib
 
       if ( this.testXml == null )
       { // Normal working mode
-        this.currentRequest = new SpotFeedRequest( currentFeedKind, TrackerForeignId, asyncChainedState.Id, this.iAttempt );
+        this.currentRequest = new SpotFeedRequest( currentFeedKind, TrackerForeignId.Id, asyncChainedState.Id, this.iAttempt );
         Log.InfoFormat( "Created request for {0}, {1} lrid {2}", TrackerForeignId, this.currentRequest.FeedKind, asyncChainedState.Id );
       }
       else
@@ -281,7 +281,7 @@ namespace FlyTrace.LocationLib
 
             FeedKind currentFeedKind = this.attemptsOrder[this.iAttempt];
 
-            this.currentRequest = new SpotFeedRequest( currentFeedKind, TrackerForeignId, asyncChainedState.Id, this.iAttempt );
+            this.currentRequest = new SpotFeedRequest( currentFeedKind, TrackerForeignId.Id, asyncChainedState.Id, this.iAttempt );
 
             Thread.MemoryBarrier( );
             // If isAborted but we're here then "bad" request was finished and closed.

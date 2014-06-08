@@ -53,7 +53,7 @@ namespace FlyTrace.Service.Test
             from name in this.sourceData.Keys
             select new TrackerId
             {
-              ForeignId = ForeignIdPrefix + name,
+              ForeignId = new ForeignId( ForeignId.SPOT, TestIdPrefix + name ),
               Name = name
             }
           ).ToList( );
@@ -64,7 +64,7 @@ namespace FlyTrace.Service.Test
       }
     }
 
-    public static readonly string ForeignIdPrefix = "FlyTraceTestId_";
+    public static readonly string TestIdPrefix = "FlyTraceTestId_";
 
     private readonly object sync = new object( );
 
@@ -115,7 +115,7 @@ namespace FlyTrace.Service.Test
         if ( positionNumber <= 0 )
           return GetEmtpyFeed( trackerForeignId );
 
-        string name = trackerForeignId.Substring( ForeignIdPrefix.Length );
+        string name = trackerForeignId.Substring( TestIdPrefix.Length );
 
         /*  Take from each source one after another.
          *  Say PositionNumber=9 and source is S1, what would be a max number of

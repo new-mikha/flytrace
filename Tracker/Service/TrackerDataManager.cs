@@ -681,7 +681,7 @@ namespace FlyTrace.Service
           string trackerName = callData.TrackerIds[i].Name;
           TrackerStateHolder trackerStateHolder = callData.TrackerStateHolders[i];
 
-          RevisedTrackerState nullableSnapshot = snapshots[i]; // null means that position is not retrieved yet from the SPOT server 
+          RevisedTrackerState nullableSnapshot = snapshots[i]; // null means that position is not retrieved yet from the foreign server 
 
           if ( nullableSnapshot != null && nullableSnapshot.DataRevision != null )
             nextThresholdRevision = Math.Max( nextThresholdRevision, nullableSnapshot.DataRevision.Value );
@@ -969,9 +969,10 @@ namespace FlyTrace.Service
 
     private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 
-    private Dictionary<string, TrackerStateHolder> trackers = new Dictionary<string, TrackerStateHolder>( );
+    private Dictionary<ForeignId, TrackerStateHolder> trackers = 
+      new Dictionary<ForeignId, TrackerStateHolder>( );
 
-    internal Dictionary<string, TrackerStateHolder> Trackers { get { return this.trackers; } }
+    internal Dictionary<ForeignId, TrackerStateHolder> Trackers { get { return this.trackers; } }
 
     private CoordResponseItem TrackerFromTrackerSnapshot
     (
@@ -1108,7 +1109,7 @@ namespace FlyTrace.Service
       {
         try
         {
-          Dictionary<string, TrackerStateHolder> trackersToUpdate = GetTrackersToUpdate( );
+          Dictionary<ForeignId, TrackerStateHolder> trackersToUpdate = GetTrackersToUpdate( );
 
           int maxMsToWait = ( int ) Math.Ceiling( ( nextAllowedRequestTime - DateTime.Now ).TotalMilliseconds );
           if ( maxMsToWait <= 0 )
@@ -1146,7 +1147,7 @@ namespace FlyTrace.Service
               Log.InfoFormat( "Updating {0} trackers...", trackersToUpdate.Count );
               TrackersListRequest trackersListRequest = new TrackersListRequest( );
 
-              Dictionary<string, TrackerState> trackerRequestResults =
+              Dictionary<ForeignId, TrackerState> trackerRequestResults =
                   trackersListRequest.GetTrackersLocations( trackersToUpdate.Keys, GetSanitizedAttemptsOrder( ) );
 
               // calc nextAllowedRequestTime here to prevent tons of exceptions per second in 
@@ -1166,7 +1167,7 @@ namespace FlyTrace.Service
                 Log.Info( "Reset nextAllowedRequestTime to Now" );
               }
 
-              foreach ( KeyValuePair<string, TrackerState> idAndLocation in trackerRequestResults )
+              foreach ( KeyValuePair<ForeignId, TrackerState> idAndLocation in trackerRequestResults )
               {
                 // No-lock technique: we just replace Snapshot. 
                 // If a reader has older version, or null - it's ok everywhere.
@@ -1224,7 +1225,7 @@ namespace FlyTrace.Service
 
           lock ( this.trackers )
           { // Now remove trackers that haven't been accessed for a long time.
-            List<string> oldTrackersIds = new List<string>( );
+            List<ForeignId> oldTrackersIds = new List<ForeignId>( );
             long threshold2Remove = DateTime.Now.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
             foreach ( var pair in this.trackers )
             {
@@ -1244,7 +1245,7 @@ namespace FlyTrace.Service
             {
               Log.InfoFormat( "Removing {0} old trackers...", oldTrackersIds.Count );
 
-              foreach ( string idToRemove in oldTrackersIds )
+              foreach ( ForeignId idToRemove in oldTrackersIds )
               {
                 this.trackers.Remove( idToRemove );
               }
@@ -1401,7 +1402,7 @@ namespace FlyTrace.Service
       }
     }
 
-    private Dictionary<string, TrackerStateHolder> GetTrackersToUpdate( )
+    private Dictionary<ForeignId, TrackerStateHolder> GetTrackersToUpdate( )
     {
       int refreshChunk = Settings.Default.RefreshChunk;
 
@@ -1411,7 +1412,7 @@ namespace FlyTrace.Service
       // No need in MemoryBarrier here to access Snapshot because this method runs in 
       // the same thread that sets these values
 
-      Dictionary<string, TrackerStateHolder> result = new Dictionary<string, TrackerStateHolder>( );
+      Dictionary<ForeignId, TrackerStateHolder> result = new Dictionary<ForeignId, TrackerStateHolder>( );
 
       lock ( this.trackers )
       {
@@ -1605,7 +1606,7 @@ namespace FlyTrace.Service
           trackResponseItem.TrackerName = trackerName;
           trackResponseItem.Track = null;
 
-          string trackerForeignId = callData.TrackerIds[iResult].ForeignId;
+          ForeignId trackerForeignId = callData.TrackerIds[iResult].ForeignId;
           TrackerStateHolder trackerStateHolder = callData.TrackerStateHolders[iResult];
 
           bool isReqFound = false;

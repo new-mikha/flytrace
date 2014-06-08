@@ -29,6 +29,8 @@ using System.Threading;
 using System.Web;
 using System.Web.Configuration;
 
+using FlyTrace.LocationLib;
+
 using log4net;
 
 namespace FlyTrace.Service
@@ -37,7 +39,8 @@ namespace FlyTrace.Service
   internal struct TrackerId
   {
     public string Name;
-    public string ForeignId;
+
+    public ForeignId ForeignId;
   }
 
   internal class GroupFacade
@@ -174,8 +177,12 @@ namespace FlyTrace.Service
           while ( sqlDataReader.Read( ) )
           {
             TrackerId trackerId;
+
             trackerId.Name = sqlDataReader["Name"].ToString( );
-            trackerId.ForeignId = sqlDataReader["TrackerForeignId"].ToString( );
+
+            ForeignId foreignId = new ForeignId( "SPOT", sqlDataReader["TrackerForeignId"].ToString( ) );
+            trackerId.ForeignId = foreignId;
+
             result.Add( trackerId );
           }
         }
@@ -305,8 +312,12 @@ namespace FlyTrace.Service
           if ( sqlDataReader.Read( ) )
           {
             TrackerId result;
+
             result.Name = sqlDataReader["Name"].ToString( );
-            result.ForeignId = sqlDataReader["TrackerForeignId"].ToString( );
+
+            ForeignId foreignId = new ForeignId( "SPOT", sqlDataReader["TrackerForeignId"].ToString( ) );
+            result.ForeignId = foreignId;
+
             return result;
           }
 

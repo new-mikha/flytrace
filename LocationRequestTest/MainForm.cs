@@ -170,7 +170,8 @@ namespace LocationRequestTest
 
         LocationRequest locationRequest;
         if ( this.inetSourceRadioButton.Checked )
-          locationRequest = new LocationRequest( feedId, appFolder, attemptsOrder.ToArray( ) );
+          locationRequest =
+            new LocationRequest( new ForeignId( ForeignId.SPOT, feedId ), appFolder, attemptsOrder.ToArray( ) );
         else
         {
           if ( attemptsOrder.Count == 0 )
@@ -180,7 +181,9 @@ namespace LocationRequestTest
           if ( sampleXml == null )
             sampleXml = ( new SampleXmlForm( ) ).SampleXml; // bad, bad style :)
 
-          locationRequest = new LocationRequest( "testxml", sampleXml, attemptsOrder[0], appFolder );
+          locationRequest =
+            new LocationRequest(
+              new ForeignId( ForeignId.SPOT, "testxml" ), sampleXml, attemptsOrder[0], appFolder );
         }
 
         if ( this.resultTextBox.Text.Length > 0 )

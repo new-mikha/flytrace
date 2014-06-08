@@ -78,17 +78,17 @@ namespace FlyTrace.Service.Administration
 
     private void BindDataSource( )
     {
-      Dictionary<string, TrackerStateHolder> trackers = TrackerDataManager.Singleton.Trackers;
+      Dictionary<ForeignId, TrackerStateHolder> trackers = TrackerDataManager.Singleton.Trackers;
 
       List<TrackerDisplayItem> list;
       lock ( trackers )
       {
         list = new List<TrackerDisplayItem>( trackers.Count );
 
-        foreach ( KeyValuePair<string, TrackerStateHolder> kvp in trackers )
+        foreach ( KeyValuePair<ForeignId, TrackerStateHolder> kvp in trackers )
         {
           TrackerDisplayItem item = new TrackerDisplayItem( );
-          item.SpotId = kvp.Key;
+          item.SpotId = kvp.Key.Id;
 
           DateTime accessTime = DateTime.FromFileTime( Interlocked.Read( ref kvp.Value.AccessTimestamp ) ).ToUniversalTime( );
           item.AccessTime = accessTime;

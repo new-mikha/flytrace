@@ -235,28 +235,31 @@ namespace FlyTrace
           object objTrackerForeignId = e.Values["TrackerForeignId"];
           if ( objTrackerForeignId is string )
           {
-            string trackerForeignId = objTrackerForeignId.ToString( );
+            string spotId = objTrackerForeignId.ToString( );
 
-            int iMarker = trackerForeignId.IndexOf( spotPageAddrMarker, StringComparison.CurrentCultureIgnoreCase );
+            int iMarker = spotId.IndexOf( spotPageAddrMarker, StringComparison.CurrentCultureIgnoreCase );
             if ( iMarker >= 0 )
             {
-              trackerForeignId = trackerForeignId.Substring( iMarker + spotPageAddrMarker.Length );
+              spotId = spotId.Substring( iMarker + spotPageAddrMarker.Length );
             }
 
-            trackerForeignId = trackerForeignId.Trim( );
+            spotId = spotId.Trim( );
 
             TrackerDataSetTableAdapters.GroupTrackerTableAdapter adapter =
               new FlyTrace.TrackerDataSetTableAdapters.GroupTrackerTableAdapter( );
 
             // This proc returns value greater than zero if the tracker already exists 
             // in the database, which means it's OK, and 0 otherwise:
-            int? dbTrackerCheck = adapter.ForeignTrackerIdCheck( trackerForeignId );
+            int? dbTrackerCheck = adapter.ForeignTrackerIdCheck( spotId );
 
             if ( dbTrackerCheck == 0 )
             { // the tracker doesn't exists in the database, so we need to check it:
               string appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "Serice\\logs" );
+
+              ForeignId foreignId = new ForeignId( ForeignId.SPOT, spotId );
+
               LocationRequest locationRequest =
-                new LocationRequest( trackerForeignId, appAuxLogFolder, LocationRequest.DefaultAttemptsOrder );
+                new LocationRequest( foreignId, appAuxLogFolder, LocationRequest.DefaultAttemptsOrder );
               TrackerState tracker = locationRequest.ReadLocation( );
               if ( tracker.Error != null &&
                    tracker.Error.Type == ErrorType.BadTrackerId )
@@ -266,7 +269,7 @@ namespace FlyTrace
                     "We cannot recognize the SPOT Share Page ID you've passed. Our best guess<br />for the Shared Page that you mean " +
                       "is <a href=\"http://share.findmespot.com/shared/faces/viewspots.jsp?glId={0}\"> " +
                       "that one</a>, but it doesn't work.",
-                    trackerForeignId
+                    spotId
                   );
                 //BadSpotId = trackerForeignId;
                 //this.formView.FindControl( "badSpotIdInfoPanel" ).Visible = true;
@@ -275,7 +278,7 @@ namespace FlyTrace
             }
 
             // put it back even if we didn't find spotPageAddrMarker in it, to ensure that it's trimmed:
-            e.Values["TrackerForeignId"] = trackerForeignId.Trim( );
+            e.Values["TrackerForeignId"] = spotId.Trim( );
           }
         }
       }
