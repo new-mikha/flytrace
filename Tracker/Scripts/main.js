@@ -177,7 +177,7 @@ function showLogos() {
 
     var homeControlDiv = document.createElement('div');
     homeControlDiv.style.padding = '5px';
-    homeControlDiv.innerHTML = "<img src='" + _logoSource + "'/>";
+    homeControlDiv.innerHTML = "<a href='http://www.advridermag.com.au/forum' target='flytrace_advridermag'><img src='" + _logoSource + "'/></a>";
 
     homeControlDiv.index = 1;
     _map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(homeControlDiv);
