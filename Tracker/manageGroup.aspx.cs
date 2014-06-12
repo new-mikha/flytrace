@@ -33,12 +33,7 @@ using System.Linq;
 
 using FlyTrace.LocationLib;
 using FlyTrace.LocationLib.Data;
-
-// UserGroupsGrid.ascx
-// Resources.resx
-// Shared/public depending on if it's shared or public
-// ALTER TABLE dbo.[Group] ADD IsPublic BIT NOT NULL CONSTRAINT Group_IsPublic DEFAULT 1
-// --ALTER TABLE dbo.[Group] DROP CONSTRAINT Group_IsPublic
+using FlyTrace.LocationLib.ForeignAccess;
 
 namespace FlyTrace
 {
@@ -111,7 +106,7 @@ namespace FlyTrace
       else
       {
         if ( Global.IsSimpleEventsModel )
-        { 
+        {
           TrackerDataSetTableAdapters.ProcsAdapter procsAdapter =
             new TrackerDataSetTableAdapters.ProcsAdapter( );
 
@@ -254,12 +249,15 @@ namespace FlyTrace
 
             if ( dbTrackerCheck == 0 )
             { // the tracker doesn't exists in the database, so we need to check it:
-              string appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "Serice\\logs" );
+              string appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "logs" );
 
               ForeignId foreignId = new ForeignId( ForeignId.SPOT, spotId );
 
-              LocationRequest locationRequest =
-                new LocationRequest( foreignId, appAuxLogFolder, LocationRequest.DefaultAttemptsOrder );
+              LocationRequestFactory locationRequestFactory =
+               ForeignAccessCentral.LocationRequestFactories[ForeignId.SPOT];
+
+              LocationRequest locationRequest = locationRequestFactory.CreateRequest( foreignId );
+
               TrackerState tracker = locationRequest.ReadLocation( );
               if ( tracker.Error != null &&
                    tracker.Error.Type == ErrorType.BadTrackerId )

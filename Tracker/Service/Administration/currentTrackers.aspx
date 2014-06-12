@@ -98,7 +98,7 @@
                                     <ItemTemplate>
                                         <asp:Label ID="error" runat="server" Text='<%# Bind("Error") %>'></asp:Label>
                                         <br />
-                                        <asp:Label ID="errorFeedKind" runat="server" Text='<%# Bind("ErrorFeedKind") %>'></asp:Label>
+                                        <asp:Label ID="errorTag" runat="server" Text='<%# Bind("ErrorTag") %>'></asp:Label>
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:TemplateField HeaderText="Access Time" ItemStyle-HorizontalAlign="Center" SortExpression="AccessTime">
@@ -116,9 +116,9 @@
                                         <asp:Label ID="revision" runat="server" Text='<%# Bind("Revision") %>'></asp:Label>
                                     </ItemTemplate>
                                 </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Feed Kind" ItemStyle-HorizontalAlign="Center" SortExpression="FeedKind">
+                                <asp:TemplateField HeaderText="Tag" ItemStyle-HorizontalAlign="Center" SortExpression="Tag">
                                     <ItemTemplate>
-                                        <asp:Label ID="feedKind" runat="server" Text='<%# Bind("FeedKind") %>'></asp:Label>
+                                        <asp:Label ID="tag" runat="server" Text='<%# Bind("Tag") %>'></asp:Label>
                                     </ItemTemplate>
                                 </asp:TemplateField>
                             </Columns>

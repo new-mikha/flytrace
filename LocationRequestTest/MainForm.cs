@@ -46,8 +46,9 @@ namespace LocationRequestTest
 {
   using FlyTrace.LocationLib;
   using FlyTrace.LocationLib.Data;
-  using FlyTrace.Service;
   using System.Threading;
+  using FlyTrace.LocationLib.ForeignAccess.Spot;
+  using FlyTrace.Service;
 
   public partial class MainForm : Form
   {
@@ -168,10 +169,13 @@ namespace LocationRequestTest
 
         string appFolder = Path.GetDirectoryName( Assembly.GetExecutingAssembly( ).CodeBase ).Replace( "file:\\", "" );
 
-        LocationRequest locationRequest;
+        SpotLocationRequest locationRequest;
         if ( this.inetSourceRadioButton.Checked )
+        {
+          ForeignId foreignId = new ForeignId( ForeignId.SPOT, feedId );
           locationRequest =
-            new LocationRequest( new ForeignId( ForeignId.SPOT, feedId ), appFolder, attemptsOrder.ToArray( ) );
+            new SpotLocationRequest( foreignId, appFolder, attemptsOrder.ToArray( ) );
+        }
         else
         {
           if ( attemptsOrder.Count == 0 )
@@ -181,9 +185,10 @@ namespace LocationRequestTest
           if ( sampleXml == null )
             sampleXml = ( new SampleXmlForm( ) ).SampleXml; // bad, bad style :)
 
+          ForeignId foreignId = new ForeignId( ForeignId.SPOT, "testxml" );
           locationRequest =
-            new LocationRequest(
-              new ForeignId( ForeignId.SPOT, "testxml" ), sampleXml, attemptsOrder[0], appFolder );
+            new SpotLocationRequest(
+              foreignId, sampleXml, attemptsOrder[0], appFolder );
         }
 
         if ( this.resultTextBox.Text.Length > 0 )
@@ -234,10 +239,10 @@ namespace LocationRequestTest
       {
         try
         {
-          LocationRequest locationRequest = ( LocationRequest ) ar.AsyncState;
+          SpotLocationRequest locationRequest = ( SpotLocationRequest ) ar.AsyncState;
 
           StringBuilder sb = new StringBuilder( );
-          sb.AppendFormat( "Result for {0}:\r\n", locationRequest.TrackerForeignId );
+          sb.AppendFormat( "Result for {0}:\r\n", locationRequest.ForeignId );
 
           TrackerState trackerRequestResult = locationRequest.EndReadLocation( ar );
 
@@ -381,6 +386,7 @@ namespace LocationRequestTest
         AddResultText( "Start revision: " );
         AddResultText( RevisionGenerator.Revision.ToString( ) );
         AddResultText( ", incrementing by 1..." );
+
         RevisionGenerator.IncrementRevision( );
         AddResultText( "Done, new revision: " );
         AddResultTextLine( RevisionGenerator.Revision.ToString( ) );
@@ -483,7 +489,7 @@ namespace LocationRequestTest
 
                 try
                 {
-                  resultRev = RevisionGenerator.IncrementRevision( );
+                resultRev = RevisionGenerator.IncrementRevision( );
                 }
                 catch ( Exception exc1 )
                 {

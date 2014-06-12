@@ -38,19 +38,23 @@ namespace FlyTrace.LocationLib
 
     public readonly Data.Error Error;
 
+    /// <summary>
+    /// Debug string specific to the foreign system, e.g. feed kind for SPOT. Used for diagnostics
+    /// only.
+    /// </summary>
+    public readonly string Tag;
+
     public readonly DateTime RefreshTime = DateTime.Now.ToUniversalTime( );
 
     /// <summary>
     /// Makes an instance with the lat and lon found in the response from the foreign web server.
     /// </summary>
     /// <param name="fullTrack">Not null, not empty value (i.e. with at least one element).</param>
-    /// <param name="feedKind"></param>
-    public TrackerState(
-      IEnumerable<Data.TrackPointData> fullTrack,
-      FeedKind feedKind
-    )
+    /// <param name="tag">Debug string specific to the foreign system, see also <see cref="Tag"/> for details.</param>
+    public TrackerState( IEnumerable<Data.TrackPointData> fullTrack, string tag )
     {
-      Position = new Data.Position( fullTrack, feedKind );
+      Position = new Data.Position( fullTrack );
+      Tag = tag;
     }
 
     /// <summary>
@@ -59,32 +63,37 @@ namespace FlyTrace.LocationLib
     /// <see cref="RequestResult(string)"/> should be used.
     /// </summary>
     /// <param name="errCode"></param>
-    public TrackerState( Data.ErrorType errCode, FeedKind feedKind )
+    /// <param name="tag">Debug string specific to the foreign system, see also <see cref="Tag"/> for details.</param>
+    public TrackerState( Data.ErrorType errCode, string tag )
     {
       if ( errCode == Data.ErrorType.AuxError )
         throw new ArgumentException(
           string.Format( "This constructor doesn't accept error state {0}, another constructor should be used for that.", errCode ) );
 
-      Error = new Data.Error( errCode, null, feedKind );
+      Error = new Data.Error( errCode, null );
+      Tag = tag;
     }
 
     /// <summary>Makes an instance with aux.error message.</summary>
     /// <param name="auxErrorMessage"></param>
-    public TrackerState( string auxErrorMessage, FeedKind feedKind )
+    /// <param name="tag">Debug string specific to the foreign system, see also <see cref="Tag"/> for details.</param>
+    public TrackerState( string auxErrorMessage, string tag )
     {
       if ( auxErrorMessage == null )
         throw new ArgumentNullException( "auxErrorMessage" );
 
-      Error = new Data.Error( Data.ErrorType.AuxError, auxErrorMessage, feedKind );
+      Error = new Data.Error( Data.ErrorType.AuxError, auxErrorMessage );
+      Tag = tag;
     }
 
-    protected TrackerState( Data.Position position, Data.Error error )
+    protected TrackerState( Data.Position position, Data.Error error, string tag )
     {
       if ( position == null && error == null )
         throw new ArgumentException( "At least one parameter should be not null" );
 
       Position = position;
       Error = error;
+      Tag = tag;
     }
 
     public override string ToString( )

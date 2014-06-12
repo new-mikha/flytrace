@@ -43,6 +43,9 @@ namespace FlyTrace.Service
     {
       log4net.Config.XmlConfigurator.Configure( );
 
+      string appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "logs" );
+      LocationLib.ForeignAccess.ForeignAccessCentral.Init( appAuxLogFolder );
+
       try
       { // that's a service feauture, so don't stop if it fails
         this.serviceMutex = new Mutex( true, "FlyTraceService" );

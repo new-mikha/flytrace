@@ -40,17 +40,15 @@ namespace FlyTrace.LocationLib.Data
 
   public class Error 
   {
-    internal Error( ErrorType type, string auxMessage, FeedKind feedKind )
+    internal Error( ErrorType type, string auxMessage )
     {
       Type = type;
       AuxMessage = auxMessage;
-      FeedKind = feedKind;
       // If adding new field/property - don't forget to add it to equalityExpression below
     }
 
     public readonly ErrorType Type;
     public readonly string AuxMessage;
-    public readonly FeedKind FeedKind;
 
     // EqualityExpressionCheck checks that all fields/properties of the type are included into the expression
     private static Func<Error, Error, bool> equalityExpression =
@@ -58,7 +56,6 @@ namespace FlyTrace.LocationLib.Data
         ( x, y ) =>
           x.Type == y.Type &&
           x.AuxMessage == y.AuxMessage &&
-          x.FeedKind == y.FeedKind &&
           x.Message == y.Message // Although Message is a function of Type & AuxMessage, include it here for
                                  // completeness. So if later it is made independent property we still have it here.
       );
