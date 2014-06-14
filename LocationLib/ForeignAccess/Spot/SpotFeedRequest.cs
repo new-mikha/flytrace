@@ -28,15 +28,8 @@ using log4net;
 using System.Xml;
 using System.Threading;
 
-namespace FlyTrace.LocationLib
+namespace FlyTrace.LocationLib.ForeignAccess.Spot
 {
-  public class AbortStat
-  {
-    public readonly DateTime Start = DateTime.Now.ToUniversalTime( );
-
-    public int Stage;
-  }
-
   /// <summary>
   /// TODO: change comment, it's wrong at the moment.
   /// AsyncWebRequestState instanse can change during a single call to LocationRequest, each instance correponds to a single attempt.
@@ -164,7 +157,7 @@ namespace FlyTrace.LocationLib
       }
       catch ( Exception exc )
       {
-        SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind ) );
+        SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind.ToString( ) ) );
         Log.ErrorFormat( "BeginRequest throwed an error for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, this.FeedKind, this.callId, exc.Message );
       }
 
@@ -280,7 +273,7 @@ namespace FlyTrace.LocationLib
         Log.InfoFormat( "GetResponseCallback fail for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, this.FeedKind, this.callId,
           Log.IsDebugEnabled ? exc.ToString( ) : exc.Message );
 
-        SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind ) );
+        SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind.ToString( ) ) );
       }
     }
 
@@ -444,7 +437,7 @@ namespace FlyTrace.LocationLib
             exc.Message
           );
 
-          SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind ) );
+          SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind.ToString( ) ) );
         }
       }
       catch ( Exception outerExc )
@@ -469,8 +462,29 @@ namespace FlyTrace.LocationLib
     private static TrackPointDataTimeEqualityComparer timeEqualityComparer =
       new TrackPointDataTimeEqualityComparer( );
 
+    //private static Random rand = new Random( );
+
+    //private static object randSync = new object( );
+
+    //private void RandomError( )
+    //{
+    //  if ( FeedKind == Spot.FeedKind.Feed_2_0 )
+    //  {
+    //    lock ( randSync )
+    //    {
+    //      if ( rand.NextDouble( ) < 0.3 )
+    //      {
+    //        throw new ApplicationException( "Random error" );
+    //      }
+    //    }
+    //  }
+
+    //}
+
     private TrackerState AnalyzeCurrentBuffer( AsyncChainedState<TrackerState> asyncChainedState )
     {
+      // RandomError( );
+
       Log.DebugFormat( "Analyzing buffer for {0}, {1}, lrid {2}", this.trackerForeignId, this.FeedKind, this.callId );
 
       TrackerState result;
@@ -538,16 +552,16 @@ namespace FlyTrace.LocationLib
 
       if ( isBadTrackerId )
       {
-        result = new TrackerState( Data.ErrorType.BadTrackerId, FeedKind );
+        result = new TrackerState( Data.ErrorType.BadTrackerId, FeedKind.ToString( ) );
       }
       else if ( messages.Count == 0 )
       {
         if ( parseErrorMessage != null )
-          result = new TrackerState( parseErrorMessage, FeedKind );
+          result = new TrackerState( parseErrorMessage, FeedKind.ToString( ) );
         else if ( messageTagFound )
-          result = new TrackerState( Data.ErrorType.ResponseHasBadSchema, FeedKind );
+          result = new TrackerState( Data.ErrorType.ResponseHasBadSchema, FeedKind.ToString( ) );
         else
-          result = new TrackerState( Data.ErrorType.ResponseHasNoData, FeedKind );
+          result = new TrackerState( Data.ErrorType.ResponseHasNoData, FeedKind.ToString( ) );
       }
       else
       { // we have some data
@@ -560,7 +574,7 @@ namespace FlyTrace.LocationLib
           .Distinct( timeEqualityComparer )
           .OrderByDescending( msg => msg.ForeignTime );
 
-        result = new TrackerState( fullTrack, FeedKind );
+        result = new TrackerState( fullTrack, FeedKind.ToString( ) );
       }
 
       return result;

@@ -22,24 +22,6 @@ namespace FlyTrace {
         protected global::System.Web.UI.WebControls.Label serviceStatShortStatus;
         
         /// <summary>
-        /// serviceStatDetailsMultiView control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.MultiView serviceStatDetailsMultiView;
-        
-        /// <summary>
-        /// serviceStatDetailsShow control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.View serviceStatDetailsShow;
-        
-        /// <summary>
         /// serviceStatDisplayTable control.
         /// </summary>
         /// <remarks>
@@ -47,42 +29,6 @@ namespace FlyTrace {
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
         protected global::System.Web.UI.WebControls.Table serviceStatDisplayTable;
-        
-        /// <summary>
-        /// serviceStatDetailsEdit control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.View serviceStatDetailsEdit;
-        
-        /// <summary>
-        /// serviceStatEditTable control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.Table serviceStatEditTable;
-        
-        /// <summary>
-        /// updateAttemptsOrderLinkButton control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.LinkButton updateAttemptsOrderLinkButton;
-        
-        /// <summary>
-        /// cancelAttemptsOrderChangeLinkButton control.
-        /// </summary>
-        /// <remarks>
-        /// Auto-generated field.
-        /// To modify move field declaration from designer file to code-behind file.
-        /// </remarks>
-        protected global::System.Web.UI.WebControls.LinkButton cancelAttemptsOrderChangeLinkButton;
         
         /// <summary>
         /// adminStatMessagesTable control.

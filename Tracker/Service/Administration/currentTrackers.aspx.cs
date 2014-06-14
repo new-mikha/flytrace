@@ -51,7 +51,7 @@ namespace FlyTrace.Service.Administration
 
       public string Error { get; set; }
 
-      public string ErrorFeedKind { get; set; }
+      public string ErrorTag { get; set; }
 
       public DateTime AccessTime { get; set; }
 
@@ -63,7 +63,7 @@ namespace FlyTrace.Service.Administration
 
       public int? Revision { get; set; }
 
-      public string FeedKind { get; set; }
+      public string Tag { get; set; }
     }
 
     protected void Page_Load( object sender, EventArgs e )
@@ -78,17 +78,17 @@ namespace FlyTrace.Service.Administration
 
     private void BindDataSource( )
     {
-      Dictionary<string, TrackerStateHolder> trackers = TrackerDataManager.Singleton.Trackers;
+      Dictionary<ForeignId, TrackerStateHolder> trackers = TrackerDataManager.Singleton.Trackers;
 
       List<TrackerDisplayItem> list;
       lock ( trackers )
       {
         list = new List<TrackerDisplayItem>( trackers.Count );
 
-        foreach ( KeyValuePair<string, TrackerStateHolder> kvp in trackers )
+        foreach ( KeyValuePair<ForeignId, TrackerStateHolder> kvp in trackers )
         {
           TrackerDisplayItem item = new TrackerDisplayItem( );
-          item.SpotId = kvp.Key;
+          item.SpotId = kvp.Key.Id;
 
           DateTime accessTime = DateTime.FromFileTime( Interlocked.Read( ref kvp.Value.AccessTimestamp ) ).ToUniversalTime( );
           item.AccessTime = accessTime;
@@ -111,7 +111,7 @@ namespace FlyTrace.Service.Administration
 
             if ( tracker.Position != null )
             {
-              item.FeedKind = tracker.Position.FeedKind.ToString( );
+              item.Tag = tracker.Tag;
 
               {
                 TrackPointData currPoint = tracker.Position.CurrPoint;
@@ -134,7 +134,7 @@ namespace FlyTrace.Service.Administration
             if ( tracker.Error != null )
             {
               item.Error = tracker.Error.ToString( );
-              item.ErrorFeedKind = tracker.Error.FeedKind.ToString( );
+              item.ErrorTag = tracker.Tag;
             }
 
           }
@@ -158,12 +158,12 @@ namespace FlyTrace.Service.Administration
         return list.OrderByDescending( i => i.SpotId );
       }
 
-      if ( SortExpression == "FeedKind" )
+      if ( SortExpression == "Tag" )
       {
         if ( SortDirection == SortDirection.Ascending )
-          return list.OrderBy( i => i.FeedKind ); ;
+          return list.OrderBy( i => i.Tag ); ;
 
-        return list.OrderByDescending( i => i.FeedKind );
+        return list.OrderByDescending( i => i.Tag );
       }
 
       if ( SortExpression == "CurrentTs" )

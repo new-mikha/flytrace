@@ -29,27 +29,29 @@ using System.Linq;
 using log4net;
 
 using FlyTrace.LocationLib;
+using FlyTrace.LocationLib.ForeignAccess;
 using FlyTrace.Service.Properties;
 
 namespace FlyTrace.Service
 {
+
   internal class TrackersListRequest
   {
     private List<LocationRequest> requests = new List<LocationRequest>( );
 
-    private AsyncChainedState<Dictionary<string, TrackerState>> asyncChainedState;
+    private AsyncChainedState<Dictionary<ForeignId, TrackerState>> asyncChainedState;
 
     private int multiCallCheck = 0;
 
-    public Dictionary<string, TrackerState> GetTrackersLocations( IEnumerable<string> trackerForeignIds, IEnumerable<FeedKind> attemptsOrder )
+    public Dictionary<ForeignId, TrackerState> GetTrackersLocations( IEnumerable<ForeignId> trackerForeignIds )
     {
-      IAsyncResult ar = BeginGetTrackersLocations( trackerForeignIds, attemptsOrder, null, null );
+      IAsyncResult ar = BeginGetTrackersLocations( trackerForeignIds, null, null );
       return EndGetTrackersLocations( ar );
     }
 
     private static ILog Log = LogManager.GetLogger( "TDM.ListReq" );
 
-    public IAsyncResult BeginGetTrackersLocations( IEnumerable<string> trackerForeignIds, IEnumerable<FeedKind> attemptsOrder, AsyncCallback callback, object state )
+    public IAsyncResult BeginGetTrackersLocations( IEnumerable<ForeignId> trackerForeignIds, AsyncCallback callback, object state )
     {
       int syncMultiCallCheck = Interlocked.Increment( ref multiCallCheck );
 
@@ -60,7 +62,7 @@ namespace FlyTrace.Service
             "The BeginGetTrackersLocations method cannot be called for the second time on the same " +
              "instance until the EndGetTrackersLocations method has been called." );
 
-        this.asyncChainedState = new AsyncChainedState<Dictionary<string, TrackerState>>( callback, state );
+        this.asyncChainedState = new AsyncChainedState<Dictionary<ForeignId, TrackerState>>( callback, state );
 
         {
           int endWaitTimeout = Settings.Default.ListRequestTimeout;
@@ -73,23 +75,33 @@ namespace FlyTrace.Service
         // Blog search: http://www.google.com.au/search?tbm=blg&hl=en&source=hp&biw=1440&bih=738&q=http%3A%2F%2Fshare.findmespot.com%2Fshared%2Ffaces%2F&btnG=Search&gbv=2#q=http://share.findmespot.com/shared/faces/&hl=en&gbv=2&tbm=blg&source=lnt&tbs=qdr:w&sa=X&ei=3cXYTurKGojSmAX-4LXnCw&ved=0CBEQpwUoBA&bav=on.2,or.r_gc.r_pw.,cf.osb&fp=536e09847cd89619&biw=1440&bih=738
 
         string appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "logs" );
-        foreach ( string trackerForeignId in trackerForeignIds )
+        foreach ( ForeignId trackerForeignId in trackerForeignIds )
         { // We fill the this.requests list PRIOR to actually starting any web request. List is thread-safe for 
           // reading when none writes to it, so later we don't care about sycnronization when accessing it.
-
-          LocationRequest locRequest;
-
-          if ( trackerForeignId.StartsWith( Test.TestSource.ForeignIdPrefix ) )
+          try
           {
-            string testXml = Test.TestSource.Singleton.GetFeed( trackerForeignId );
-            locRequest = new LocationRequest( trackerForeignId, testXml, FeedKind.Feed_2_0, appAuxLogFolder );
-          }
-          else
-          {
-            locRequest = new LocationRequest( trackerForeignId, appAuxLogFolder, attemptsOrder );
-          }
+            LocationRequestFactory requestFactory =
+              ForeignAccessCentral.LocationRequestFactories[trackerForeignId.Type];
 
-          this.requests.Add( locRequest );
+            LocationRequest locRequest;
+
+            if ( trackerForeignId.Id.StartsWith( Test.TestSource.TestIdPrefix ) )
+            {
+              string testXml = Test.TestSource.Singleton.GetFeed( trackerForeignId.Id );
+              locRequest = requestFactory.CreateTestRequest( trackerForeignId, testXml );
+            }
+            else
+            {
+              locRequest = requestFactory.CreateRequest( trackerForeignId );
+            }
+
+            this.requests.Add( locRequest );
+          }
+          catch ( Exception exc )
+          {
+            Log.ErrorFormat( "Can't read location for {0}: {1}", trackerForeignId.Id, exc.ToString( ) );
+            AddTrackerError( trackerForeignId, exc );
+          }
         }
 
         // And only when we have the list of the Request instances prepared, begin the actual web requests:
@@ -101,8 +113,8 @@ namespace FlyTrace.Service
           }
           catch ( Exception exc )
           {
-            Log.ErrorFormat( "Can't read location for {0}: {1}", locationRequest.TrackerForeignId, exc.ToString( ) );
-            AddTrackerError( locationRequest.TrackerForeignId, exc );
+            Log.ErrorFormat( "Can't read location for {0}: {1}", locationRequest.ForeignId, exc.ToString( ) );
+            AddTrackerError( locationRequest.ForeignId, exc );
           }
         }
       }
@@ -116,10 +128,10 @@ namespace FlyTrace.Service
       return this.asyncChainedState.FinalAsyncResult;
     }
 
-    public Dictionary<string, TrackerState> EndGetTrackersLocations( IAsyncResult ar )
+    public Dictionary<ForeignId, TrackerState> EndGetTrackersLocations( IAsyncResult ar )
     {
-      AsyncResult<Dictionary<string, TrackerState>> asyncResult =
-        ( AsyncResult<Dictionary<string, TrackerState>> ) ar;
+      AsyncResult<Dictionary<ForeignId, TrackerState>> asyncResult =
+        ( AsyncResult<Dictionary<ForeignId, TrackerState>> ) ar;
 
       try
       {
@@ -131,25 +143,25 @@ namespace FlyTrace.Service
 
         bool hasAbortedRequests = false;
 
-        Dictionary<string, TrackerState> substResult = new Dictionary<string, TrackerState>( );
+        Dictionary<ForeignId, TrackerState> substResult = new Dictionary<ForeignId, TrackerState>( );
         lock ( this.result )
         {
           foreach ( LocationRequest locReq in this.requests )
           {
             TrackerState trackerState;
-            if ( this.result.TryGetValue( locReq.TrackerForeignId, out trackerState ) )
+            if ( this.result.TryGetValue( locReq.ForeignId, out trackerState ) )
             {
-              substResult.Add( locReq.TrackerForeignId, trackerState );
+              substResult.Add( locReq.ForeignId, trackerState );
             }
             else
             {
-              LocationRequest.TimedOutRequestsLog.ErrorFormat( "Location request hasn't finished for lrid {0}, tracker id {1}", locReq.Lrid, locReq.TrackerForeignId );
+              LocationRequest.TimedOutRequestsLog.ErrorFormat( "Location request hasn't finished for lrid {0}, tracker id {1}", locReq.Lrid, locReq.ForeignId );
               ThreadPool.QueueUserWorkItem( AsyncAbortRequest, locReq );
               LocationRequest.TimedOutRequestsLog.ErrorFormat( "Location request with lrid {0} queued for abort.", locReq.Lrid );
 
               hasAbortedRequests = true;
 
-              substResult.Add( locReq.TrackerForeignId, new TrackerState( exc.Message, FeedKind.Feed_2_0 ) );
+              substResult.Add( locReq.ForeignId, new TrackerState( exc.Message, "None" ) );
             }
           }
         }
@@ -268,12 +280,12 @@ namespace FlyTrace.Service
         try
         {
           TrackerState trackerState = locationRequest.EndReadLocation( ar );
-          AddTrackerData( locationRequest.TrackerForeignId, trackerState );
+          AddTrackerData( locationRequest.ForeignId, trackerState );
         }
         catch ( Exception exc )
         {
           Log.Error( "Can't end reading locations", exc );
-          AddTrackerError( locationRequest.TrackerForeignId, exc );
+          AddTrackerError( locationRequest.ForeignId, exc );
         }
       }
       catch ( Exception exc2 )
@@ -283,9 +295,9 @@ namespace FlyTrace.Service
       }
     }
 
-    private Dictionary<string, TrackerState> result = new Dictionary<string, TrackerState>( );
+    private Dictionary<ForeignId, TrackerState> result = new Dictionary<ForeignId, TrackerState>( );
 
-    private void AddTrackerData( string trackerForeignId, TrackerState trackerState )
+    private void AddTrackerData( ForeignId trackerForeignId, TrackerState trackerState )
     {
       if ( Log.IsDebugEnabled )
         Log.DebugFormat( "AddTrackerData: acquiring lock for {0}...", trackerForeignId );
@@ -320,9 +332,9 @@ namespace FlyTrace.Service
       }
     }
 
-    private void AddTrackerError( string trackerForeignId, Exception exc )
+    private void AddTrackerError( ForeignId trackerForeignId, Exception exc )
     {
-      AddTrackerData( trackerForeignId, new TrackerState( exc.Message, FeedKind.None ) );
+      AddTrackerData( trackerForeignId, new TrackerState( exc.Message, "None" ) );
     }
   }
 }

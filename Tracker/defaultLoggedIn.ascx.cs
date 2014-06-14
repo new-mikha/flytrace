@@ -100,27 +100,15 @@ namespace FlyTrace
         this.serviceStatShortStatus.Visible = true;
         this.serviceStatShortStatus.Text = "Seems that the service is not running";
         this.serviceStatShortStatus.ForeColor = warnColor;
-        this.serviceStatDetailsMultiView.Visible = false;
         return;
       }
-
-      this.serviceStatDetailsMultiView.Visible = true;
 
       try
       {
         Service.AdminFacade serviceAdminFacade = new Service.AdminFacade( );
         Service.AdminStat adminStat = serviceAdminFacade.GetAdminStat( );
 
-        if ( this.serviceStatDetailsMultiView.GetActiveView( ) == this.serviceStatDetailsShow )
-        {
-          this.serviceStatShortStatus.Visible = true;
-          ServiceStatToDisplayMode( adminStat.AttemptsOrder );
-        }
-        else
-        {
-          this.serviceStatShortStatus.Visible = false;
-          ServiceStatToEditMode( adminStat.AttemptsOrder );
-        }
+        ServiceStatToDisplayMode( adminStat.ForeignSourcesStat );
 
         ShowAdminStatMessages( adminStat.Messages );
 
@@ -170,94 +158,55 @@ namespace FlyTrace
       this.adminStatMessagesTable.Rows.Add( row );
     }
 
-    private void ServiceStatToEditMode( FlyTrace.Service.AttemptStat[] attemptStats )
+    private void ServiceStatToDisplayMode( FlyTrace.Service.ForeignSourceStat[] foreignSourcesStat )
     {
-      int iItem = 0;
-      foreach ( FlyTrace.Service.AttemptStat attemptStat in attemptStats )
+      foreach ( FlyTrace.Service.ForeignSourceStat stat in foreignSourcesStat )
       {
-        TableRow row = new TableRow( );
+        List<string> lines = new List<string>( );
+        lines.Add( stat.Name );
+        if ( !string.IsNullOrEmpty( stat.Stat ) )
+          lines.AddRange( stat.Stat.Split( '\n' ) );
 
-        TableCell tableCell = new TableCell( );
-
-        DropDownList ddl = new DropDownList( );
-        ddl.Items.AddRange( attemptStats.Select( attStat => new ListItem( attStat.FeedKind.ToString( ) ) ).ToArray( ) );
-        ddl.SelectedIndex = iItem;
-        ddl.ID = "feedKindOrder_" + iItem.ToString( );
-        ddl.Attributes.Add( "onchange", "alert(this.selectedIndex)" );
-        tableCell.Controls.Add( ddl );
-
-        row.Cells.Add( tableCell );
-
-        this.serviceStatEditTable.Rows.Add( row );
-
-        iItem++;
-      }
-    }
-
-    private void ServiceStatToDisplayMode( FlyTrace.Service.AttemptStat[] attemptStats )
-    {
-      foreach ( FlyTrace.Service.AttemptStat attemptStat in attemptStats )
-      {
-        TableRow row = new TableRow( );
-
+        foreach ( string line in lines )
         {
-          TableCell feedNameCell = new TableCell( );
+          TableRow row = new TableRow( );
 
-          feedNameCell.Text = attemptStat.FeedKind.ToString( ) + " :";
-          feedNameCell.HorizontalAlign = HorizontalAlign.Right;
-          if ( attemptStat.FeedKind.ToString( ) != LocationLib.LocationRequest.DefaultAttemptsOrder[0].ToString( ) )
-            feedNameCell.ForeColor = Color.Gray;
-          row.Cells.Add( feedNameCell );
-        }
-
-        {
-          TableCell feedTimeCell = new TableCell( );
-
-          feedTimeCell.HorizontalAlign = HorizontalAlign.Right;
-          if ( attemptStat.SuccTime.HasValue )
+          int iTab = line.IndexOf( '\t' );
           {
+            TableCell feedNameCell = new TableCell( );
+
+            if ( iTab >= 0 )
+            {
+              feedNameCell.Text = line.Remove( iTab );
+              feedNameCell.HorizontalAlign = HorizontalAlign.Right;
+            }
+            else
+            {
+              feedNameCell.Text = line;
+              feedNameCell.ColumnSpan = 2;
+            }
+
+            if ( !stat.IsOk )
+              feedNameCell.ForeColor = Color.Gray;
+            row.Cells.Add( feedNameCell );
+          }
+
+          if ( iTab >= 0 )
+          {
+            TableCell feedTimeCell = new TableCell( );
+
+            feedTimeCell.HorizontalAlign = HorizontalAlign.Right;
             feedTimeCell.Text =
-              FlyTrace.LocationLib.Tools.GetAgeStr( attemptStat.SuccTime.Value );
-          }
-          else
-          {
-            feedTimeCell.Text = "None";
+              ( iTab < line.Length - 1 )
+              ? line.Substring( iTab + 1 )
+              : "None";
+
+            row.Cells.Add( feedTimeCell );
           }
 
-          row.Cells.Add( feedTimeCell );
+          this.serviceStatDisplayTable.Rows.Add( row );
         }
-
-        this.serviceStatDisplayTable.Rows.Add( row );
       }
-
-      if ( attemptStats.Length == 3 &&
-           attemptStats[0].FeedKind == Service.FeedKind.Feed_2_0 &&
-           attemptStats[1].FeedKind == Service.FeedKind.Feed_1_0_undoc &&
-           attemptStats[2].FeedKind == Service.FeedKind.Feed_1_0 )
-      {
-        this.serviceStatShortStatus.Text = "all good";
-        this.serviceStatShortStatus.ForeColor = okColor;
-      }
-      else
-      {
-        this.serviceStatShortStatus.Text = "NOT ORDERED";
-        this.serviceStatShortStatus.ForeColor = warnColor;
-      }
-    }
-
-    protected void changeAttemptsOrderLinkButton_Click( object sender, EventArgs e )
-    {
-      this.serviceStatDetailsMultiView.SetActiveView( this.serviceStatDetailsEdit );
-    }
-
-    protected void updateAttemptsOrderLinkButton_Click( object sender, EventArgs e )
-    {
-      this.serviceStatDetailsMultiView.SetActiveView( this.serviceStatDetailsShow );
-    }
-
-    protected void cancelAttemptsOrderChangeLinkButton_Click( object sender, EventArgs e )
-    {
-      this.serviceStatDetailsMultiView.SetActiveView( this.serviceStatDetailsShow );
     }
   }
 }

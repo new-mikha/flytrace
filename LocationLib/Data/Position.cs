@@ -28,7 +28,7 @@ namespace FlyTrace.LocationLib.Data
 {
   public class Position
   {
-    internal Position( IEnumerable<TrackPointData> fullTrack, FeedKind feedKind )
+    internal Position( IEnumerable<TrackPointData> fullTrack )
     {
       if ( fullTrack == null )
         throw new ArgumentNullException( "fullTrack" );
@@ -36,7 +36,6 @@ namespace FlyTrace.LocationLib.Data
       CurrPoint = fullTrack.First( ); // throws an exception if it's empty - it's ok (because it shouldn't be empty)
       PreviousPoint = fullTrack.Skip( 1 ).FirstOrDefault( ); // could be null
       FullTrack = fullTrack.ToArray( );
-      FeedKind = feedKind;
       // If adding new field/property - don't forget to add it to equalityExpression below
     }
 
@@ -57,8 +56,6 @@ namespace FlyTrace.LocationLib.Data
 
     public readonly TrackPointData[] FullTrack;
 
-    public readonly FeedKind FeedKind;
-
     // EqualityExpressionCheck checks that all fields/properties of the type are included into the expression.
     private static Func<Position, Position, bool> equalityExpression =
       Utils.EqualityExpressionCheck<Position>(
@@ -67,8 +64,7 @@ namespace FlyTrace.LocationLib.Data
           x.UserMessage == y.UserMessage && // of FullTrack, include it here for completeness. So if later it is 
           TrackPointData.ArePointsEqual( x.CurrPoint, y.CurrPoint ) && // made independent property(s) we still have it here.
           TrackPointData.ArePointsEqual( x.PreviousPoint, y.PreviousPoint ) &&
-          TrackPointData.ArePointArraysEqual( x.FullTrack, y.FullTrack ),
-        "FeedKind"
+          TrackPointData.ArePointArraysEqual( x.FullTrack, y.FullTrack )
       );
 
     public override string ToString( )

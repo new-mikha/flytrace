@@ -49,9 +49,10 @@ namespace FlyTrace.Service
     (
       LocationLib.Data.Position position,
       LocationLib.Data.Error error,
+      string tag,
       UpdateReason updatedPart
     )
-      : base( position, error )
+      : base( position, error, tag )
     {
       int revision;
       if ( RevisionGenerator.TryIncrementRevision( out revision ) )
@@ -69,7 +70,7 @@ namespace FlyTrace.Service
     (
       RevisedTrackerState oldTrackerState
     )
-      : base( oldTrackerState.Position, oldTrackerState.Error )
+      : base( oldTrackerState.Position, oldTrackerState.Error, oldTrackerState.Tag )
     {
       DataRevision = oldTrackerState.DataRevision;
       UpdatedPart = oldTrackerState.UpdatedPart;
@@ -100,7 +101,7 @@ namespace FlyTrace.Service
       if ( oldResult == null && newResult == null ) return null;
 
       if ( oldResult == null && newResult != null )
-        return new RevisedTrackerState( newResult.Position, newResult.Error, UpdateReason.BrandNew );
+        return new RevisedTrackerState( newResult.Position, newResult.Error, newResult.Tag, UpdateReason.BrandNew );
 
       if ( oldResult != null && newResult == null )
         return new RevisedTrackerState( oldResult );
@@ -179,7 +180,7 @@ namespace FlyTrace.Service
       else
         updatedPart = UpdateReason.NewPos;
 
-      return new RevisedTrackerState( position, error, updatedPart );
+      return new RevisedTrackerState( position, error, newResult.Tag, updatedPart );
     }
   }
 }

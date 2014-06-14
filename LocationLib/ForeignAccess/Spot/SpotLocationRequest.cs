@@ -33,7 +33,7 @@ using System.Xml;
 
 using log4net;
 
-namespace FlyTrace.LocationLib
+namespace FlyTrace.LocationLib.ForeignAccess.Spot
 {
   public enum FeedKind
   {
@@ -55,7 +55,7 @@ namespace FlyTrace.LocationLib
   /// into the full track and Location.PrevPoint. At the same time, Location.CurrPoint is always filled if the newset 
   /// point returned by the foreign server, no matter what age it has.
   /// </remarks>
-  public class LocationRequest
+  public class SpotLocationRequest : LocationRequest
   {
     private static ILog Log = LogManager.GetLogger( "TDM.LocReq" );
 
@@ -80,9 +80,10 @@ namespace FlyTrace.LocationLib
     /// That's needed for logging purposes. It could be null, or e.g. 
     /// value of Path.Combine( HttpRuntime.AppDomainAppPath , "logs" ).
     /// </param>
-    public LocationRequest( string trackerForeignId, string appAuxLogFolder, IEnumerable<FeedKind> attemptsOrder )
+    public SpotLocationRequest( ForeignId foreignId, string appAuxLogFolder, IEnumerable<FeedKind> attemptsOrder )
+      : base( foreignId )
     {
-      TrackerForeignId = trackerForeignId;
+      this.spotId = foreignId.Id;
       this.appAuxLogFolder = appAuxLogFolder;
 
       if ( attemptsOrder != null &&
@@ -96,27 +97,32 @@ namespace FlyTrace.LocationLib
       }
     }
 
-    private string testXml;
+    private readonly string spotId;
 
-    public LocationRequest
+    private readonly string testXml;
+
+    public SpotLocationRequest
     (
-      string testForeignId,
+      ForeignId foreignId,
       string testXml,
       FeedKind requestType,
       string appAuxLogFolder
     )
+      : base( foreignId )
     {
-      TrackerForeignId = testForeignId;
       this.testXml = testXml;
       this.appAuxLogFolder = appAuxLogFolder;
       this.attemptsOrder = new FeedKind[] { requestType };
     }
 
-    public readonly string TrackerForeignId;
-
     /// <summary>Number of attempt for this request (where 0 is first attempt), corresponds to an element 
     /// in <see cref="feedsPriorities"/>.</summary>
     private volatile int iAttempt;
+
+    private volatile FeedKind currentFeedKind;
+
+    internal FeedKind CurrentFeedKind { get { return this.currentFeedKind; } }
+
 
     //private static Random rand = new Random( );
 
@@ -149,9 +155,7 @@ namespace FlyTrace.LocationLib
     // a bit too many volatile reads after that, but it shouldn't be a problem - not thousands of them per seconds anyway.
     private volatile SpotFeedRequest currentRequest;
 
-    public long Lrid { get; private set; }
-
-    public IAsyncResult BeginReadLocation( AsyncCallback callback, object state )
+    public override IAsyncResult BeginReadLocation( AsyncCallback callback, object state )
     {
       lock ( this.sync )
       {
@@ -167,16 +171,16 @@ namespace FlyTrace.LocationLib
 
       Lrid = asyncChainedState.Id;
 
-      FeedKind currentFeedKind = this.attemptsOrder[this.iAttempt];
+      this.currentFeedKind = this.attemptsOrder[this.iAttempt];
 
       if ( this.testXml == null )
       { // Normal working mode
-        this.currentRequest = new SpotFeedRequest( currentFeedKind, TrackerForeignId, asyncChainedState.Id, this.iAttempt );
-        Log.InfoFormat( "Created request for {0}, {1} lrid {2}", TrackerForeignId, this.currentRequest.FeedKind, asyncChainedState.Id );
+        this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.spotId, asyncChainedState.Id, this.iAttempt );
+        Log.InfoFormat( "Created request for {0}, {1} lrid {2}", this.spotId, this.currentRequest.FeedKind, asyncChainedState.Id );
       }
       else
       { // Debug mode
-        this.currentRequest = new SpotFeedRequest( currentFeedKind, "TestXml", testXml, asyncChainedState.Id );
+        this.currentRequest = new SpotFeedRequest( this.currentFeedKind, "TestXml", testXml, asyncChainedState.Id );
       }
       this.currentRequest.BeginRequest( SpotFeedRequestCallback, asyncChainedState );
 
@@ -185,13 +189,11 @@ namespace FlyTrace.LocationLib
 
     private bool isAborted = false;
 
-    public static ILog TimedOutRequestsLog = LogManager.GetLogger( "TimedOutRequests" );
-
     /// <summary>
     /// Normally this method should not be called. This only happens in cases like if SpotFeedRequest.ResponseStreamReadCallback 
     /// is not called and SpotFeedRequest fails to finish normally (such cases were observed)
     /// </summary>
-    public void SafelyAbortRequest( AbortStat abortStat )
+    public override void SafelyAbortRequest( AbortStat abortStat )
     {
       // Once it's quite emergency mode, do everything to close it, taking that any kind of exception could happen here,
       // including those from race conditions.
@@ -224,11 +226,11 @@ namespace FlyTrace.LocationLib
         {
           string tsFileName = string.Format( "{0}.succ.timestamp", this.currentRequest.FeedKind );
           if ( Log.IsDebugEnabled )
-            Log.DebugFormat( "Call succeeded for {0}, {1}, lrid {2}", TrackerForeignId, this.currentRequest.FeedKind, asyncChainedState.Id );
+            Log.DebugFormat( "Call succeeded for {0}, {1}, lrid {2}", this.spotId, this.currentRequest.FeedKind, asyncChainedState.Id );
 
           if ( this.iAttempt != 0 )
           {
-            Log.WarnFormat( "Retry succeeded for {0}, {1}, lrid {2}", TrackerForeignId, this.currentRequest.FeedKind, asyncChainedState.Id );
+            Log.WarnFormat( "Retry succeeded for {0}, {1}, lrid {2}", this.spotId, this.currentRequest.FeedKind, asyncChainedState.Id );
           }
 
           if ( this.appAuxLogFolder != null )
@@ -241,7 +243,7 @@ namespace FlyTrace.LocationLib
             }
             catch ( Exception exc )
             {
-              Log.ErrorFormat( "SpotFeedRequestCallback for {0}, {1}, lrid {2}: {3}", TrackerForeignId, this.currentRequest.FeedKind, asyncChainedState.Id, exc );
+              Log.ErrorFormat( "SpotFeedRequestCallback for {0}, {1}, lrid {2}: {3}", this.spotId, this.currentRequest.FeedKind, asyncChainedState.Id, exc );
             }
           }
 
@@ -256,11 +258,12 @@ namespace FlyTrace.LocationLib
 
           if ( !havingMoreAttempts )
           {
-            if ( result.Error.Type == Data.ErrorType.ResponseHasNoData )
+            if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
+                 result.Error.Type == Data.ErrorType.BadTrackerId )
             {
               Log.InfoFormat(
                 "Request for {0}, lrid {1} failed: {2}",
-                TrackerForeignId,
+                this.spotId,
                 asyncChainedState.Id,
                 result.Error );
             }
@@ -268,7 +271,7 @@ namespace FlyTrace.LocationLib
             {
               Log.ErrorFormat(
                 "Request for {0}, lrid {1} failed: {2}",
-                TrackerForeignId,
+                this.spotId,
                 asyncChainedState.Id,
                 result.Error );
             }
@@ -279,15 +282,15 @@ namespace FlyTrace.LocationLib
           {
             this.iAttempt++;
 
-            FeedKind currentFeedKind = this.attemptsOrder[this.iAttempt];
+            this.currentFeedKind = this.attemptsOrder[this.iAttempt];
 
-            this.currentRequest = new SpotFeedRequest( currentFeedKind, TrackerForeignId, asyncChainedState.Id, this.iAttempt );
+            this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.spotId, asyncChainedState.Id, this.iAttempt );
 
             Thread.MemoryBarrier( );
             // If isAborted but we're here then "bad" request was finished and closed.
             if ( !this.isAborted )
             {
-              Log.WarnFormat( "Retrying using {0} for {1}, lrid {2} after an error: {3}", currentFeedKind, TrackerForeignId, asyncChainedState.Id, result.Error );
+              Log.WarnFormat( "Retrying using {0} for {1}, lrid {2} after an error: {3}", this.currentFeedKind, this.spotId, asyncChainedState.Id, result.Error );
 
               this.currentRequest.BeginRequest( SpotFeedRequestCallback, asyncChainedState );
             }
@@ -300,7 +303,7 @@ namespace FlyTrace.LocationLib
       }
     }
 
-    public TrackerState EndReadLocation( IAsyncResult ar )
+    protected override TrackerState EndReadLocationProtected( IAsyncResult ar )
     {
       lock ( this.sync )
       { // safe to do it before actual work of EndReadLocation
@@ -316,13 +319,13 @@ namespace FlyTrace.LocationLib
 
         TrackerState result = finalAsyncResult.EndInvoke( );
 
-        Log.InfoFormat( "Got some result for {0} ({1}): {2}", TrackerForeignId, this.currentRequest.FeedKind, result );
+        Log.InfoFormat( "Got some result for {0} ({1}): {2}", this.spotId, this.currentRequest.FeedKind, result );
 
         return result;
       }
       catch ( Exception exc )
       {
-        Log.ErrorFormat( "Got error for {0}: {1}", TrackerForeignId, exc.Message );
+        Log.ErrorFormat( "Got error for {0}: {1}", this.spotId, exc.Message );
         throw;
       }
     }

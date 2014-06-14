@@ -681,7 +681,7 @@ namespace FlyTrace.Service
           string trackerName = callData.TrackerIds[i].Name;
           TrackerStateHolder trackerStateHolder = callData.TrackerStateHolders[i];
 
-          RevisedTrackerState nullableSnapshot = snapshots[i]; // null means that position is not retrieved yet from the SPOT server 
+          RevisedTrackerState nullableSnapshot = snapshots[i]; // null means that position is not retrieved yet from the foreign server 
 
           if ( nullableSnapshot != null && nullableSnapshot.DataRevision != null )
             nextThresholdRevision = Math.Max( nextThresholdRevision, nullableSnapshot.DataRevision.Value );
@@ -969,9 +969,10 @@ namespace FlyTrace.Service
 
     private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 
-    private Dictionary<string, TrackerStateHolder> trackers = new Dictionary<string, TrackerStateHolder>( );
+    private Dictionary<ForeignId, TrackerStateHolder> trackers = 
+      new Dictionary<ForeignId, TrackerStateHolder>( );
 
-    internal Dictionary<string, TrackerStateHolder> Trackers { get { return this.trackers; } }
+    internal Dictionary<ForeignId, TrackerStateHolder> Trackers { get { return this.trackers; } }
 
     private CoordResponseItem TrackerFromTrackerSnapshot
     (
@@ -1108,7 +1109,7 @@ namespace FlyTrace.Service
       {
         try
         {
-          Dictionary<string, TrackerStateHolder> trackersToUpdate = GetTrackersToUpdate( );
+          Dictionary<ForeignId, TrackerStateHolder> trackersToUpdate = GetTrackersToUpdate( );
 
           int maxMsToWait = ( int ) Math.Ceiling( ( nextAllowedRequestTime - DateTime.Now ).TotalMilliseconds );
           if ( maxMsToWait <= 0 )
@@ -1146,8 +1147,8 @@ namespace FlyTrace.Service
               Log.InfoFormat( "Updating {0} trackers...", trackersToUpdate.Count );
               TrackersListRequest trackersListRequest = new TrackersListRequest( );
 
-              Dictionary<string, TrackerState> trackerRequestResults =
-                  trackersListRequest.GetTrackersLocations( trackersToUpdate.Keys, GetSanitizedAttemptsOrder( ) );
+              Dictionary<ForeignId, TrackerState> trackerRequestResults =
+                  trackersListRequest.GetTrackersLocations( trackersToUpdate.Keys );
 
               // calc nextAllowedRequestTime here to prevent tons of exceptions per second in 
               // case of an unexpected systematic problems with requests:
@@ -1166,7 +1167,7 @@ namespace FlyTrace.Service
                 Log.Info( "Reset nextAllowedRequestTime to Now" );
               }
 
-              foreach ( KeyValuePair<string, TrackerState> idAndLocation in trackerRequestResults )
+              foreach ( KeyValuePair<ForeignId, TrackerState> idAndLocation in trackerRequestResults )
               {
                 // No-lock technique: we just replace Snapshot. 
                 // If a reader has older version, or null - it's ok everywhere.
@@ -1177,29 +1178,6 @@ namespace FlyTrace.Service
                 TrackerStateHolder trackerStateHolder = trackersToUpdate[idAndLocation.Key];
 
                 TrackerState freshResult = idAndLocation.Value;
-
-                if ( freshResult.Error == null )
-                {
-                  {
-                    DateTime otherFeedSuccTime;
-
-                    lock ( this.attemptsStatSync )
-                    {
-                      if ( !feedsSuccTimes.TryGetValue( freshResult.Position.FeedKind, out otherFeedSuccTime ) ||
-                           otherFeedSuccTime < freshResult.RefreshTime )
-                      {
-                        feedsSuccTimes[freshResult.Position.FeedKind] = freshResult.RefreshTime;
-                      }
-                    }
-                  }
-
-                  {
-                    int feedStat;
-                    this.feedsSuccStats.TryGetValue( freshResult.Position.FeedKind, out feedStat );
-                    this.feedsSuccStats[freshResult.Position.FeedKind] = feedStat + 1;
-                  }
-                }
-
 
                 RevisedTrackerState mergedResult;
 
@@ -1217,14 +1195,12 @@ namespace FlyTrace.Service
                 if ( Log.IsInfoEnabled )
                   Log.InfoFormat( "Merged result for {0}: {1}.", idAndLocation.Key, mergedResult );
               }
-
-              UpdateAttemptsOrder( );
             }
           } // if ( trackersToUpdate.Count > 0 )
 
           lock ( this.trackers )
           { // Now remove trackers that haven't been accessed for a long time.
-            List<string> oldTrackersIds = new List<string>( );
+            List<ForeignId> oldTrackersIds = new List<ForeignId>( );
             long threshold2Remove = DateTime.Now.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
             foreach ( var pair in this.trackers )
             {
@@ -1244,7 +1220,7 @@ namespace FlyTrace.Service
             {
               Log.InfoFormat( "Removing {0} old trackers...", oldTrackersIds.Count );
 
-              foreach ( string idToRemove in oldTrackersIds )
+              foreach ( ForeignId idToRemove in oldTrackersIds )
               {
                 this.trackers.Remove( idToRemove );
               }
@@ -1262,146 +1238,7 @@ namespace FlyTrace.Service
       Log.Info( "Finishing worker thread..." );
     }
 
-    private void UpdateAttemptsOrder( )
-    {
-      int totalFeedStatCount = this.feedsSuccStats.Values.Sum( );
-      if ( totalFeedStatCount > 100 )
-      {
-        string logString = "";
-        FeedKind defaultFeed = LocationRequest.DefaultAttemptsOrder[0];
-        int bestStat = 0;
-        FeedKind bestFeed = FeedKind.None;
-        foreach ( KeyValuePair<FeedKind, int> kvpFeedStat in this.feedsSuccStats )
-        {
-          if ( logString != "" )
-            logString += ", ";
-          logString += string.Format( "{0}/{1}", kvpFeedStat.Key, kvpFeedStat.Value );
-
-          if ( kvpFeedStat.Value > bestStat )
-          {
-            bestStat = kvpFeedStat.Value;
-            bestFeed = kvpFeedStat.Key;
-          }
-          else if ( kvpFeedStat.Value == bestStat &&
-                    kvpFeedStat.Key == defaultFeed )
-          {
-            bestFeed = defaultFeed;
-          }
-        }
-
-        if ( bestFeed == FeedKind.None )
-        { // should not happen, but let's check
-          Log.ErrorFormat(
-            "NONE obtained as \"best feed\", total number value in feedsSuccStats is {0}",
-            this.feedsSuccStats.Count
-          );
-        }
-        else
-        {
-          FeedKind prevBestFeed = this.attemptsOrder.FirstOrDefault( );
-          if ( bestFeed != prevBestFeed )
-          {
-            Log.Warn( "Log stat for the moment: " + logString );
-            lock ( this.attemptsStatSync )
-            {
-              this.attemptsOrder.RemoveAll( fk => fk == bestFeed );
-              this.attemptsOrder.Insert( 0, bestFeed );
-            }
-            Log.WarnFormat( "Best feed was {0}, now it's {1}", prevBestFeed, bestFeed );
-          }
-        }
-
-        this.feedsSuccStats.Clear( );
-      }
-    }
-
-    /// <summary>
-    /// Normally this.attemptsOrder should have all values from FeedKind enum except None. But it's very 
-    /// important that it's always true, otherwise it could stuck with wrong feed kind(s) or even without 
-    /// any at all. So check that these values are really there, and there is no garbage from any kind of bug.
-    /// </summary>
-    /// <returns></returns>
-    private FeedKind[] GetSanitizedAttemptsOrder( )
-    {
-      bool isOk = false;
-      if ( this.attemptsOrder == null )
-      {
-        Log.Error( "this.attemptsOrder is null" );
-      }
-      else if ( this.attemptsOrder.Count == 0 )
-      {
-        Log.Error( "this.attemptsOrder is empty" );
-      }
-      else if ( this.attemptsOrder.Contains( FeedKind.None ) )
-      {
-        Log.Error( "this.attemptsOrder contains None" );
-      }
-      else
-      {
-        int distinctCount = this.attemptsOrder.Distinct( ).Count( );
-        if ( this.attemptsOrder.Count != distinctCount )
-        {
-          Log.ErrorFormat(
-            "this.attemptsOrder contains non-unique values ({0} total and {1} unique)",
-            this.attemptsOrder.Count,
-            distinctCount
-          );
-        }
-        else
-        {
-          int totalCountOfAvailableFeeds = Enum.GetValues( typeof( FeedKind ) ).Length - 1;
-          if ( this.attemptsOrder.Count != totalCountOfAvailableFeeds )
-          {
-            Log.ErrorFormat( "this.attemptsOrder is not complete or has garbage inside ({0} values)", this.attemptsOrder.Count );
-          }
-          else
-          {
-            isOk = true;
-          }
-        }
-      }
-
-      if ( !isOk )
-      {
-        this.attemptsOrder = new List<FeedKind>( LocationRequest.DefaultAttemptsOrder );
-      }
-
-      return this.attemptsOrder.ToArray( );
-    }
-
-    private object attemptsStatSync = new object( );
-
-    private Dictionary<FeedKind, DateTime> feedsSuccTimes = new Dictionary<FeedKind, DateTime>( );
-
-    private Dictionary<FeedKind, int> feedsSuccStats = new Dictionary<FeedKind, int>( );
-
-    private List<FeedKind> attemptsOrder = new List<FeedKind>( LocationRequest.DefaultAttemptsOrder );
-
-    public AttemptStat[] AttemptStats
-    {
-      get
-      {
-        lock ( this.attemptsStatSync )
-        {
-          AttemptStat[] result = new AttemptStat[this.attemptsOrder.Count];
-
-          for ( int i = 0; i < this.attemptsOrder.Count; i++ )
-          {
-            result[i].FeedKind = this.attemptsOrder[i];
-
-            DateTime dtSucc;
-            if ( this.feedsSuccTimes.TryGetValue( result[i].FeedKind, out dtSucc ) )
-              result[i].SuccTime = dtSucc;
-            else
-              result[i].SuccTime = null;
-          }
-
-          return result;
-        }
-      }
-    }
-
-    private Dictionary<string, TrackerStateHolder> GetTrackersToUpdate( )
+    private Dictionary<ForeignId, TrackerStateHolder> GetTrackersToUpdate( )
     {
       int refreshChunk = Settings.Default.RefreshChunk;
 
@@ -1411,7 +1248,7 @@ namespace FlyTrace.Service
       // No need in MemoryBarrier here to access Snapshot because this method runs in 
       // the same thread that sets these values
 
-      Dictionary<string, TrackerStateHolder> result = new Dictionary<string, TrackerStateHolder>( );
+      Dictionary<ForeignId, TrackerStateHolder> result = new Dictionary<ForeignId, TrackerStateHolder>( );
 
       lock ( this.trackers )
       {
@@ -1605,7 +1442,7 @@ namespace FlyTrace.Service
           trackResponseItem.TrackerName = trackerName;
           trackResponseItem.Track = null;
 
-          string trackerForeignId = callData.TrackerIds[iResult].ForeignId;
+          ForeignId trackerForeignId = callData.TrackerIds[iResult].ForeignId;
           TrackerStateHolder trackerStateHolder = callData.TrackerStateHolders[iResult];
 
           bool isReqFound = false;
@@ -1742,11 +1579,5 @@ namespace FlyTrace.Service
         }
       }
     }
-  }
-
-  public struct AttemptStat
-  {
-    public FeedKind FeedKind;
-    public DateTime? SuccTime;
   }
 }

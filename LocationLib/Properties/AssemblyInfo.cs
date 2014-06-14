@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle( "LocationLib" )]
 [assembly: AssemblyDescription( "" )]
 [assembly: AssemblyConfiguration( "" )]
-[assembly: AssemblyCompany( "Microsoft" )]
+[assembly: AssemblyCompany( "Flytrace" )]
 [assembly: AssemblyProduct( "LocationLib" )]
-[assembly: AssemblyCopyright( "Copyright © Microsoft 2012" )]
+[assembly: AssemblyCopyright( "Copyright © Flytrace 2012" )]
 [assembly: AssemblyTrademark( "" )]
 [assembly: AssemblyCulture( "" )]
 

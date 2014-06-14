@@ -17,8 +17,8 @@
   You should have received a copy of the GNU Affero General Public License
   along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
 --%>
-
-<%@ Control Language="C#" AutoEventWireup="true" CodeBehind="defaultLoggedIn.ascx.cs" Inherits="FlyTrace.defaultLoggedIn" %>
+<%@ Control Language="C#" AutoEventWireup="true" CodeBehind="defaultLoggedIn.ascx.cs"
+    Inherits="FlyTrace.defaultLoggedIn" %>
 <%@ Register TagPrefix="flyTrace" TagName="UserGroupsGrid" Src="~/UserGroupsGrid.ascx" %>
 <%@ Register TagPrefix="flyTrace" TagName="UserEventsGrid" Src="~/UserEventsGrid.ascx" %>
 <%@ Register TagPrefix="flyTrace" TagName="UserTodayTask" Src="~/UserTodayTask.ascx" %>
@@ -38,22 +38,11 @@
                         Attempts order:
                         <asp:Label ID="serviceStatShortStatus" Font-Bold="true" runat="server" ForeColor="#00CC00">all good</asp:Label>
                     </div>
-                    <asp:MultiView ID="serviceStatDetailsMultiView" runat="server" ActiveViewIndex="0">
-                        <asp:View ID="serviceStatDetailsShow" runat="server">
-                            <%--<div style="border-bottom: 1px dotted gray; border-top: 1px dotted gray;"> make sense if changeAttemptsOrderLinkButton is visible--%>
-                            <div style="border-top: 1px dotted gray;">
-                                <asp:Table EnableViewState="false" ID="serviceStatDisplayTable" runat="server" CellSpacing="0" CellPadding="3">
-                                </asp:Table>
-                            </div>
-                            <%--<asp:LinkButton Visible="False" ID="changeAttemptsOrderLinkButton" runat="server" OnClick="changeAttemptsOrderLinkButton_Click">Change attempts order</asp:LinkButton>--%>
-                        </asp:View>
-                        <asp:View ID="serviceStatDetailsEdit" runat="server">
-                            <asp:Table EnableViewState="false" ID="serviceStatEditTable" runat="server" CellSpacing="0" CellPadding="3">
-                            </asp:Table>
-                            <asp:LinkButton ID="updateAttemptsOrderLinkButton" runat="server" OnClick="updateAttemptsOrderLinkButton_Click">Update</asp:LinkButton>
-                            <asp:LinkButton ID="cancelAttemptsOrderChangeLinkButton" runat="server" OnClick="cancelAttemptsOrderChangeLinkButton_Click">Cancel</asp:LinkButton>
-                        </asp:View>
-                    </asp:MultiView>
+                    <div style="border-top: 1px dotted gray;">
+                        <asp:Table EnableViewState="false" ID="serviceStatDisplayTable" runat="server" CellSpacing="0"
+                            CellPadding="3">
+                        </asp:Table>
+                    </div>
                 </div>
                 <div style="display: inline-block; margin-left: 1em; vertical-align: top">
                     <a href="administration/manageUsers.aspx">Manage Users</a><br />
@@ -67,7 +56,8 @@
                 </div>
             </div>
             <div style="margin-left: 1em;">
-                <asp:Table EnableViewState="false" ID="adminStatMessagesTable" runat="server" CellSpacing="0" CellPadding="3">
+                <asp:Table EnableViewState="false" ID="adminStatMessagesTable" runat="server" CellSpacing="0"
+                    CellPadding="3">
                 </asp:Table>
             </div>
         </div>

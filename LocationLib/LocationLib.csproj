@@ -71,6 +71,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ForeignAccess\AbortStat.cs" />
     <Compile Include="AsyncChainedState.cs" />
     <Compile Include="AsyncResult.cs" />
     <Compile Include="AsyncResultNoResult.cs" />
@@ -78,8 +79,13 @@
     <Compile Include="Data\Position.cs" />
     <Compile Include="Data\TrackPointData.cs" />
     <Compile Include="Data\Utils.cs" />
-    <Compile Include="SpotFeedRequest.cs" />
-    <Compile Include="LocationRequest.cs" />
+    <Compile Include="ForeignId.cs" />
+    <Compile Include="ForeignAccess\ForeignAccessCentral.cs" />
+    <Compile Include="ForeignAccess\LocationRequest.cs" />
+    <Compile Include="ForeignAccess\LocationRequestFactory.cs" />
+    <Compile Include="ForeignAccess\Spot\SpotFeedRequest.cs" />
+    <Compile Include="ForeignAccess\Spot\SpotLocationRequest.cs" />
+    <Compile Include="ForeignAccess\Spot\SpotLocationRequestFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="TrackerState.cs" />

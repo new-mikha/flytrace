@@ -25,6 +25,7 @@ using System.Web;
 using System.Web.Services;
 using FlyTrace.LocationLib;
 using System.Threading;
+using FlyTrace.LocationLib.ForeignAccess;
 
 namespace FlyTrace.Service.Administration
 {
@@ -45,9 +46,16 @@ namespace FlyTrace.Service.Administration
       public string Message;
     }
 
+    public struct ForeignSourceStat
+    {
+      public string Name;
+      public string Stat;
+      public bool IsOk;
+    }
+
     public struct AdminStat
     {
-      public AttemptStat[] AttemptsOrder;
+      public ForeignSourceStat[] ForeignSourcesStat;
 
       public AdminMessage[] Messages;
 
@@ -62,14 +70,25 @@ namespace FlyTrace.Service.Administration
     public AdminStat GetAdminStat( )
     {
       AdminStat result;
-      result.AttemptsOrder = TrackerDataManager.Singleton.AttemptStats;
-      
-      result.Messages = 
+      result.ForeignSourcesStat = new ForeignSourceStat[ForeignAccessCentral.LocationRequestFactories.Count];
+
+      int iForeignFactory = 0;
+      foreach ( KeyValuePair<string, LocationRequestFactory> kvp in
+        ForeignAccessCentral.LocationRequestFactories )
+      {
+        ForeignSourceStat stat;
+        stat.Name = kvp.Key;
+        stat.Stat = kvp.Value.GetStat( out stat.IsOk );
+
+        result.ForeignSourcesStat[iForeignFactory++] = stat;
+      }
+
+      result.Messages =
         TrackerDataManager.Singleton.AdminAlerts
         .GetMessages( )
-        .Select( 
-          kvp => 
-            new AdminMessage { Key = kvp.Key, Message = kvp.Value } 
+        .Select(
+          kvp =>
+            new AdminMessage { Key = kvp.Key, Message = kvp.Value }
         )
         .ToArray( );
 
