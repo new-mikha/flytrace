@@ -66,10 +66,12 @@
         }
     </style>
     <% 
+        string logoPath = System.IO.Path.Combine( HttpRuntime.AppDomainAppPath, "add/logo1.png" );
+
         Response.Write(
             string.Format(
                 "\n\n<script type=\"text/javascript\">\nvar _logoSource='{0}';\n</script>\n",
-                OwnerId == AdvRiderUserId
+                ( OwnerId == AdvRiderUserId && System.IO.File.Exists( logoPath ) )
                 ? "add/logo1.png"
                 : "" ) );
 
