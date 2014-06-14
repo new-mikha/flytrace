@@ -806,6 +806,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       string noDataMsg;
       string wrongTrackerIdMsg;
+      string feedNotActiveMsg;
 
       bool isBadTrackerId = false;
 
@@ -818,6 +819,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           // these are the messages that SPOT server return when different errors happen in SecondChance request:
           noDataMsg = "Error happened. No data returned";
           wrongTrackerIdMsg = "Wrong guestLinkId";
+          feedNotActiveMsg = wrongTrackerIdMsg;
         }
         else
         { //
@@ -831,13 +833,15 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           // these are the messages that SPOT server return when different errors happen in Unofficial request:
           noDataMsg = "No Messages to display";
           wrongTrackerIdMsg = "Feed Not Found";
+          feedNotActiveMsg = "Feed Currently Not Active"; // occurs when tracker was deleted?
         }
 
         if ( errorDescr.Contains( noDataMsg ) )
         {
           // do nothing, the well-formed XML without data will be processed as ResponseHadNoData later.
         }
-        else if ( errorDescr.Contains( wrongTrackerIdMsg ) )
+        else if ( errorDescr.Contains( wrongTrackerIdMsg ) ||
+                  errorDescr.Contains( feedNotActiveMsg ) )
         {
           isBadTrackerId = true;
         }
