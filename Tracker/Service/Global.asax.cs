@@ -43,14 +43,25 @@ namespace FlyTrace.Service
     {
       log4net.Config.XmlConfigurator.Configure( );
 
-      string appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "logs" );
+      string appAuxLogFolder;
+      if ( Properties.Settings.Default.WriteSuccRequestFlagFile )
+      {
+        appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "logs" );
+        Log.InfoFormat( "Use '{0}' as a path for succ flag files", appAuxLogFolder );
+      }
+      else
+      {
+        appAuxLogFolder = null;
+        Log.InfoFormat( "Succ flag files will not be created." );
+      }
+
       LocationLib.ForeignAccess.ForeignAccessCentral.Init( appAuxLogFolder );
 
       try
       { // that's a service feauture, so don't stop if it fails
         this.serviceMutex = new Mutex( true, "FlyTraceService" );
       }
-      catch(Exception exc)
+      catch ( Exception exc )
       {
         Log.Error( "Failed to created mutex", exc );
       }

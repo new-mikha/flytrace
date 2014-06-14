@@ -258,7 +258,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
           if ( !havingMoreAttempts )
           {
-            if ( result.Error.Type == Data.ErrorType.ResponseHasNoData )
+            if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
+                 result.Error.Type == Data.ErrorType.BadTrackerId )
             {
               Log.InfoFormat(
                 "Request for {0}, lrid {1} failed: {2}",

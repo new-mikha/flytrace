@@ -81,19 +81,29 @@
     </layout>
   </appender>
 
+  <appender name="SmtpAppender" type="log4net.Appender.SmtpAppender">
+    <to value="m.karmazin@gmail.com" />
+    <from value="admin@flytrace.com" />
+    <subject value="FlyTrace log" />
+    <smtpHost value="192.168.101.179" />
+    <bufferSize value="512" />
+    <lossy value="false" />
+    <filter type="log4net.Filter.LevelRangeFilter">
+      <levelMin value="ERROR" />
+    </filter>
+    <evaluator type="log4net.Core.TimeEvaluator">
+      <interval value="1800"/>
+    </evaluator>
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%newline%date [%thread] %level %logger - %message" />
+    </layout>
+  </appender>
 
   <root>
     <level value="WARN" />
     <appender-ref ref="ServiceNormalRollingFile" />
+    <appender-ref ref="SmtpAppender" />
   </root>
-
-  <logger name="TDM">
-    <level value="WARN" />
-  </logger>
-
-  <logger name="TDM.FeedReq">
-    <level value="WARN" />
-  </logger>
 
   <logger name="TimedOutAborts">
     <level value="DEBUG" />
@@ -106,22 +116,22 @@
     <appender-ref ref="TimedOutRequestsAppender" />
   </logger>
 
-  <logger name="TDM.IncrUpd" additivity="false">
+  <logger name="TDM.IncrUpd">
     <level value="WARN" />
     <appender-ref ref="IncrUpdRollingFile" />
   </logger>
 
-  <logger name="IncrTest" additivity="false">
+  <logger name="IncrTest">
     <level value="WARN" />
     <appender-ref ref="IncrClientErrorsAppender" />
   </logger>
 
-  <logger name="ObsoleteCallsLog" additivity="false">
+  <logger name="ObsoleteCallsLog">
     <level value="INFO" />
     <appender-ref ref="ObsoleteCallsAppender" />
   </logger>
 
-  <logger name="InfoLog" additivity="false">
+  <logger name="InfoLog">
     <level value="INFO" />
     <appender-ref ref="ServiceNormalRollingFile" />
   </logger>
