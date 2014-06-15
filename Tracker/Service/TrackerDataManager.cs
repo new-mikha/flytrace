@@ -33,6 +33,8 @@ using System.Text;
 using FlyTrace.Service.Properties;
 using System.Data.SqlClient;
 using FlyTrace.LocationLib.Data;
+using log4net.Repository;
+using log4net.Appender;
 
 namespace FlyTrace.Service
 {
@@ -931,7 +933,7 @@ namespace FlyTrace.Service
 
     private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 
-    private Dictionary<ForeignId, TrackerStateHolder> trackers = 
+    private Dictionary<ForeignId, TrackerStateHolder> trackers =
       new Dictionary<ForeignId, TrackerStateHolder>( );
 
     internal Dictionary<ForeignId, TrackerStateHolder> Trackers { get { return this.trackers; } }
@@ -1057,6 +1059,58 @@ namespace FlyTrace.Service
       }
     }
 
+    private DateTime prevBufferingAppendersPokingTs = DateTime.Now;
+
+    /// <summary>
+    /// See <see cref="PokeLog4NetBufferingAppenders"/> method. Defines time between flushes.
+    /// This time is in minutes;
+    /// </summary>
+    private const int BufferingAppendersFlushPeriod = 30;
+
+    private void PokeLog4NetBufferingAppenders( )
+    { // Method to flush events in buffered appenders like SmtpAppender. Problem is that it can keep 
+      // an unfrequent single event in the buffer until the service is stopping, even if TimeEvaluator
+      // is in use. The latter would flush the buffer only when another event is coming after specified 
+      // time. But if a single important event comes into the buffer, it would just stay there.
+      //
+      // This method solves the problem flushing each BufferingAppenderSkeleton in case it's not Lossy, 
+      // after every 30 minutes.
+
+      if ( ( DateTime.Now - prevBufferingAppendersPokingTs ).TotalMinutes > BufferingAppendersFlushPeriod )
+      {
+        prevBufferingAppendersPokingTs = DateTime.Now;
+
+        // queue it into the thread pool to avoid potential delays in log4net in processing that stuff:
+        ThreadPool.QueueUserWorkItem( Log4NetBufferingAppendersFlushWorker );
+      }
+    }
+
+    private void Log4NetBufferingAppendersFlushWorker( object state )
+    {
+      string errName = "";
+      try
+      {
+        ILoggerRepository defaultRepository = log4net.LogManager.GetRepository( );
+
+        foreach ( IAppender appender in defaultRepository.GetAppenders( ) )
+        {
+          errName = appender.GetType( ).Name;
+          if ( appender is BufferingAppenderSkeleton )
+          {
+            BufferingAppenderSkeleton bufferingAppender = appender as BufferingAppenderSkeleton;
+            if ( !bufferingAppender.Lossy )
+            {
+              bufferingAppender.Flush( );
+            }
+          }
+        }
+      }
+      catch ( Exception exc )
+      {
+        Log.ErrorFormat( "Can't poke buffering appenders, error happened for '{0}': {1}", errName, exc );
+      }
+    }
+
     private volatile bool isStoppingWorkerThread = false;
 
     private void RefreshThreadWorker( )
@@ -1085,6 +1139,8 @@ namespace FlyTrace.Service
             trackersToUpdate = null;
             this.refreshThreadEvent.WaitOne( maxMsToWait );
           }
+
+          PokeLog4NetBufferingAppenders( );
 
           if ( this.isStoppingWorkerThread )
             break;
