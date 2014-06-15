@@ -1087,16 +1087,24 @@ namespace FlyTrace.Service
 
     private void Log4NetBufferingAppendersFlushWorker( object state )
     {
+      ILog log = LogManager.GetLogger( "LogFlush" );
+
       string errName = "";
       try
       {
+        // TODO: experimental feature, all hard-coded values to be removed later:
+        DateTime destTime = DateTime.Now.AddHours( 8 );
+
         ILoggerRepository defaultRepository = log4net.LogManager.GetRepository( );
 
         foreach ( IAppender appender in defaultRepository.GetAppenders( ) )
         {
-          errName = appender.GetType( ).Name;
+          string logName = appender.GetType( ).Name;
+
+          errName = logName;
           if ( appender is BufferingAppenderSkeleton )
           {
+            log.InfoFormat( "Flushing {0} at {1}", logName, destTime );
             BufferingAppenderSkeleton bufferingAppender = appender as BufferingAppenderSkeleton;
             if ( !bufferingAppender.Lossy )
             {
@@ -1107,7 +1115,7 @@ namespace FlyTrace.Service
       }
       catch ( Exception exc )
       {
-        Log.ErrorFormat( "Can't poke buffering appenders, error happened for '{0}': {1}", errName, exc );
+        log.ErrorFormat( "Can't poke buffering appenders, error happened for '{0}': {1}", errName, exc );
       }
     }
 
