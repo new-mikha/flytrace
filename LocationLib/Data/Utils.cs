@@ -207,8 +207,6 @@ namespace FlyTrace.LocationLib.Data
 
     private static void CheckSymmetricalParamsUsage( Expression expr, Dictionary<string, int> paramsUsageStat )
     {
-      bool result = true;
-
       if ( paramsUsageStat.Count != 2 )
       {
         throw new ApplicationException(

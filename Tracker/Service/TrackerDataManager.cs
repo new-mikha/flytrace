@@ -451,10 +451,6 @@ namespace FlyTrace.Service
     {
       callData.TrackerStateHolders = new TrackerStateHolder[callData.TrackerIds.Count];
 
-      // Pick up corresponding TrackerStateHolder from the main dictionary.
-      // If it's absent, add it to the dic and set the flag that we need to wait for the added tracker retrieve.
-      bool shouldWait = false;
-
       if ( Log.IsDebugEnabled )
         Log.DebugFormat( "Acquiring lock in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
 
@@ -475,14 +471,6 @@ namespace FlyTrace.Service
           }
 
           callData.TrackerStateHolders[i] = trackerStateHolder;
-
-          // Snapshot is not volatile, but it's not a problem. If trackerStateHolder was just created above, then there 
-          // is really null. If it was created earlier and still reads as null then callData is added to 
-          // waitingToRetrieveList and sooner or later this call will be finished.
-          if ( trackerStateHolder.Snapshot == null )
-          {
-            shouldWait = true;
-          }
         }
       } // lock ( this.trackers )
 
@@ -490,32 +478,6 @@ namespace FlyTrace.Service
         Log.DebugFormat( "Lock has been released in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
 
       FinishGetCoordsCall( callData );
-
-      // Below is obsolete. Do not wait for update for "wait" trackers, return immediately.
-      //// If all data already presented in the dictionary, just set it as the result in asyncChainedState.
-      //// Otherwise add the call to the waiting list, kick the retrieve thread, and return imediately.
-      //if ( !shouldWait )
-      //{
-      //  FinishGetCoordsCall( callData );
-      //}
-      //else
-      //{
-      //  if ( Log.IsDebugEnabled )
-      //    Log.DebugFormat( "Acquiring lock #2 in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
-
-      //  lock ( this.waitingToRetrieveList )
-      //  {
-      //    if ( Log.IsDebugEnabled )
-      //      Log.DebugFormat( "Inside lock #2 in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
-
-      //    this.waitingToRetrieveList.Add( callData );
-      //  }
-
-      //  if ( Log.IsDebugEnabled )
-      //    Log.DebugFormat( "Out of lock #2 in TrackerIdsReady for call id {0}, group {1}...", callData.CallId, callData.Group );
-
-      //  this.refreshThreadEvent.Set( );
-      //}
     }
 
     private void FinishGetCoordsCall( CallData callData )

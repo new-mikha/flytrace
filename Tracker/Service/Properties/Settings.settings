@@ -11,9 +11,6 @@
     <Setting Name="Version" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">18</Value>
     </Setting>
-    <Setting Name="IncrDebugRatio" Type="System.Double" Scope="Application">
-      <Value Profile="(Default)">1</Value>
-    </Setting>
     <Setting Name="RefreshChunk" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">10</Value>
     </Setting>
@@ -22,6 +19,12 @@
     </Setting>
     <Setting Name="WriteSuccRequestFlagFile" Type="System.Boolean" Scope="Application">
       <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="IncrDebugRatio" Type="System.Double" Scope="Application">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="SpotConsequentRequestsErrorCountThresold" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">1</Value>
     </Setting>
   </Settings>
 </SettingsFile>

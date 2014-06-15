@@ -174,7 +174,7 @@ namespace LocationRequestTest
         {
           ForeignId foreignId = new ForeignId( ForeignId.SPOT, feedId );
           locationRequest =
-            new SpotLocationRequest( foreignId, appFolder, attemptsOrder.ToArray( ) );
+            new SpotLocationRequest( foreignId, appFolder, null, attemptsOrder.ToArray( ) );
         }
         else
         {
@@ -489,7 +489,7 @@ namespace LocationRequestTest
 
                 try
                 {
-                resultRev = RevisionGenerator.IncrementRevision( );
+                  resultRev = RevisionGenerator.IncrementRevision( );
                 }
                 catch ( Exception exc1 )
                 {

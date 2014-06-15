@@ -55,7 +55,10 @@ namespace FlyTrace.Service
         Log.InfoFormat( "Succ flag files will not be created." );
       }
 
-      LocationLib.ForeignAccess.ForeignAccessCentral.Init( appAuxLogFolder );
+      LocationLib.ForeignAccess.ForeignAccessCentral.Init( 
+        appAuxLogFolder ,
+        Properties.Settings.Default.SpotConsequentRequestsErrorCountThresold
+      );
 
       try
       { // that's a service feauture, so don't stop if it fails

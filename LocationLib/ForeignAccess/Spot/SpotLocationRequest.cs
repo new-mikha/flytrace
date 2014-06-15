@@ -57,9 +57,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
   /// </remarks>
   public class SpotLocationRequest : LocationRequest
   {
-    private static ILog Log = LogManager.GetLogger( "TDM.LocReq" );
+    private readonly static ILog Log = LogManager.GetLogger( "TDM.LocReq" );
 
-    private string appAuxLogFolder;
+    private readonly string appAuxLogFolder;
+
+    private readonly ThresholdCounter consequentRequestsErrorCounter;
 
     /// <summary>Requests for different destinations are executed in this order until any one succeeds or there 
     /// are no more unrequested destinations in this array.</summary>
@@ -75,16 +77,30 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     /// <summary>
     /// </summary>
-    /// <param name="trackerForeignId"></param>
-    /// <param name="appAuxLogFolder">It's where this class puts either "*.succ.timestamp" files.
-    /// That's needed for logging purposes. It could be null, or e.g. 
-    /// value of Path.Combine( HttpRuntime.AppDomainAppPath , "logs" ).
+    /// <param name="foreignId"></param>
+    /// <param name="appAuxLogFolder">It's where this class puts "*.succ.timestamp" files.
+    /// That's needed for logging purposes. It could be null  (no flag files then), or e.g. a value of 
+    /// Path.Combine( HttpRuntime.AppDomainAppPath , "logs" ).
     /// </param>
-    public SpotLocationRequest( ForeignId foreignId, string appAuxLogFolder, IEnumerable<FeedKind> attemptsOrder )
+    /// <param name="consequentRequestsErrorCounter">
+    /// A counter to check if request error should be reported as error or as warning. If the number of 
+    /// consequent request errors is not reached parameter's Threshold value, it logged as Warning. Otherwise
+    /// it's logged as Error. Can be null, in this case always logged as Error. Note that: 
+    /// - a successful request sets this counter to zero.
+    /// - ResponseHasNoData or BadTrackerId are ignored and not counted as neither fail nor success.
+    /// </param>
+    /// <param name="attemptsOrder"></param>
+    public SpotLocationRequest(
+      ForeignId foreignId,
+      string appAuxLogFolder,
+      ThresholdCounter consequentRequestsErrorCounter,
+      IEnumerable<FeedKind> attemptsOrder
+    )
       : base( foreignId )
     {
       this.spotId = foreignId.Id;
       this.appAuxLogFolder = appAuxLogFolder;
+      this.consequentRequestsErrorCounter = consequentRequestsErrorCounter;
 
       if ( attemptsOrder != null &&
            attemptsOrder.Any( fk => fk != FeedKind.None ) )
@@ -138,13 +154,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       //{
       //  throw new ApplicationException( "Debug :" + msg );
       //}
-    }
-
-    public TrackerState ReadLocation( )
-    {
-      IAsyncResult ar = BeginReadLocation( null, null );
-      ar.AsyncWaitHandle.WaitOne( );
-      return EndReadLocation( ar );
     }
 
     private readonly object sync = new object( );
@@ -248,6 +257,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           }
 
           asyncChainedState.SetAsCompleted( result );
+
+          if ( this.consequentRequestsErrorCounter != null )
+            this.consequentRequestsErrorCounter.Reset( );
         }
         else
         {
@@ -258,23 +270,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
           if ( !havingMoreAttempts )
           {
-            if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
-                 result.Error.Type == Data.ErrorType.BadTrackerId )
-            {
-              Log.InfoFormat(
-                "Request for {0}, lrid {1} failed: {2}",
-                this.spotId,
-                asyncChainedState.Id,
-                result.Error );
-            }
-            else
-            {
-              Log.ErrorFormat(
-                "Request for {0}, lrid {1} failed: {2}",
-                this.spotId,
-                asyncChainedState.Id,
-                result.Error );
-            }
+            LogRequestError( asyncChainedState, result );
 
             asyncChainedState.SetAsCompleted( result );
           }
@@ -300,6 +296,44 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       catch ( Exception exc )
       {
         asyncChainedState.SetAsCompleted( exc );
+      }
+    }
+
+    private void LogRequestError( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
+    {
+      if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
+           result.Error.Type == Data.ErrorType.BadTrackerId )
+      {
+        Log.InfoFormat(
+          "Request for {0}, lrid {1} failed: {2}",
+          this.spotId,
+          asyncChainedState.Id,
+          result.Error );
+      }
+      else
+      {
+        bool shouldReportError = true;
+        int consequentErrorsCount = 1;
+
+        if ( this.consequentRequestsErrorCounter != null )
+        {
+          consequentErrorsCount = this.consequentRequestsErrorCounter.Increment( out shouldReportError );
+        }
+
+        string message =
+          string.Format
+          (
+            "Request for {0}, lrid {1} failed: {2}. That's a consequent request error #{3}",
+            this.spotId,
+            asyncChainedState.Id,
+            result.Error,
+            consequentErrorsCount
+          );
+
+        if ( shouldReportError )
+          Log.Error( message );
+        else
+          Log.Warn( message );
       }
     }
 

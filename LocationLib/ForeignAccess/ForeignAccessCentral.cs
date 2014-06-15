@@ -14,9 +14,13 @@ namespace FlyTrace.LocationLib.ForeignAccess
 
     private static string logFolder = null;
 
-    public static void Init( string logFolder )
+    private static ThresholdCounter spotConsequentRequestsErrorCounter;
+
+    public static void Init( string logFolder, int spotConsequentRequestsErrorCountThresold )
     {
       ForeignAccessCentral.logFolder = logFolder;
+      ForeignAccessCentral.spotConsequentRequestsErrorCounter = 
+        new ThresholdCounter( spotConsequentRequestsErrorCountThresold );
     }
 
     public static Dictionary<string, LocationRequestFactory> LocationRequestFactories
@@ -32,7 +36,10 @@ namespace FlyTrace.LocationLib.ForeignAccess
 
             locationRequestFactories.Add(
               ForeignId.SPOT,
-              new Spot.SpotLocationRequestFactory( logFolder )
+              new Spot.SpotLocationRequestFactory( 
+                logFolder ,
+                spotConsequentRequestsErrorCounter
+              )
             );
           }
         }

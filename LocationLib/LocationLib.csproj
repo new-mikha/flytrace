@@ -87,6 +87,7 @@
     <Compile Include="ForeignAccess\Spot\SpotLocationRequest.cs" />
     <Compile Include="ForeignAccess\Spot\SpotLocationRequestFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ThresholdCounter.cs" />
     <Compile Include="Tools.cs" />
     <Compile Include="TrackerState.cs" />
   </ItemGroup>

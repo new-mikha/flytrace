@@ -52,15 +52,6 @@ namespace FlyTrace.Service.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
-        public double IncrDebugRatio {
-            get {
-                return ((double)(this["IncrDebugRatio"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("10")]
         public int RefreshChunk {
             get {
@@ -83,6 +74,24 @@ namespace FlyTrace.Service.Properties {
         public bool WriteSuccRequestFlagFile {
             get {
                 return ((bool)(this["WriteSuccRequestFlagFile"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double IncrDebugRatio {
+            get {
+                return ((double)(this["IncrDebugRatio"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int SpotConsequentRequestsErrorCountThresold {
+            get {
+                return ((int)(this["SpotConsequentRequestsErrorCountThresold"]));
             }
         }
     }
