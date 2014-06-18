@@ -331,6 +331,8 @@ namespace FlyTrace.Service
 
     public IAsyncResult BeginGetCoordinates( int group, string clientSeed, AsyncCallback callback, object state )
     {
+      Global.SetDefaultCultureToThread( );
+
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
       try
@@ -1123,6 +1125,8 @@ namespace FlyTrace.Service
 
     private void RefreshThreadWorker( )
     {
+      Global.SetDefaultCultureToThread();
+
       DateTime nextAllowedRequestTime = DateTime.Now;
 
       // It's OK to use "new" everywhere in this method and in methods it 
@@ -1317,10 +1321,17 @@ namespace FlyTrace.Service
       return result;
     }
 
-    public IAsyncResult BeginGetTracks( int group, TrackRequestItem[] trackRequests, AsyncCallback callback, object asyncState,
+    public IAsyncResult BeginGetTracks
+    ( 
+      int group, 
+      TrackRequestItem[] trackRequests, 
+      AsyncCallback callback, 
+      object asyncState,
       out long callId // temporary debug thing, to be removed.
-      )
+    )
     {
+      Global.SetDefaultCultureToThread( );
+
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
       LogCallCount( callCount );
@@ -1385,6 +1396,8 @@ namespace FlyTrace.Service
 
     private void GetTrackerIdResponseForTracks( IAsyncResult ar )
     {
+      Global.SetDefaultCultureToThread( );
+
       var callData = ( CallData ) ar.AsyncState;
 
       callData.CheckSynchronousFlag( ar.CompletedSynchronously );
