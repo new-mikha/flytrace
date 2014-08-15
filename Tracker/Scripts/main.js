@@ -369,8 +369,8 @@ function addMapButton(title, eventHandler, screenPosition, textColor) {
 }
 
 function isMarkerDisplayble(netTrackerData) {
-    return !isSosType(netTrackerData) &&
-        isHavingCoordinates(netTrackerData) && !netTrackerData.IsHidden;
+    return isSosType(netTrackerData) ||
+        (isHavingCoordinates(netTrackerData) && !netTrackerData.IsHidden);
 }
 
 function isHavingCoordinates(netTrackerData) {
