@@ -331,6 +331,8 @@ namespace FlyTrace.Service
 
     public IAsyncResult BeginGetCoordinates( int group, string clientSeed, AsyncCallback callback, object state )
     {
+      Global.SetDefaultCultureToThread( );
+
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
       try
@@ -1087,16 +1089,24 @@ namespace FlyTrace.Service
 
     private void Log4NetBufferingAppendersFlushWorker( object state )
     {
+      ILog log = LogManager.GetLogger( "LogFlush" );
+
       string errName = "";
       try
       {
+        // TODO: experimental feature, all hard-coded values to be removed later:
+        DateTime destTime = DateTime.Now.AddHours( 8 );
+
         ILoggerRepository defaultRepository = log4net.LogManager.GetRepository( );
 
         foreach ( IAppender appender in defaultRepository.GetAppenders( ) )
         {
-          errName = appender.GetType( ).Name;
+          string logName = appender.GetType( ).Name;
+
+          errName = logName;
           if ( appender is BufferingAppenderSkeleton )
           {
+            log.InfoFormat( "Flushing {0} at {1}", logName, destTime );
             BufferingAppenderSkeleton bufferingAppender = appender as BufferingAppenderSkeleton;
             if ( !bufferingAppender.Lossy )
             {
@@ -1107,7 +1117,7 @@ namespace FlyTrace.Service
       }
       catch ( Exception exc )
       {
-        Log.ErrorFormat( "Can't poke buffering appenders, error happened for '{0}': {1}", errName, exc );
+        log.ErrorFormat( "Can't poke buffering appenders, error happened for '{0}': {1}", errName, exc );
       }
     }
 
@@ -1115,6 +1125,8 @@ namespace FlyTrace.Service
 
     private void RefreshThreadWorker( )
     {
+      Global.SetDefaultCultureToThread();
+
       DateTime nextAllowedRequestTime = DateTime.Now;
 
       // It's OK to use "new" everywhere in this method and in methods it 
@@ -1309,10 +1321,17 @@ namespace FlyTrace.Service
       return result;
     }
 
-    public IAsyncResult BeginGetTracks( int group, TrackRequestItem[] trackRequests, AsyncCallback callback, object asyncState,
+    public IAsyncResult BeginGetTracks
+    ( 
+      int group, 
+      TrackRequestItem[] trackRequests, 
+      AsyncCallback callback, 
+      object asyncState,
       out long callId // temporary debug thing, to be removed.
-      )
+    )
     {
+      Global.SetDefaultCultureToThread( );
+
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
       LogCallCount( callCount );
@@ -1377,6 +1396,8 @@ namespace FlyTrace.Service
 
     private void GetTrackerIdResponseForTracks( IAsyncResult ar )
     {
+      Global.SetDefaultCultureToThread( );
+
       var callData = ( CallData ) ar.AsyncState;
 
       callData.CheckSynchronousFlag( ar.CompletedSynchronously );

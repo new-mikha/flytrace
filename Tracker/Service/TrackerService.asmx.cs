@@ -106,7 +106,7 @@ namespace FlyTrace.Service
 
     [WebMethod]
     public void TestCheck( string msg )
-    {
+    { // not just a debug method, this one is used from main.js script
       IncrTestLog.Error( msg );
     }
   }

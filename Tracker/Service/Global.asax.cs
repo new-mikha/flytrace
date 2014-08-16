@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Web;
 using System.Web.Security;
@@ -33,6 +34,15 @@ namespace FlyTrace.Service
 {
   public class Global : System.Web.HttpApplication
   {
+    internal static readonly CultureInfo DefaultCulture = CultureInfo.GetCultureInfo( "en-AU" );
+
+    internal static void SetDefaultCultureToThread( )
+    {
+      Thread.CurrentThread.CurrentCulture = DefaultCulture;
+      Thread.CurrentThread.CurrentUICulture = DefaultCulture;
+    }
+
+
     private readonly DateTime StartTime = DateTime.Now;
 
     private readonly ILog Log = LogManager.GetLogger( "Service.Global" );
@@ -59,6 +69,8 @@ namespace FlyTrace.Service
         appAuxLogFolder ,
         Properties.Settings.Default.SpotConsequentRequestsErrorCountThresold
       );
+
+      LocationLib.Tools.DefaultCulture = DefaultCulture;
 
       try
       { // that's a service feauture, so don't stop if it fails

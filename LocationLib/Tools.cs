@@ -22,11 +22,27 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Globalization;
+using System.Threading;
 
 namespace FlyTrace.LocationLib
 {
   public static class Tools
   {
+    private static CultureInfo defaultCulture = CultureInfo.CurrentCulture;
+
+    public static CultureInfo DefaultCulture
+    {
+      get { return defaultCulture; }
+      set { defaultCulture = value; }
+    }
+
+    internal static void SetDefaultCultureToThread( )
+    {
+      Thread.CurrentThread.CurrentCulture = DefaultCulture;
+      Thread.CurrentThread.CurrentUICulture = DefaultCulture;
+    }
+
     public static string GetAgeStr( DateTime dateTime, bool withSec = true )
     {
       double unusedTotalDays;
