@@ -13,3 +13,5 @@ Site update scripts/Update/
 Site update scripts/Full/
 Tracker/add/
 Site update scripts/Update.zip
+Tracker/Service/App_Data/test/*.xml
+!Tracker/Service/App_Data/test/_*.xml
