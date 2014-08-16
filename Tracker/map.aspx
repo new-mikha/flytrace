@@ -124,7 +124,7 @@
     </script>
     <script type="text/javascript" src="Scripts/date.format.js">
     </script>
-    <script type="text/javascript" src="Scripts/main.js?ver=63">
+    <script type="text/javascript" src="Scripts/main.js?ver=64">
     </script>
 </head>
 <body onload="initialize()">
@@ -215,7 +215,7 @@
                     </tr>
                 </table>
                 <div style="display: none;" id="hiddenHint">
-                    * Tracker is hidden from the map until it sends a new point.
+                    * Tracker is hidden until it sends a new point.
                 </div>
                 <input type="button" value='Show All Tracks' onclick='showAllTracks()' />
                 <input type="button" value='Hide All Tracks' onclick='hideAllTracks()' />
