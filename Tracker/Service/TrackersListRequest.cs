@@ -64,12 +64,12 @@ namespace FlyTrace.Service
 
         this.asyncChainedState = new AsyncChainedState<Dictionary<ForeignId, TrackerState>>( callback, state );
 
+        if( AsyncResultNoResult.DefaultEndWaitTimeout > 0 )
         {
-          int endWaitTimeout = Settings.Default.ListRequestTimeout;
-          endWaitTimeout = Math.Max( 10, endWaitTimeout );
-          endWaitTimeout = Math.Min( 120, endWaitTimeout );
-          Thread.MemoryBarrier( );
-          this.asyncChainedState.FinalAsyncResult.EndWaitTimeout = endWaitTimeout * 1000;
+          // Allow underlying requests to timeout and then report it to this async operation. 
+          // Otherwise it could be this one timing out only because underlying requests is timing out 
+          // a fraction of second later.
+          this.asyncChainedState.FinalAsyncResult.EndWaitTimeout = AsyncResultNoResult.DefaultEndWaitTimeout + 5000;
         }
 
         // Blog search: http://www.google.com.au/search?tbm=blg&hl=en&source=hp&biw=1440&bih=738&q=http%3A%2F%2Fshare.findmespot.com%2Fshared%2Ffaces%2F&btnG=Search&gbv=2#q=http://share.findmespot.com/shared/faces/&hl=en&gbv=2&tbm=blg&source=lnt&tbs=qdr:w&sa=X&ei=3cXYTurKGojSmAX-4LXnCw&ved=0CBEQpwUoBA&bav=on.2,or.r_gc.r_pw.,cf.osb&fp=536e09847cd89619&biw=1440&bih=738

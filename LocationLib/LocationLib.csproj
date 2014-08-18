@@ -79,6 +79,7 @@
     <Compile Include="Data\Position.cs" />
     <Compile Include="Data\TrackPointData.cs" />
     <Compile Include="Data\Utils.cs" />
+    <Compile Include="ForeignAccess\ConsequentErrorsCounter.cs" />
     <Compile Include="ForeignId.cs" />
     <Compile Include="ForeignAccess\ForeignAccessCentral.cs" />
     <Compile Include="ForeignAccess\LocationRequest.cs" />

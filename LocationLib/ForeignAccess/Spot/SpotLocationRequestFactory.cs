@@ -30,7 +30,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
   {
     private readonly string appAuxLogFolder;
 
-    private readonly ThresholdCounter consequentRequestsErrorCounter;
+    private readonly ConsequentErrorsCounter consequentErrorsCounter;
 
     /// <summary>
     /// Spot requests factory constructor.
@@ -38,23 +38,23 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     /// <param name="appAuxLogFolder">It's where this class puts "*.succ.timestamp" files.
     /// That's needed for logging purposes. It could be null (no flag files then), or e.g. a value of 
     /// Path.Combine( HttpRuntime.AppDomainAppPath , "logs" ).</param>
-    /// <param name="consequentRequestsErrorCounter">
+    /// <param name="consequentErrorsCounter">
     /// A counter to check if request error should be reported as error or as warning. If the number of 
     /// consequent request errors is not reached parameter's Threshold value, it logged as Warning. Otherwise
     /// it's logged as Error. Can be null, in this case always logged as Error. Note that: 
     /// - a successful request sets this counter to zero.
     /// - ResponseHasNoData or BadTrackerId are ignored and not counted as neither fail nor success.
     /// </param>
-    public SpotLocationRequestFactory( string appAuxLogFolder, ThresholdCounter consequentRequestsErrorCounter )
+    public SpotLocationRequestFactory( string appAuxLogFolder, ConsequentErrorsCounter consequentErrorsCounter )
     {
       this.appAuxLogFolder = appAuxLogFolder;
-      this.consequentRequestsErrorCounter = consequentRequestsErrorCounter;
+      this.consequentErrorsCounter = consequentErrorsCounter;
     }
 
     public override LocationRequest CreateRequest( ForeignId foreignId )
     {
       LocationRequest locationRequest =
-        new SpotLocationRequest( foreignId, this.appAuxLogFolder, this.consequentRequestsErrorCounter, GetSanitizedAttemptsOrder( ) );
+        new SpotLocationRequest( foreignId, this.appAuxLogFolder, this.consequentErrorsCounter, GetSanitizedAttemptsOrder( ) );
 
       locationRequest.ReadLocationFinished += locationRequest_ReadLocationFinished;
 

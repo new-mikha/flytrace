@@ -14,13 +14,27 @@ namespace FlyTrace.LocationLib.ForeignAccess
 
     private static string logFolder = null;
 
-    private static ThresholdCounter spotConsequentRequestsErrorCounter;
+    private static ConsequentErrorsCounter spotConsequentErrorsCounter;
 
-    public static void Init( string logFolder, int spotConsequentRequestsErrorCountThresold )
+    /// <summary>
+    /// Initializes auxilliary facilities like logging. Call is optional.
+    /// </summary>
+    /// <param name="logFolder"></param>
+    /// <param name="spotConsequentRequestsErrorCountThresold"></param>
+    /// <param name="spotConsequentTimedOutRequestsThresold"></param>
+    public static void InitAux( 
+      string logFolder, 
+      int spotConsequentRequestsErrorCountThresold ,
+      int spotConsequentTimedOutRequestsThresold
+    )
     {
       ForeignAccessCentral.logFolder = logFolder;
-      ForeignAccessCentral.spotConsequentRequestsErrorCounter = 
-        new ThresholdCounter( spotConsequentRequestsErrorCountThresold );
+      
+      ForeignAccessCentral.spotConsequentErrorsCounter =
+        new ConsequentErrorsCounter( 
+          spotConsequentRequestsErrorCountThresold, 
+          spotConsequentTimedOutRequestsThresold 
+        );
     }
 
     public static Dictionary<string, LocationRequestFactory> LocationRequestFactories
@@ -38,7 +52,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
               ForeignId.SPOT,
               new Spot.SpotLocationRequestFactory( 
                 logFolder ,
-                spotConsequentRequestsErrorCounter
+                spotConsequentErrorsCounter
               )
             );
           }

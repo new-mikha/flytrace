@@ -61,7 +61,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private readonly string appAuxLogFolder;
 
-    private readonly ThresholdCounter consequentRequestsErrorCounter;
+    private readonly ConsequentErrorsCounter consequentErrorsCounter;
 
     /// <summary>Requests for different destinations are executed in this order until any one succeeds or there 
     /// are no more unrequested destinations in this array.</summary>
@@ -82,7 +82,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     /// That's needed for logging purposes. It could be null  (no flag files then), or e.g. a value of 
     /// Path.Combine( HttpRuntime.AppDomainAppPath , "logs" ).
     /// </param>
-    /// <param name="consequentRequestsErrorCounter">
+    /// <param name="consequentErrorsCounter">
     /// A counter to check if request error should be reported as error or as warning. If the number of 
     /// consequent request errors is not reached parameter's Threshold value, it logged as Warning. Otherwise
     /// it's logged as Error. Can be null, in this case always logged as Error. Note that: 
@@ -93,14 +93,14 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     public SpotLocationRequest(
       ForeignId foreignId,
       string appAuxLogFolder,
-      ThresholdCounter consequentRequestsErrorCounter,
+      ConsequentErrorsCounter consequentErrorsCounter,
       IEnumerable<FeedKind> attemptsOrder
     )
       : base( foreignId )
     {
       this.spotId = foreignId.Id;
       this.appAuxLogFolder = appAuxLogFolder;
-      this.consequentRequestsErrorCounter = consequentRequestsErrorCounter;
+      this.consequentErrorsCounter = consequentErrorsCounter;
 
       if ( attemptsOrder != null &&
            attemptsOrder.Any( fk => fk != FeedKind.None ) )
@@ -258,8 +258,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
           asyncChainedState.SetAsCompleted( result );
 
-          if ( this.consequentRequestsErrorCounter != null )
-            this.consequentRequestsErrorCounter.Reset( );
+          if ( this.consequentErrorsCounter != null )
+            this.consequentErrorsCounter.RequestsErrorsCounter.Reset( );
         }
         else
         {
@@ -315,9 +315,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         bool shouldReportError = true;
         int consequentErrorsCount = 1;
 
-        if ( this.consequentRequestsErrorCounter != null )
+        if ( this.consequentErrorsCounter != null )
         {
-          consequentErrorsCount = this.consequentRequestsErrorCounter.Increment( out shouldReportError );
+          consequentErrorsCount = 
+            this.consequentErrorsCounter.RequestsErrorsCounter.Increment( out shouldReportError );
         }
 
         string message =

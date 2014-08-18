@@ -65,9 +65,10 @@ namespace FlyTrace.Service
         Log.InfoFormat( "Succ flag files will not be created." );
       }
 
-      LocationLib.ForeignAccess.ForeignAccessCentral.Init( 
+      LocationLib.ForeignAccess.ForeignAccessCentral.InitAux( 
         appAuxLogFolder ,
-        Properties.Settings.Default.SpotConsequentRequestsErrorCountThresold
+        Properties.Settings.Default.SpotConsequentRequestsErrorCountThresold,
+        Properties.Settings.Default.SpotConsequentTimedOutRequestsThresold
       );
 
       LocationLib.Tools.DefaultCulture = DefaultCulture;

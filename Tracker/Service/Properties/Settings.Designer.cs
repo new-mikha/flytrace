@@ -61,15 +61,6 @@ namespace FlyTrace.Service.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("60")]
-        public int ListRequestTimeout {
-            get {
-                return ((int)(this["ListRequestTimeout"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool WriteSuccRequestFlagFile {
             get {
@@ -88,10 +79,19 @@ namespace FlyTrace.Service.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
         public int SpotConsequentRequestsErrorCountThresold {
             get {
                 return ((int)(this["SpotConsequentRequestsErrorCountThresold"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1")]
+        public int SpotConsequentTimedOutRequestsThresold {
+            get {
+                return ((int)(this["SpotConsequentTimedOutRequestsThresold"]));
             }
         }
     }
