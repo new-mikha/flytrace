@@ -124,7 +124,7 @@
     </script>
     <script type="text/javascript" src="Scripts/date.format.js">
     </script>
-    <script type="text/javascript" src="Scripts/main.js?ver=64">
+    <script type="text/javascript" src="Scripts/main.js?ver=65">
     </script>
 </head>
 <body onload="initialize()">
@@ -161,14 +161,18 @@
                     <input type="button" value="Update Now" onclick="onLookup();" />
                     <input type="button" value="Show Map" onclick="togglePanels();" />
                 </div>
-                <br />
+                <p>
                 Coordinates format:
                 <select id="coordFormatSelect" onchange="javascript:changeCoordsFormat(this.value)"
                     id="coordFormatTopDropDownList">
-                    <option value="Deg">DD.DDDDDD&#176;</option>
-                    <option selected="selected" value="DegMin">DD&#176;MM.MMM'</option>
-                    <option value="DegMinSec">DD&#176;MM'SS.S&quot;</option>
+                    <option value="deg">DD.DDDDDD&#176;</option>
+                    <option selected="selected" value="degmin">DD&#176;MM.MMM'</option>
+                    <option value="degminsec">DD&#176;MM'SS.S&quot;</option>
                 </select>
+                <br />
+                The same map with this coordinates format pre-selected: <a id='preFormatLink' href=''>
+                    link</a>
+                </p>
                 <table id='listTable' border="0">
                     <tr>
                         <td>

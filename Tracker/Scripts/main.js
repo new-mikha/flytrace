@@ -32,28 +32,37 @@ function initialize() {
     try {
         var queryString = function () {
             // This function is anonymous, is executed immediately and 
-            // the return value is assigned to QueryString!
+            // the return value is assigned to queryString!
             var query_string = {};
             var query = window.location.search.substring(1);
             var vars = query.split("&");
             for (var i = 0; i < vars.length; i++) {
                 var pair = vars[i].split("=");
-                // If first entry with this name
-                if (typeof query_string[pair[0]] === "undefined") {
-                    query_string[pair[0]] = pair[1];
+
+                var key = pair[0];
+                if (typeof key !== "undefined")
+                    key = key.toLowerCase();
+
+                var val = pair[1];
+                if (typeof val !== "undefined")
+                    val = val.toLowerCase();
+
+                if (typeof query_string[key] === "undefined") {
+                    // If first entry with this name
+                    query_string[key] = val;
+                } else if (typeof query_string[key] === "string") {
                     // If second entry with this name
-                } else if (typeof query_string[pair[0]] === "string") {
-                    var arr = [query_string[pair[0]], pair[1]];
-                    query_string[pair[0]] = arr;
-                    // If third or later entry with this name
+                    var arr = [query_string[key], val];
+                    query_string[key] = arr;
                 } else {
-                    query_string[pair[0]].push(pair[1]);
+                    // If third or later entry with this name
+                    query_string[key].push(val);
                 }
             }
             return query_string;
         } ();
 
-        _autoUpdateEnabled = !(queryString.UseAutoUpdate == "0" || queryString.UseAutoUpdate == "false");
+        _autoUpdateEnabled = !(queryString.useautoupdate == "0" || queryString.useautoupdate == "false");
 
         if (_groupId == 132 ||
             _groupId == 138 ||
@@ -124,12 +133,24 @@ function initialize() {
 
         addMapButton("Show Pilot List", togglePanels, google.maps.ControlPosition.TOP_LEFT);
 
-        var tempCoordFormat = getCookie('flytrace_coord_format');
+        var tempCoordFormat = queryString.defcoordformat;
 
-        if (tempCoordFormat != null && tempCoordFormat != '') {
+        if (tempCoordFormat !== 'deg' &&
+            tempCoordFormat !== 'degmin' &&
+            tempCoordFormat !== 'degminsec') {
+            tempCoordFormat = getCookie('flytrace_coord_format');
+            if (typeof tempCoordFormat !== "undefined")
+                tempCoordFormat = tempCoordFormat.toLowerCase();
+        }
+
+        if (tempCoordFormat == 'deg' ||
+            tempCoordFormat == 'degmin' ||
+            tempCoordFormat == 'degminsec') {
             _coordFormat = tempCoordFormat;
             $("#coordFormatSelect").val(_coordFormat);
         }
+
+        setPreFormatLink();
 
         _numAllTracksAlertShown = getCookie('numAllTracksAlertShown');
         if (isNaN(parseInt(_numAllTracksAlertShown))) {
@@ -169,6 +190,35 @@ function initialize() {
         alert(exc.message);
     }
 }
+
+function updateUrlParameter(url, param, paramVal) {
+    var newAdditionalURL = "";
+    var tempArray = url.split("?");
+    var baseURL = tempArray[0];
+    var additionalURL = tempArray[1];
+    var temp = "";
+    if (additionalURL) {
+        tempArray = additionalURL.split("&");
+        for (i = 0; i < tempArray.length; i++) {
+            if (tempArray[i].split('=')[0] != param) {
+                newAdditionalURL += temp + tempArray[i];
+                temp = "&";
+            }
+        }
+    }
+
+    var rows_txt = temp + "" + param + "=" + paramVal;
+    return baseURL + "?" + newAdditionalURL + rows_txt;
+}
+
+function setPreFormatLink() {
+    var format = $("#coordFormatSelect").val();
+
+    var url = window.location.href.toLowerCase();
+    url = updateUrlParameter(url, "defcoordformat", format);
+    document.getElementById('preFormatLink').setAttribute('href', url);
+}
+
 
 function showLogos() {
     if (_logoSource == "" ||
@@ -1213,7 +1263,7 @@ function getContent(marker) {
             coordsTableStr =
                 "<table style=\"width: 100%; font-family: 'courier New' , Courier, monospace;\"><tr><td>"
                     + coordsStr + "</td><td style=\"text-align: center;\">" +
-                    "<a href='javascript: copyToClipboard(\"" + coordsStrFlat + "\");'>Copy<br />coords</a>" +
+                    "<a href='javascript: copyToClipboard(\"" + escape(coordsStrFlat) + "\");'>Copy<br />coords</a>" +
                     "</td></tr></table>";
 
             var statusStr =
@@ -1232,9 +1282,6 @@ function getContent(marker) {
                     coordsTableStr +
                     errAddOn +
                     getTrackControlStr(trackerHolder);
-
-            //+ "<input type='button' value='Center &amp; Zoom To' onclick='centerAndZoom(\"" + trackerHolder.Name + "\");'/> <br />" +
-            //"<input type='button' value='Select Coords' onclick='copyToClipboard(\"" + coordsStr + "\");'/>";
         }
 
         return content;
@@ -1950,12 +1997,15 @@ function showAge(trackerHolder) {
 }
 
 function copyToClipboard(text) {
-    window.prompt("Copy that manually:", text);
+    var d = document.createElement("div");
+    d.innerHTML = unescape(text);
+
+    window.prompt("Copy that manually:", d.innerText);
 }
 
 function getDegrees(lat, lon, breakLine) {
     var res;
-    if (_coordFormat == 'Deg') {
+    if (_coordFormat == 'deg') {
         res = lat.toString();
 
         if (breakLine)
@@ -1981,18 +2031,18 @@ function getDegrees(lat, lon, breakLine) {
             lonPrefix = "E";
         lonAbs = Math.abs(lonAbs);
 
-        res = latPrefix + '&nbsp;' + TransformCoords(latAbs, 2);
+        res = latPrefix + '&nbsp;' + transformCoords(latAbs, 2);
         if (breakLine)
             res = res + "<br />";
         else
             res = res + "&nbsp;";
 
-        res = res + lonPrefix + TransformCoords(lonAbs, 3);
+        res = res + lonPrefix + transformCoords(lonAbs, 3);
     }
 
     return res;
 
-    function TransformCoords(coord, degLength) {
+    function transformCoords(coord, degLength) {
         var res;
 
         var deg = Math.floor(coord);
@@ -2001,7 +2051,7 @@ function getDegrees(lat, lon, breakLine) {
 
         var minFloor = Math.floor(min);
 
-        if (_coordFormat == 'DegMinSec') {
+        if (_coordFormat == 'degminsec') {
             var sec = ((min - minFloor) * 60);
             var secFloor = Math.floor(sec);
             var secFraction = Math.round((sec - secFloor) * 10);
@@ -2156,12 +2206,15 @@ function positionContent() {
     }
 }
 
-var _coordFormat = 'DegMin';
+var _coordFormat = 'degmin';
 
 function changeCoordsFormat(value) {
     _coordFormat = value;
     setCookie('flytrace_coord_format', value);
     updateTrackersDisplay();
+    closeInfoWindow();
+
+    setPreFormatLink();
 }
 
 $(document).ready(function () {
