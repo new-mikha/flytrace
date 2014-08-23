@@ -10,34 +10,27 @@ if [%1]==[/?] goto :usage
 if [%1]==[\?] goto :usage
 
 SET from_rev=
-SET to_rev=
 SET dest_folder=
 
 
 if [%1]==[] (
-	echo Inclusive 'to' revision is HEAD, dest folder is ./Update
     SET /P from_rev=Enter NON-inclusive 'from' revision, could be a tag name:
 	
-	SET to_rev=HEAD
 	SET dest_folder=Update
 ) else (
     SET from_rev=%1
 
-    SET to_rev=%2
-    if [%2]==[] SET to_rev=HEAD
-
-    SET dest_folder=%3
-    if [%3]==[] SET dest_folder=Update
+    SET dest_folder=%2
+    if [%2]==[] SET dest_folder=Update
 )
 
 if [%from_rev%]==[] goto :usage
 
 echo From: %from_rev%
-echo To: %to_rev%
+echo To: HEAD
 echo Folder: %dest_folder%
 
-echo git diff --name-only %from_rev% %to_rev% --diff-filter=ACMR 
-git diff --name-only %from_rev% %to_rev% --diff-filter=ACMR >changed_files.txt
+git diff --name-only %from_rev% HEAD --diff-filter=ACMR >changed_files.txt
 if ERRORLEVEL 1 (
 	echo.
     goto :cleanup
@@ -58,11 +51,9 @@ echo    Either run it without parameters, e.g. right from the Windows Explorer
 echo    by the double click:
 echo    %0
 echo      If this bach file is running without parameters, it asks for
-echo      'from' revision, and sets 'to' revision and destination 
-echo      folder to defaults (see below)
+echo      'from' revision, and sets destination to default value (see below)
 echo    - OR run it from the command line: -
-echo    %0 from_revision [to_revision] [dest_folder]
-echo      If to_revision is omitted, then HEAD is used.
+echo    %0 from_revision [dest_folder]
 echo      If dest_folder is omitted, then 'Update' is used.
 echo      Note that dest_folder is not cleaned up. If the folder already 
 echo      exists, it's recommended to clean it up manually.
