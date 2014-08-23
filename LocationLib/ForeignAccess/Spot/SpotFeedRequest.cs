@@ -673,6 +673,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           // SPOT service might returns many statuses, so convert them to either of the above:
 
           if ( locationType == "TEST" ||
+               locationType == "STOP" ||
                locationType == "HELP-CANCEL" )
             locationType = "OK";
 
