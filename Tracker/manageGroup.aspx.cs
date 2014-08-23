@@ -558,7 +558,7 @@ namespace FlyTrace
         {
           setForAllItem =
             new ListItem(
-              "<b>SHOW</b> owner-defined messages, and do the same for <b>all other groups</b>, and make it <b>default setting</b>.",
+              "<b>SHOW</b> owner-defined messages, and do the same for <b>all YOUR groups</b>, and make it <b>default setting</b>.",
               "setForAll"
             );
 

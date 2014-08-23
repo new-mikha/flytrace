@@ -37,7 +37,7 @@
             margin: 0.19em;
         }
     </style>
-    <%--Comment below is not a real one but rather an "IE conditional comment", 
+    <%--Comment below is not a really a comment but rather an "IE conditional block", 
         DO NOT CHANGE OR REMOVE IT. Need it for IE 7 that doesn't understand inline-block. 
         See http://robertnyman.com/2010/02/24/css-display-inline-block-why-it-rocks-and-why-it-sucks/ for 
         details, including "zoom: 1" --%>

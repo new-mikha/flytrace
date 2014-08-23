@@ -143,9 +143,9 @@
                                         Owner-defined messages for OK, CUSTOM and HELP markers:
                                         <asp:Image ID="Image3" runat="server" ImageUrl="~/App_Themes/Default/siteHelp.png" />
                                         <asp:RadioButtonList ID="showMessagesRadioButtonList" runat="server">
-                                            <asp:ListItem Value="show"><b>SHOW</b> owner-defined messages.
+                                            <asp:ListItem Value="show"><b>SHOW</b> owner-defined messages for this group.
                                             </asp:ListItem>
-                                            <asp:ListItem Value="hide"><b>DO NOT SHOW</b> owner-defined messages.
+                                            <asp:ListItem Value="hide"><b>DO NOT SHOW</b> owner-defined messages for this group.
                                             </asp:ListItem>
                                         </asp:RadioButtonList>
                                         <br />

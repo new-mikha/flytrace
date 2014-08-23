@@ -18,7 +18,8 @@
   along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
 --%>
 
-<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="usermessageshelp.aspx.cs" Inherits="FlyTrace.help.usermessageshelp" StylesheetTheme="Default" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="usermessageshelp.aspx.cs"
+    Inherits="FlyTrace.help.usermessageshelp" StylesheetTheme="Default" %>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -27,7 +28,7 @@
 </head>
 <body>
     <form id="form1" runat="server">
-    <div align="left" style="padding-left: 5px; padding-bottom: 10px">
+    <div align="left" style="padding-left: 5px; width: 50em; padding-bottom: 10px">
         <table style="text-align: left">
             <tr>
                 <td>
@@ -41,18 +42,22 @@
                 </td>
             </tr>
             <tr>
-                <td>
+                <td style="text-align: justify">
                     <h3>
                         Owner-defined messages
                     </h3>
-                    SPOT owners define their own messages for OK, CUSTOM and HELP messages using their accounts on SPOT website.<br />
-                    Showing these messages here is disabled by default, but you may turn it on for your groups. In the example below quoted<br />
-                    message in <i>Italic</i> font is such owner-defined message:
+                    SPOT owners can customize the OK, CUSTOM and HELP messages being sent from their devices
+                    (to set up these messages, SPOT owners should use their profiles on the SPOT website). As an
+                    owner of your groups you can enable showing those messages, like in the example
+                    below:
                     <br />
                     <img alt="" src="userMsgHelp.png" />
                     <br />
-                    To enable owner-defined messages for a group, edit your group details (same place where you edit your group name).<br />
-                    You can also enable it by default for <b>new groups</b>, this can be done in your <a href="../profile.aspx">profile</a>.
+                    But by default customized messages DO NOT COME THROUGH TO YOUR MAPS along
+                    with the points and OK/CUSTOM/HELP statuses. To enable showing it in Info pop-ups
+                    like shown above, edit the group details on the same page where you edit the group
+                    name. You can also enable it by default for new groups, this can be done in your
+                    <a href="../profile.aspx">profile</a>.
                 </td>
             </tr>
         </table>
