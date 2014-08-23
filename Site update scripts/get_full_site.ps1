@@ -22,6 +22,8 @@ where {
     $_.FullName -like "*.aspx" -or
     $_.FullName -like "*.ascx" -or
     $_.FullName -like "*.resx" -or
+    $_.FullName -like "*.jpg" -or
+    $_.FullName -like "*.png" -or
     $_.FullName -like "*.config" -or
     $_.FullName -like "*.settings" -or
     $_.FullName -like "*.default" -or

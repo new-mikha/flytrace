@@ -32,6 +32,8 @@ where {
     $_ -like "*.aspx" -or
     $_ -like "*.ascx" -or
     $_ -like "*.resx" -or
+    $_ -like "*.jpg" -or
+    $_ -like "*.png" -or
     $_ -like "*.config" -or
     $_ -like "*.settings" -or
     $_ -like "*.default" -or
