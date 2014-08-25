@@ -1535,8 +1535,8 @@ namespace FlyTrace.Service
               }
             }
 
-
-            if ( trackResponseItem.Track.Count > 0 ) // Ensure that only not-empty tracks go to the result
+            if ( trackResponseItem.Track != null &&
+                 trackResponseItem.Track.Count > 0 ) // Ensure that only not-empty tracks go to the result
             {
               // note that trackResponseItem is a struct, so changes made to trackResponseItem variable 
               // after this point wouldn't go anywhere:
