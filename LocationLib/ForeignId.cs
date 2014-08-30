@@ -67,5 +67,10 @@ namespace FlyTrace.LocationLib
         Type == other.Type &&
         Id == other.Id;
     }
+
+    public override string ToString( )
+    {
+      return string.Format( "{0} {1}", Type, Id );
+    }
   }
 }
