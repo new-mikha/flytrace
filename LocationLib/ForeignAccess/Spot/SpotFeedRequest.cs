@@ -516,7 +516,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           if ( message == null )
             break;
 
-          DateTime nowUtc = DateTime.Now.ToUniversalTime( );
+          DateTime nowUtc = DateTime.UtcNow;
 
           bool shouldBreak;
 

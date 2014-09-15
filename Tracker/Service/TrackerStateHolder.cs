@@ -44,11 +44,18 @@ namespace FlyTrace.Service
   internal class TrackerStateHolder
   {
     /// <summary>The value of this field (i.e.reference to <see cref="Tracker"/> class) could be changed at 
-    /// any time by different threads. So to access members of the referenced instance, first read it into local variable,
-    /// and then work with the local variable. It's made volatile to prevent access reordering.
+    /// any time by different threads. So to access members of the referenced instance, either put it under the same lock 
+    /// as the one that writes to that property, or first read it into a local variable then work with the local variable. 
+    /// Note that it's NOT volatile, so make volatile reads to prevent reordering.
     /// </summary>
     public RevisedTrackerState Snapshot;
 
-    public long AccessTimestamp = DateTime.Now.ToFileTime( );
+    ///// <summary>
+    ///// True when the request is in progress for the tracker, false otherwise. Assumed to be set under the lock
+    ///// that writes to the <see cref="Snapshot"/>
+    ///// </summary>
+    //public int? requestNum;
+
+    public long AccessTimestamp = DateTime.UtcNow.ToFileTime( );
   }
 }

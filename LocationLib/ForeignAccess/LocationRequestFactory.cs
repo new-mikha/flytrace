@@ -32,5 +32,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
     public abstract LocationRequest CreateTestRequest( ForeignId foreignId, string testSource );
 
     public abstract string GetStat( out bool isOk );
+
+    //public abstract uint RefreshInterval { get; }
   }
 }

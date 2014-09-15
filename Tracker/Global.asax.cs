@@ -408,7 +408,7 @@ namespace FlyTrace
             sqlCmd.Parameters["@UserName"].Value = userName;
 
             sqlCmd.Parameters.Add( "@CurrentTimeUtc", System.Data.SqlDbType.DateTime );
-            sqlCmd.Parameters["@CurrentTimeUtc"].Value = DateTime.Now.ToUniversalTime( );
+            sqlCmd.Parameters["@CurrentTimeUtc"].Value = DateTime.UtcNow;
 
             using ( SqlDataReader reader = sqlCmd.ExecuteReader( ) )
             {

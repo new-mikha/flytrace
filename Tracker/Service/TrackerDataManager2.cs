@@ -35,11 +35,68 @@ using System.Data.SqlClient;
 using FlyTrace.LocationLib.Data;
 using log4net.Repository;
 using log4net.Appender;
+using FlyTrace.LocationLib.ForeignAccess;
 
 namespace FlyTrace.Service
 {
-  internal class TrackerDataManager
+  internal class TrackerDataManager2
   {
+    /* There is a number of parameters controlling how calls to the foreign servers are scheduled.
+     * 
+     * One of those parameters is a maximum number of simultaneous polling calls to the foreign servers. 
+     * This number can be 1 or more. When it's 1, only 1 call at a time is possible (which would be VERY 
+     * slow for a reasanoble amount of trackers to watch, but such config is still possible)
+     * 
+     * Below "calls pack" is a set of simultaneously running (overlapping) calls. Here is an example of 
+     * overlapping calls starting at separate moments in time:
+     * 
+     * Number of     0|callllll
+     * calls in the  1|...call
+     * current call  2|   ..calllllll
+     * pack at the   2|     ..callll
+     * moment of the 2|       ..calll
+     * call start    3|         ..callllllll
+     *               1|           ....call
+     *                 ---------------------
+     *                 012345678901234567890
+     *                       time, sec
+     * 
+     * Assuming there is a queue of required but not started yet calls, here are the parameters to schedule 
+     * those calls:
+     * 
+     * - MaxCallsInPack: int value >=1, defines maximum number of calls in current pack. When a call in 
+     *    the pack is finished, another call can be started at the time defined by parameters described 
+     *    above. In the example above this parameter could be 4 (see that 4 calls at the 11th and 12th 
+     *    seconds).
+     *    
+     * - TimeFromPrevStart: int value in milliseconds, >=0, defines how often calls can be started. A next
+     *   call from the queue can be started only after this time has passed after the START of the previous
+     *   one. In the example above this parameter could be 2000.  Note that the queue of required calls could 
+     *   be empty when the number of calls in the pack goes below limit, that's why in the example above some 
+     *   calls are started with interval of 3 or 4 seconds after prev.start. And of course a call pack could 
+     *   even be empty if there is no trackers to update.
+     *   
+     * - CallsGap: int value in milliseconds, >=0, in use only when there is just one call per time is 
+     *    possible, i.e. when MaxCallsInPack (below) is 1. If value of CallsGap > 0, next call from the 
+     *    queue can be started only after this time has passed after the END of the previous one. In the 
+     *    example above this parameter is ignored because MaxCallsInPack>1.
+     *    
+     * Below is an example where CallsGap is in use, with MaxCallsInPack=1, TimeFromPrevStart=7000 
+     * and CallsGap=2000:
+     *      calllll..calll...callllllll..calll...call....call....call....
+     *      01234567.0123456701234567....012345670123456701234567
+     * Probably it doesn't make much sense to use both TimeFromPrevStart>0 and CallsGap>0, but to keep 
+     * the algorithm simple they both are allowed to be non-zero.
+     * 
+     * Another parameter that controls which trackers need polling calls at all, i.e. which calls form a
+     * queue that need to be scheduled in according to the rules above:
+     * - RefreshInterval: time in seconds, >0, specifies when a tracker requires a call
+     *   to the foreign server to refresh the tracker's data. It's time span that needs to pass after previous
+     *   call for the same tracker (always counted from the prev.call start)
+     */
+
+    private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
+
     /// <summary>
     /// TODO: the comment is obsolete.
     /// If all trackers required by a call to the web service are presented in the main dictionary, then 
@@ -81,7 +138,7 @@ namespace FlyTrace.Service
 
     private static ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
-    static TrackerDataManager( )
+    static TrackerDataManager2( )
     {
       Log.InfoFormat(
         "AvgAllowedMsBetweenCalls at the moment of this instance start: {0}",
@@ -93,12 +150,12 @@ namespace FlyTrace.Service
     // So making it just a singleton. Note that initializing of this field shouldn't be 
     // protected by 'lock', 'volatile' or whatever, because it's guaranteed by CLR to be 
     // atomic set. No thread can use it until it's set & initialized.
-    public static readonly TrackerDataManager Singleton = new TrackerDataManager( );
+    public static readonly TrackerDataManager2 Singleton = new TrackerDataManager2( );
 
     public AdminAlerts AdminAlerts = new AdminAlerts( );
 
     /// <summary>Constructor is private to make the instance accessible only via the <see cref="Singleton"/> field.</summary>
-    private TrackerDataManager( )
+    private TrackerDataManager2( )
     {
       try
       {
@@ -114,7 +171,7 @@ namespace FlyTrace.Service
       }
       catch ( Exception exc )
       {
-        Log.Error( "Error on start", exc );
+        Log.Error( "Error on starting-up", exc );
         throw;
       }
 
@@ -299,9 +356,9 @@ namespace FlyTrace.Service
 
           if ( clientGroupVersion != ActualGroupVersion )
           {
-            if ( TrackerDataManager.IncrLog.IsInfoEnabled )
+            if ( TrackerDataManager2.IncrLog.IsInfoEnabled )
             {
-              TrackerDataManager.IncrLog.InfoFormat
+              TrackerDataManager2.IncrLog.InfoFormat
               (
                 "Call id {0}, actual group version ({1}) is different from one came from the client ({2}), so this call is not incremental",
                 CallId,
@@ -934,8 +991,6 @@ namespace FlyTrace.Service
 
     private Thread refreshThread;
 
-    private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
-
     private Dictionary<ForeignId, TrackerStateHolder> trackers =
       new Dictionary<ForeignId, TrackerStateHolder>( );
 
@@ -1065,13 +1120,14 @@ namespace FlyTrace.Service
     private DateTime prevBufferingAppendersPokingTs = DateTime.UtcNow;
 
     /// <summary>
-    /// See <see cref="PokeLog4NetBufferingAppenders"/> method. Defines time between flushes.
+    /// See <see cref="PokeLog4NetBufferingAppendersSafe"/> method. Defines time between flushes.
     /// This time is in minutes;
     /// </summary>
     private const int BufferingAppendersFlushPeriod = 30;
 
-    private void PokeLog4NetBufferingAppenders( )
-    { // Method to flush events in buffered appenders like SmtpAppender. Problem is that it can keep 
+    private void PokeLog4NetBufferingAppendersSafe( )
+    {
+      // Method to flush events in buffered appenders like SmtpAppender. Problem is that it can keep 
       // an unfrequent single event in the buffer until the service is stopping, even if TimeEvaluator
       // is in use. The latter would flush the buffer only when another event is coming after specified 
       // time. But if a single important event comes into the buffer, it would just stay there.
@@ -1079,12 +1135,19 @@ namespace FlyTrace.Service
       // This method solves the problem flushing each BufferingAppenderSkeleton in case it's not Lossy, 
       // after every 30 minutes.
 
-      if ( ( DateTime.UtcNow - prevBufferingAppendersPokingTs ).TotalMinutes > BufferingAppendersFlushPeriod )
+      try
       {
-        prevBufferingAppendersPokingTs = DateTime.UtcNow;
+        if ( ( DateTime.UtcNow - prevBufferingAppendersPokingTs ).TotalMinutes > BufferingAppendersFlushPeriod )
+        {
+          prevBufferingAppendersPokingTs = DateTime.UtcNow;
 
-        // queue it into the thread pool to avoid potential delays in log4net in processing that stuff:
-        ThreadPool.QueueUserWorkItem( Log4NetBufferingAppendersFlushWorker );
+          // queue it into the thread pool to avoid potential delays in log4net in processing that stuff:
+          ThreadPool.QueueUserWorkItem( Log4NetBufferingAppendersFlushWorker );
+        }
+      }
+      catch ( Exception exc )
+      {
+        Log.Error( "PokeLog4NetBufferingAppendersSafe", exc );
       }
     }
 
@@ -1128,165 +1191,54 @@ namespace FlyTrace.Service
     {
       Global.SetDefaultCultureToThread( );
 
-      DateTime nextAllowedRequestTime = DateTime.UtcNow;
-
       // It's OK to use "new" everywhere in this method and in methods it 
-      // calls, because it'srare (usually once on 3 sec) operation.
-      // LINQ and enumerators are safe to use for the same reason.
+      // calls, because it's doesn't hit too often.
+      // LINQ and enumerators are safe here for the same reason.
 
       while ( true )
       {
         try
         {
-          Dictionary<ForeignId, TrackerStateHolder> trackersToUpdate = GetTrackersToUpdate( );
+          PokeLog4NetBufferingAppendersSafe( );
 
-          int maxMsToWait = ( int ) Math.Ceiling( ( nextAllowedRequestTime - DateTime.UtcNow ).TotalMilliseconds );
-          if ( maxMsToWait <= 0 )
-          { // Request is already allowed, so wait until an event happens:
-            maxMsToWait = Timeout.Infinite;
-          }
-
-          if ( trackersToUpdate.Count == 0 ||
-               maxMsToWait > 0 )
-          {
-            trackersToUpdate = null;
-            this.refreshThreadEvent.WaitOne( maxMsToWait );
-          }
-
-          PokeLog4NetBufferingAppenders( );
+          Dictionary<ForeignId, TrackerStateHolder> trackersToRequest =
+            WaitForNextRequest( );
 
           if ( this.isStoppingWorkerThread )
             break;
-
-          if ( trackersToUpdate == null )
-          { // if it's null, it means that we're just waked up by refreshThreadEvent.
-            trackersToUpdate = GetTrackersToUpdate( );
-          }
-
-          if ( trackersToUpdate.Count > 0 )
-          {
-            if ( DateTime.UtcNow < nextAllowedRequestTime )
-            {
-              Log.InfoFormat(
-                "{0} tracker(s) to update, but need to wait {1} sec, so skipping the cycle this time",
-                trackersToUpdate.Count,
-                ( nextAllowedRequestTime - DateTime.UtcNow ).TotalSeconds
-              );
-            }
-            else
-            {
-              Log.InfoFormat( "Updating {0} trackers...", trackersToUpdate.Count );
-              TrackersListRequest trackersListRequest = new TrackersListRequest( );
-
-              Dictionary<ForeignId, TrackerState> trackerRequestResults =
-                  trackersListRequest.GetTrackersLocations( trackersToUpdate.Keys );
-
-              // calc nextAllowedRequestTime here to prevent tons of exceptions per second in 
-              // case of an unexpected systematic problems with requests:
-              nextAllowedRequestTime =
-                nextAllowedRequestTime.AddMilliseconds( Settings.Default.AvgAllowedMsBetweenCalls * trackersToUpdate.Count );
-
-              Log.InfoFormat(
-                "nextAllowedRequestTime increased to {0} (narTime - Now is {1:N0} sec)",
-                nextAllowedRequestTime,
-                ( nextAllowedRequestTime - DateTime.UtcNow ).TotalSeconds
-              );
-
-              if ( nextAllowedRequestTime < DateTime.UtcNow.AddMinutes( -20 ) )
-              { // Don't let nextAllowedRequestTime go too far to the past
-                nextAllowedRequestTime = DateTime.UtcNow;
-                Log.Info( "Reset nextAllowedRequestTime to Now" );
-              }
-
-              foreach ( KeyValuePair<ForeignId, TrackerState> idAndLocation in trackerRequestResults )
-              {
-                // No-lock technique: we just replace Snapshot. 
-                // If a reader has older version, or null - it's ok everywhere.
-                // Note that only this thread sets tracker.Snapshot
-
-                if ( Log.IsDebugEnabled )
-                  Log.DebugFormat( "Got result for {0}: {1}.", idAndLocation.Key, idAndLocation.Value );
-                TrackerStateHolder trackerStateHolder = trackersToUpdate[idAndLocation.Key];
-
-                TrackerState freshResult = idAndLocation.Value;
-
-                RevisedTrackerState mergedResult;
-
-                { // See "Incremental update algorithm explanation" comment above.
-
-                  // note that only this thread assigns Snapshot field, so reading this field (non-volatile) is ok.
-                  mergedResult = RevisedTrackerState.Merge( trackerStateHolder.Snapshot, freshResult );
-
-                  lock ( this.snapshotAccessSync )
-                  { // See comment in EndGetCoordinated method.
-                    trackerStateHolder.Snapshot = mergedResult;
-                  }
-                }
-
-                if ( Log.IsInfoEnabled )
-                  Log.InfoFormat( "Merged result for {0}: {1}.", idAndLocation.Key, mergedResult );
-              }
-            }
-          } // if ( trackersToUpdate.Count > 0 )
-
-          lock ( this.trackers )
-          { // Now remove trackers that haven't been accessed for a long time.
-            List<ForeignId> oldTrackersIds = new List<ForeignId>( );
-            long threshold2Remove = DateTime.UtcNow.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
-            foreach ( var pair in this.trackers )
-            {
-              if ( Interlocked.Read( ref pair.Value.AccessTimestamp ) < threshold2Remove )
-              {
-                oldTrackersIds.Add( pair.Key );
-              }
-            }
-
-            Log.InfoFormat( "Old trackers count: {0}, total trackers count: {1}", oldTrackersIds.Count, trackers.Count );
-
-            if ( this.trackers.Count > 0 &&
-                 ( oldTrackersIds.Count >= TrackersKillChunk ||
-                   oldTrackersIds.Count == this.trackers.Count
-                 )
-               )
-            {
-              Log.InfoFormat( "Removing {0} old trackers...", oldTrackersIds.Count );
-
-              foreach ( ForeignId idToRemove in oldTrackersIds )
-              {
-                this.trackers.Remove( idToRemove );
-              }
-
-              Log.InfoFormat( "Total number of trackers: {0}", this.trackers.Count );
-            }
-          }
         }
         catch ( Exception exc )
         {
           Log.Error( "RefreshThreadWorker", exc );
+
+          // Normally there should be no exception and this catch is the absolutely last resort.
+          // So it's possible that such an unexpected error is not a single one and moreover 
+          // it prevents the thread from waiting the reasonable time until requesting the 
+          // next tracker etc. So put a Sleep here to prevent possible near-100% processor 
+          // load of this thread. If the error is just something occasional, this Sleep is
+          // not a problem because it wouldn't block any IO or user interaction, just the 
+          // refresh would be delayed a bit:
+          Thread.Sleep( 1000 );
         }
       }
 
       Log.Info( "Finishing worker thread..." );
     }
 
-    private Dictionary<ForeignId, TrackerStateHolder> GetTrackersToUpdate( )
+    private int requestCounter = 0;
+
+    private Dictionary<ForeignId, TrackerStateHolder> WaitForNextRequest( )
     {
-      int refreshChunk = Settings.Default.RefreshChunk;
-
-      refreshChunk = Math.Max( 1, refreshChunk );
-      refreshChunk = Math.Min( 30, refreshChunk );
-
-      // No need in MemoryBarrier here to access Snapshot because this method runs in 
-      // the same thread that sets these values
-
       Dictionary<ForeignId, TrackerStateHolder> result = new Dictionary<ForeignId, TrackerStateHolder>( );
 
       lock ( this.trackers )
       {
+        
         {
           var newTrackers =
             ( from pair in this.trackers
-              where pair.Value.Snapshot == null // Snapshot is not volatile but it's the thread that sets this value
+              where pair.Value.Snapshot == null // Snapshot set in other method under the same lock
+                && !pair.Value.IsRequesting
               orderby Interlocked.Read( ref pair.Value.AccessTimestamp )
               select pair );
 
@@ -1320,6 +1272,20 @@ namespace FlyTrace.Service
       }
 
       return result;
+    }
+
+    private DateTime GetRefreshThreshold( string foreignServerType )
+    {
+      Dictionary<string, LocationRequestFactory> factories =
+        ForeignAccessCentral.LocationRequestFactories;
+
+      DateTime threshold =
+        DateTime
+        .UtcNow
+        .ToUniversalTime( )
+        .AddSeconds( -factories[foreignServerType].RefreshInterval );
+
+      return threshold;
     }
 
     public IAsyncResult BeginGetTracks
@@ -1569,54 +1535,6 @@ namespace FlyTrace.Service
       lock ( this.trackers )
       {
         this.trackers.Clear( );
-      }
-    }
-  }
-
-  public class AdminAlerts
-  {
-    private readonly Dictionary<string, string> messages =
-      new Dictionary<string, string>( StringComparer.InvariantCultureIgnoreCase );
-
-    public int CoordAccessCount;
-
-    public readonly DateTime StartTime = DateTime.UtcNow;
-
-    public List<KeyValuePair<string, string>> GetMessages( )
-    {
-      lock ( this.messages )
-      {
-        return this.messages.ToList( );
-      }
-    }
-
-    /// <summary>
-    /// It's thread-safe so a bit slow. Use specific fields for time-critical access 
-    /// (e.g. Interlocked on <see cref="CoordAccessCount"/> field)
-    /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
-    public string this[string key]
-    {
-      get
-      {
-        lock ( this.messages )
-        {
-          string result;
-          this.messages.TryGetValue( key, out result );
-          return result;
-        }
-      }
-
-      set
-      {
-        lock ( this.messages )
-        {
-          if ( this.messages.ContainsKey( key ) )
-            this.messages[key] = value;
-          else
-            this.messages.Add( key, value );
-        }
       }
     }
   }

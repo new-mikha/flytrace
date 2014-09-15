@@ -55,6 +55,7 @@
     <Reference Include="System.Web.Extensions">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
@@ -101,6 +102,7 @@
     <Compile Include="Administration\serviceLogConfig.aspx.designer.cs">
       <DependentUpon>serviceLogConfig.aspx</DependentUpon>
     </Compile>
+    <Compile Include="Scheduler.cs" />
     <Compile Include="Data.cs" />
     <Compile Include="DemoTrackers.cs" />
     <Compile Include="Global.asax.cs">
@@ -116,6 +118,9 @@
     </Compile>
     <Compile Include="Settings.cs" />
     <Compile Include="SimpleObjects.cs" />
+    <Compile Include="SystemEvents\HiddenForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Test\TestControl.aspx.cs">
       <DependentUpon>TestControl.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>

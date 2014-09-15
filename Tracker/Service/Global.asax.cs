@@ -29,6 +29,8 @@ using System.IO;
 using System.Threading;
 
 using log4net;
+using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace FlyTrace.Service
 {
@@ -42,12 +44,11 @@ namespace FlyTrace.Service
       Thread.CurrentThread.CurrentUICulture = DefaultCulture;
     }
 
-
-    private readonly DateTime StartTime = DateTime.Now;
-
     private readonly ILog Log = LogManager.GetLogger( "Service.Global" );
 
     private Mutex serviceMutex;
+
+    private readonly DateTime StartTime = DateTime.UtcNow;
 
     protected void Application_Start( object sender, EventArgs e )
     {
@@ -65,8 +66,8 @@ namespace FlyTrace.Service
         Log.InfoFormat( "Succ flag files will not be created." );
       }
 
-      LocationLib.ForeignAccess.ForeignAccessCentral.InitAux( 
-        appAuxLogFolder ,
+      LocationLib.ForeignAccess.ForeignAccessCentral.InitAux(
+        appAuxLogFolder,
         Properties.Settings.Default.SpotConsequentRequestsErrorCountThresold,
         Properties.Settings.Default.SpotConsequentTimedOutRequestsThresold
       );
@@ -86,17 +87,77 @@ namespace FlyTrace.Service
 
       // It seems that messages are not logging right at the service start, 
       // so delay "start" message to make sure it goes to the log:
-      System.Threading.Timer timer =
-        new System.Threading.Timer(
-          OnStartTimer,
-          null,
-          10000,
-          System.Threading.Timeout.Infinite );
+      DelayAction( 10000,
+        ( ) => Log.InfoFormat( "Service started at {0}", StartTime.ToLocalTime( ) )
+      );
+
+      // SystemEvents needs message pump, so start it
+      new Thread( RunMessagePump ).Start( );
     }
 
-    private void OnStartTimer( object state )
+    private void DelayAction( int milliseconds, Action action )
     {
-      Log.InfoFormat( "Service started at {0}", StartTime );
+      new System.Threading.Timer(
+        unused => action( ),
+        null,
+        milliseconds,
+        System.Threading.Timeout.Infinite );
+    }
+
+    private FlyTrace.Service.SystemEvents.HiddenForm hiddenForm;
+
+    private void RunMessagePump( )
+    {
+      ILog timeLog = LogManager.GetLogger( "TimeChange" );
+      Thread.Sleep( 10000 );
+      try
+      {
+        // Idea taken from http://msdn.microsoft.com/en-us/library/microsoft.win32.systemevents.aspx
+        // But the message is catched at a lower level, see form comments for some details
+
+        this.hiddenForm = new FlyTrace.Service.SystemEvents.HiddenForm( );
+        this.hiddenForm.TimeChanged += new EventHandler( hiddenForm_TimeChanged );
+
+        System.Windows.Forms.Application.Run( this.hiddenForm );
+        timeLog.Info( "Message pump stopped" );
+      }
+      catch ( Exception exc )
+      {
+        // As noted above the messages are not logging right at the service start, so delaying that:
+        DelayAction(
+          10000,
+          ( ) =>
+            timeLog.ErrorFormat( "Can't start message pump", exc ) );
+      }
+    }
+
+    private void hiddenForm_TimeChanged( object sender, EventArgs e )
+    {
+      ILog timeLog = LogManager.GetLogger( "TimeChange" );
+      timeLog.WarnFormat( "System time has been adjusted, clearing the cache..." );
+
+      try
+      {
+        TrackerDataManager.Singleton.ClearCache( );
+        timeLog.InfoFormat( "Cache has been cleared after system time adjusted" );
+      }
+      catch ( Exception exc )
+      {
+        const int pauseInSeconds = 60;
+
+        timeLog.ErrorFormat(
+          "Can't clear the cache after the time change, will restart the service in {0} seconds. {1}",
+          pauseInSeconds,
+          exc );
+
+        // Wait before restarting to give time to loggers (including SMTP one) to do their job.
+        // But avoid Sleeping for such a long time, because e.g. no guarantee what would happen
+        // with the log entry above in case of Sleep(). Or there could be other problems of any 
+        // kind due to blocking the thread for 1 minute. So just set up a timer:
+        DelayAction(
+          pauseInSeconds * 1000,
+          ( ) => HttpRuntime.UnloadAppDomain( ) );
+      }
     }
 
     protected void Session_Start( object sender, EventArgs e )
@@ -144,6 +205,11 @@ namespace FlyTrace.Service
       // sometimes it's get called, sometimes not.
       Log.Info( "Service stopped." );
       log4net.LogManager.Shutdown( );
+
+      if ( this.hiddenForm != null )
+        hiddenForm.TimeChanged -= new EventHandler( hiddenForm_TimeChanged );
+
+      System.Windows.Forms.Application.Exit( ); // to stop Application.Run that was started earlier
     }
   }
 }

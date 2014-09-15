@@ -52,7 +52,7 @@ namespace FlyTrace.LocationLib
 
     public static string GetAgeStr( DateTime dateTime, bool withSec, out double totalDays )
     {
-      DateTime utcNow = DateTime.Now.ToUniversalTime( );
+      DateTime utcNow = DateTime.UtcNow;
 
       DateTime endTime;
       DateTime startTime;

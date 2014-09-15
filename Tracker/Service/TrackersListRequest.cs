@@ -196,7 +196,7 @@ namespace FlyTrace.Service
     {
       try
       {
-        DateTime threshold = DateTime.Now.ToUniversalTime( ).AddMinutes( -5 );
+        DateTime threshold = DateTime.UtcNow.AddMinutes( -5 );
 
         KeyValuePair<long, AbortStat>[] timedOutAborts;
         lock ( queuedAborts )
@@ -215,7 +215,7 @@ namespace FlyTrace.Service
         {
           foreach ( KeyValuePair<long, AbortStat> kvp in timedOutAborts )
           {
-            TimeSpan timespan = DateTime.Now.ToUniversalTime( ) - kvp.Value.Start;
+            TimeSpan timespan = DateTime.UtcNow - kvp.Value.Start;
             TimedOutAbortsLog.ErrorFormat(
               "Abort for lrid {0} timed out at stage {1} for {2}", kvp.Key, kvp.Value.Stage, timespan );
           }

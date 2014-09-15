@@ -58,7 +58,7 @@ namespace FlyTrace
       this.createGroupLinkPanel.Visible = this.groupsGridView.Rows.Count > 0;
     }
 
-    private readonly DateTime utcNow = DateTime.Now.ToUniversalTime( );
+    private readonly DateTime utcNow = DateTime.UtcNow;
 
     public GridView Grid { get { return this.groupsGridView; } }
 

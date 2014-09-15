@@ -64,6 +64,7 @@
       this.button5 = new System.Windows.Forms.Button();
       this.tabControl2 = new System.Windows.Forms.TabControl();
       this.tabPage3 = new System.Windows.Forms.TabPage();
+      this.label3 = new System.Windows.Forms.Label();
       this.tabPage4 = new System.Windows.Forms.TabPage();
       this.revgenShutownAndIncrementButton = new System.Windows.Forms.Button();
       this.revgenGetCurrentButton = new System.Windows.Forms.Button();
@@ -74,6 +75,7 @@
       this.revgenInitButton = new System.Windows.Forms.Button();
       this.revgenFilePathTextBox = new System.Windows.Forms.TextBox();
       this.label2 = new System.Windows.Forms.Label();
+      this.button6 = new System.Windows.Forms.Button();
       this.groupBox1.SuspendLayout();
       this.groupBox2.SuspendLayout();
       this.groupBox3.SuspendLayout();
@@ -502,6 +504,8 @@
       // 
       // tabPage3
       // 
+      this.tabPage3.Controls.Add(this.button6);
+      this.tabPage3.Controls.Add(this.label3);
       this.tabPage3.Controls.Add(this.groupBox4);
       this.tabPage3.Controls.Add(this.button5);
       this.tabPage3.Controls.Add(this.requestLocationButton);
@@ -517,6 +521,15 @@
       this.tabPage3.TabIndex = 0;
       this.tabPage3.Text = "Location Request Test";
       this.tabPage3.UseVisualStyleBackColor = true;
+      // 
+      // label3
+      // 
+      this.label3.AutoSize = true;
+      this.label3.Location = new System.Drawing.Point(269, 204);
+      this.label3.Name = "label3";
+      this.label3.Size = new System.Drawing.Size(35, 13);
+      this.label3.TabIndex = 17;
+      this.label3.Text = "label3";
       // 
       // tabPage4
       // 
@@ -624,6 +637,16 @@
       this.label2.TabIndex = 0;
       this.label2.Text = "&Persisting file";
       // 
+      // button6
+      // 
+      this.button6.Location = new System.Drawing.Point(329, 194);
+      this.button6.Name = "button6";
+      this.button6.Size = new System.Drawing.Size(75, 23);
+      this.button6.TabIndex = 18;
+      this.button6.Text = "button6";
+      this.button6.UseVisualStyleBackColor = true;
+      this.button6.Click += new System.EventHandler(this.button6_Click);
+      // 
       // MainForm
       // 
       this.AcceptButton = this.requestLocationButton;
@@ -644,6 +667,7 @@
       this.groupBox4.PerformLayout();
       this.tabControl2.ResumeLayout(false);
       this.tabPage3.ResumeLayout(false);
+      this.tabPage3.PerformLayout();
       this.tabPage4.ResumeLayout(false);
       this.tabPage4.PerformLayout();
       this.ResumeLayout(false);
@@ -699,6 +723,8 @@
     private System.Windows.Forms.Button revgenInitButton;
     private System.Windows.Forms.TextBox revgenFilePathTextBox;
     private System.Windows.Forms.Label label2;
+    private System.Windows.Forms.Label label3;
+    private System.Windows.Forms.Button button6;
   }
 }
 

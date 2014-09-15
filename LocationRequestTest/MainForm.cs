@@ -49,6 +49,7 @@ namespace LocationRequestTest
   using System.Threading;
   using FlyTrace.LocationLib.ForeignAccess.Spot;
   using FlyTrace.Service;
+  using Microsoft.Win32;
 
   public partial class MainForm : Form
   {
@@ -68,6 +69,16 @@ namespace LocationRequestTest
       BasicConfigurator.Configure( textWriterAppender );
 
       tabControl2.SelectedIndex = 1;
+    }
+
+    protected override void WndProc( ref Message m )
+    {
+      base.WndProc( ref m );
+    }
+
+    private void SystemEvents_TimeChanged( object sender, EventArgs e )
+    {
+      this.label3.Text = DateTime.Now.ToLongTimeString( );
     }
 
 
@@ -514,6 +525,11 @@ namespace LocationRequestTest
       {
         AddResultTextLine( exc.Message );
       }
+    }
+
+    private void button6_Click( object sender, EventArgs e )
+    {
+      SystemEvents.TimeChanged += new EventHandler( SystemEvents_TimeChanged );
     }
   }
 }

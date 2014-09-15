@@ -44,7 +44,7 @@ namespace FlyTrace.LocationLib
     /// </summary>
     public readonly string Tag;
 
-    public readonly DateTime RefreshTime = DateTime.Now.ToUniversalTime( );
+    public readonly DateTime RefreshTime = DateTime.UtcNow;
 
     /// <summary>
     /// Makes an instance with the lat and lon found in the response from the foreign web server.
