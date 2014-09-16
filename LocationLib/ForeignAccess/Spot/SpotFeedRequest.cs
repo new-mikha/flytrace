@@ -294,10 +294,15 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       try
       {
-        if ( this.webRequest != null )
+        // this.webRequest can be set to null from another thread (this happened before).
+        // So get it into the local var first:
+        WebRequest localWebRequest = this.webRequest;
+        Thread.MemoryBarrier( );
+
+        if ( localWebRequest != null )
         {
           logToUse.InfoFormat( "webRequest.Abort starting for lrid {0}...", callId );
-          this.webRequest.Abort( );
+          localWebRequest.Abort( );
           logToUse.InfoFormat( "webRequest.Abort done for lrid {0}", callId );
         }
         this.webRequest = null;
@@ -316,10 +321,15 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       try
       {
-        if ( this.responseStream != null )
+        // this.localResponseStream can be set to null from another thread (this happened before).
+        // So get it into the local var first:
+        Stream localResponseStream = this.responseStream;
+        Thread.MemoryBarrier( );
+
+        if ( localResponseStream != null )
         {
           logToUse.InfoFormat( "responseStream.Close starting for lrid {0}...", callId );
-          this.responseStream.Close( );
+          localResponseStream.Close( );
           logToUse.InfoFormat( "responseStream.Close done for lrid {0}", callId );
         }
         this.responseStream = null;
@@ -338,10 +348,15 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       try
       {
-        if ( this.webResponse != null )
+        // this.webResponse can be set to null from another thread (this happened before).
+        // So get it into the local var first:
+        WebResponse localWebResponse = this.webResponse;
+        Thread.MemoryBarrier( );
+
+        if ( localWebResponse != null )
         {
           logToUse.InfoFormat( "webResponse.Close starting for lrid {0}...", callId );
-          this.webResponse.Close( );
+          localWebResponse.Close( );
           logToUse.InfoFormat( "webResponse.Close done for lrid {0}", callId );
         }
         this.webResponse = null;
