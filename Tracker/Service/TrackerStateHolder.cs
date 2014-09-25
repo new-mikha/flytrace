@@ -43,6 +43,13 @@ namespace FlyTrace.Service
   /// </remarks>
   internal class TrackerStateHolder
   {
+    public TrackerStateHolder( LocationLib.ForeignId foreignId )
+    {
+      ForeignId = foreignId;
+    }
+
+    public readonly LocationLib.ForeignId ForeignId;
+
     /// <summary>The value of this field (i.e.reference to <see cref="Tracker"/> class) could be changed at 
     /// any time by different threads. So to access members of the referenced instance, either put it under the same lock 
     /// as the one that writes to that property, or first read it into a local variable then work with the local variable. 
@@ -50,12 +57,17 @@ namespace FlyTrace.Service
     /// </summary>
     public RevisedTrackerState Snapshot;
 
-    ///// <summary>
-    ///// True when the request is in progress for the tracker, false otherwise. Assumed to be set under the lock
-    ///// that writes to the <see cref="Snapshot"/>
-    ///// </summary>
-    //public int? requestNum;
+    /// <summary>
+    /// Not null when the request is in progress for the tracker, null otherwise. NOT volatile. Accessed from multiple threads.
+    /// </summary>
+    public LocationLib.ForeignAccess.LocationRequest CurrentRequest;
 
+    /// <summary>UTC time of the latest access</summary>
     public long AccessTimestamp = DateTime.UtcNow.ToFileTime( );
+
+    public override string ToString( )
+    {
+      return ForeignId.ToString( );
+    }
   }
 }

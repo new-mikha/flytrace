@@ -31,16 +31,34 @@ namespace FlyTrace.LocationLib.ForeignAccess
   {
     public static ILog TimedOutRequestsLog = LogManager.GetLogger( "TimedOutRequests" );
 
-    public readonly ForeignId ForeignId;
+    public readonly DateTime StartTs = DateTime.UtcNow;
 
-    public long Lrid { get; protected set; }
+    public readonly string Id;
 
-    public LocationRequest( ForeignId foreignId )
+    public LocationRequest( string id )
     {
-      ForeignId = foreignId;
+      Id = id;
     }
 
+    /// <summary>
+    /// Just a helper property, combines <see cref="ForeignType"/> and <see cref="Id"/> into one
+    /// </summary>
+    public ForeignId ForeignId
+    {
+      get
+      {
+        return new ForeignId( ForeignType, Id );
+      }
+    }
+
+    /// <summary>
+    /// Location request id, set by ancestor, unique across all requests in this process.
+    /// </summary>
+    public long Lrid { get; protected set; }
+
     internal event Action<LocationRequest, TrackerState> ReadLocationFinished;
+
+    public abstract string ForeignType { get; }
 
     public abstract IAsyncResult BeginReadLocation( AsyncCallback callback, object state );
 

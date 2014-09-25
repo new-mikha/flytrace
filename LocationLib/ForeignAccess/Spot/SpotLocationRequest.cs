@@ -91,14 +91,13 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     /// </param>
     /// <param name="attemptsOrder"></param>
     public SpotLocationRequest(
-      ForeignId foreignId,
+      string id,
       string appAuxLogFolder,
       ConsequentErrorsCounter consequentErrorsCounter,
       IEnumerable<FeedKind> attemptsOrder
     )
-      : base( foreignId )
+      : base( id )
     {
-      this.spotId = foreignId.Id;
       this.appAuxLogFolder = appAuxLogFolder;
       this.consequentErrorsCounter = consequentErrorsCounter;
 
@@ -124,11 +123,16 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       FeedKind requestType,
       string appAuxLogFolder
     )
-      : base( foreignId )
+      : base( foreignId.Id )
     {
       this.testXml = testXml;
       this.appAuxLogFolder = appAuxLogFolder;
       this.attemptsOrder = new FeedKind[] { requestType };
+    }
+
+    public override string ForeignType
+    {
+      get { return ForeignId.SPOT; }
     }
 
     /// <summary>Number of attempt for this request (where 0 is first attempt), corresponds to an element 
@@ -184,8 +188,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       if ( this.testXml == null )
       { // Normal working mode
-        this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.spotId, asyncChainedState.Id, this.iAttempt );
-        Log.InfoFormat( "Created request for {0}, {1} lrid {2}", this.spotId, this.currentRequest.FeedKind, asyncChainedState.Id );
+        this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id, this.iAttempt );
+        Log.InfoFormat( "Created request for {0}, {1} lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
       }
       else
       { // Debug mode
@@ -235,11 +239,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         {
           string tsFileName = string.Format( "{0}.succ.timestamp", this.currentRequest.FeedKind );
           if ( Log.IsDebugEnabled )
-            Log.DebugFormat( "Call succeeded for {0}, {1}, lrid {2}", this.spotId, this.currentRequest.FeedKind, asyncChainedState.Id );
+            Log.DebugFormat( "Call succeeded for {0}, {1}, lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
 
           if ( this.iAttempt != 0 )
           {
-            Log.WarnFormat( "Retry succeeded for {0}, {1}, lrid {2}", this.spotId, this.currentRequest.FeedKind, asyncChainedState.Id );
+            Log.WarnFormat( "Retry succeeded for {0}, {1}, lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
           }
 
           if ( this.appAuxLogFolder != null )
@@ -252,7 +256,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             }
             catch ( Exception exc )
             {
-              Log.ErrorFormat( "SpotFeedRequestCallback for {0}, {1}, lrid {2}: {3}", this.spotId, this.currentRequest.FeedKind, asyncChainedState.Id, exc );
+              Log.ErrorFormat( "SpotFeedRequestCallback for {0}, {1}, lrid {2}: {3}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id, exc );
             }
           }
 
@@ -280,13 +284,13 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
             this.currentFeedKind = this.attemptsOrder[this.iAttempt];
 
-            this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.spotId, asyncChainedState.Id, this.iAttempt );
+            this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id, this.iAttempt );
 
             Thread.MemoryBarrier( );
             // If isAborted but we're here then "bad" request was finished and closed.
             if ( !this.isAborted )
             {
-              Log.WarnFormat( "Retrying using {0} for {1}, lrid {2} after an error: {3}", this.currentFeedKind, this.spotId, asyncChainedState.Id, result.Error );
+              Log.WarnFormat( "Retrying using {0} for {1}, lrid {2} after an error: {3}", this.currentFeedKind, this.Id, asyncChainedState.Id, result.Error );
 
               this.currentRequest.BeginRequest( SpotFeedRequestCallback, asyncChainedState );
             }
@@ -306,7 +310,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       {
         Log.InfoFormat(
           "Request for {0}, lrid {1} failed: {2}",
-          this.spotId,
+          this.Id,
           asyncChainedState.Id,
           result.Error );
       }
@@ -325,7 +329,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           string.Format
           (
             "Request for {0}, lrid {1} failed: {2}. That's a consequent request error #{3}",
-            this.spotId,
+            this.Id,
             asyncChainedState.Id,
             result.Error,
             consequentErrorsCount
@@ -354,13 +358,13 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         TrackerState result = finalAsyncResult.EndInvoke( );
 
-        Log.InfoFormat( "Got some result for {0} ({1}): {2}", this.spotId, this.currentRequest.FeedKind, result );
+        Log.InfoFormat( "Got some result for {0} ({1}): {2}", this.Id, this.currentRequest.FeedKind, result );
 
         return result;
       }
       catch ( Exception exc )
       {
-        Log.ErrorFormat( "Got error for {0}: {1}", this.spotId, exc.Message );
+        Log.ErrorFormat( "Got error for {0}: {1}", this.Id, exc.Message );
         throw;
       }
     }

@@ -33,7 +33,7 @@ namespace FlyTrace.Service
   {
     private static ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
-    public enum UpdateReason { BrandNew, NewPos, NewErr, AllNew };
+    public enum UpdateReason { BrandNew, NewPos, NewErr, NoChange };
 
     /// <summary>
     /// Identifies Position and Error data inside, but NOT the object itself. There could be more than one instances 
@@ -44,6 +44,21 @@ namespace FlyTrace.Service
 
     public readonly UpdateReason UpdatedPart;
 
+    public RevisedTrackerState
+    (
+      LocationLib.Data.Position position,
+      LocationLib.Data.Error error,
+      string tag,
+      UpdateReason updatedPart,
+      int revision
+    )
+      : base( position, error, tag )
+    {
+      DataRevision = revision;
+      UpdatedPart = updatedPart;
+    }
+
+    // TODO: remove
     /// <summary>Gets pos and err from parameters, and gets NEW DataRevision and RefreshTime</summary>
     private RevisedTrackerState
     (
@@ -65,6 +80,7 @@ namespace FlyTrace.Service
       }
     }
 
+    // TODO: remove
     /// <summary>Only <see cref="RefreshTime"/> is changed, everything else including DataRevision is the same as in <paramref name="oldResult"/>.</summary>
     private RevisedTrackerState
     (
@@ -83,8 +99,8 @@ namespace FlyTrace.Service
 
     /// <summary>
     /// Merges data from existing tracker state that was loaded earlier and updated state that just came from the
-    /// foreign server. It is actually "merge" because if old location is not null and new error is not null than 
-    /// the result would have old location and new error. Also it checks if result is the same as the existing tracker 
+    /// foreign server. It is actually "merge" because if old position is not null and new error is not null than 
+    /// the result would have old position and new error. Also it checks if result is the same as the existing tracker 
     /// state, and if so just returns old result, keeping the version of the tracker data. Otherwise result has brand 
     /// new version.
     /// </summary>
@@ -129,35 +145,22 @@ namespace FlyTrace.Service
         position = oldResult.Position;
       }
       else
-      { // oldResult.Location is null, but newResult.Location could be either null or not null here.
+      { // oldResult.Position is null, but newResult.Position could be either null or not null here.
         position = newResult.Position;
       }
 
-      /* We need to ensure that result has at either Location or Error set (or both).
+      /* We need to ensure that result has at either Position or Error set (or both).
        * 
-       * - if location is still null here, then both results Location set to null (see checks above). 
-       *   But neither constructor allows both Location and Error to be null => both Errors are not null,
+       * - if position is still null here, then both results Position set to null (see checks above). 
+       *   But neither constructor allows both Position and Error to be null => both Errors are not null,
        *   So newResult have Error set, and the merged one will have at least Error set to the new 
-       *   result Error (and probably Location).
+       *   result Error (and probably Position).
        *   
-       * - if location is not null, then it doesn't matter if newResult.Error is null or not - the merged 
-       *   one still have Location set (and probably error - if the new one has it).
+       * - if position is not null, then it doesn't matter if newResult.Error is null or not - the merged 
+       *   one still have Position set (and probably error - if the new one has it).
        */
 
       LocationLib.Data.Error error = newResult.Error;
-
-      /* Now find out what modificationTs is. If no change happens, then modificationTs is oldResult.modificationTs, 
-       * otherwise it's Now.ToFileTimeUtc. Note that the final result of the method is made out of location variable 
-       * and newResult.Error (see below). So following is possible:
-       * - Location is obtained for a tracker, resulting in Tracker( Location=loc1, Error=null )
-       * - On a next query to the SPOT server, error is received for the tracker so newResult
-       *   is Tracker(Location=null, Error=err1). But this method merges data, so final return result will
-       *   be Tracker(Location=loc1, Error=err1). 
-       * That's why oldResult should be checked against merged result (which is not ready at this point) to find 
-       * resulting modificationTs.
-       * So below oldResult.Location is compared against location variable (NOT newResult.Location), and oldResult.Error is 
-       * compared against newResult.Error
-       */
 
       bool arePositionsEqual = LocationLib.Data.Position.ArePositionsEqual( oldResult.Position, position );
       bool areErrorsEqual = LocationLib.Data.Error.AreErrorsEqual( oldResult.Error, error );
@@ -174,7 +177,7 @@ namespace FlyTrace.Service
 
       UpdateReason updatedPart;
       if ( arePositionsEqual && areErrorsEqual )
-        updatedPart = UpdateReason.AllNew;
+        updatedPart = UpdateReason.NoChange;
       else if ( arePositionsEqual )
         updatedPart = UpdateReason.NewErr;
       else
@@ -182,5 +185,89 @@ namespace FlyTrace.Service
 
       return new RevisedTrackerState( position, error, newResult.Tag, updatedPart );
     }
+
+    public static UpdateReason Merge(
+      RevisedTrackerState oldResult,
+      LocationLib.TrackerState newResult,
+      out LocationLib.Data.Position position,
+      out LocationLib.Data.Error error
+    )
+    {
+      if ( oldResult == null && newResult == null )
+      {
+        position = null;
+        error = null;
+        return UpdateReason.NoChange;
+        ;
+      }
+
+      if ( oldResult == null && newResult != null )
+      {
+        position = newResult.Position;
+        error = newResult.Error;
+        return UpdateReason.BrandNew;
+      }
+
+      if ( oldResult != null && newResult == null )
+      {
+        position = oldResult.Position;
+        error = oldResult.Error;
+        return UpdateReason.NoChange;
+      }
+
+      if ( oldResult.Position != null && newResult.Position != null )
+      {
+        if ( oldResult.Position.CurrPoint.ForeignTime > newResult.Position.CurrPoint.ForeignTime )
+        { // should be a rare case, but still possible. E.g. it could be like this:
+          // - unoffical request with very fresh data succeeded (see LocationRequests internals)
+          // - 15 seconds later unoffical request fails, and official started, returning old data.
+
+          // log it as error because there a convention in log4net "send errors by email"
+          IncrLog.ErrorFormat( "'Old' result is actually newer than 'new' result: {0}\r\n{1}", oldResult, newResult );
+          position = oldResult.Position;
+        }
+        else if ( oldResult.Position.CurrPoint.ForeignTime < newResult.Position.CurrPoint.ForeignTime )
+        {
+          position = newResult.Position;
+        }
+        else
+        { // foreign times are equal here.
+          position = newResult.Position;
+        }
+      }
+      else if ( oldResult.Position != null )
+      {
+        position = oldResult.Position;
+      }
+      else
+      { // oldResult.Position is null, but newResult.Position also could be null here (or could be not)
+        position = newResult.Position;
+      }
+
+      error = newResult.Error;
+
+      /* Need to ensure that result has either Position or Error set (or both)
+       * 
+       * - if position is still null here, then both results Position set to null (see checks above). 
+       *   But neither constructor allows both Position and Error to be null => both Errors are not null.
+       *   So output error is set, and the merged one will have at least Error set to the new 
+       *   result Error (and probably Position).
+       *   
+       * - if position is not null, then it doesn't matter if output error is null or not - the merged 
+       *   one will still have position set (and probably error - if the new one has it).
+       */
+
+      bool arePositionsEqual = LocationLib.Data.Position.ArePositionsEqual( oldResult.Position, position );
+      bool areErrorsEqual = LocationLib.Data.Error.AreErrorsEqual( oldResult.Error, error );
+
+      if ( arePositionsEqual && areErrorsEqual )
+        return UpdateReason.NoChange;
+
+      if ( arePositionsEqual )
+        return UpdateReason.NewErr;
+
+      return UpdateReason.NewPos;
+    } // Merge
+
   }
 }

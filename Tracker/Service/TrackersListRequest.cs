@@ -113,8 +113,8 @@ namespace FlyTrace.Service
           }
           catch ( Exception exc )
           {
-            Log.ErrorFormat( "Can't read location for {0}: {1}", locationRequest.ForeignId, exc.ToString( ) );
-            AddTrackerError( locationRequest.ForeignId, exc );
+            Log.ErrorFormat( "Can't read location for {0}: {1}", locationRequest.Id, exc.ToString( ) );
+            AddTrackerError( locationRequest.Id, exc );
           }
         }
       }
@@ -149,19 +149,19 @@ namespace FlyTrace.Service
           foreach ( LocationRequest locReq in this.requests )
           {
             TrackerState trackerState;
-            if ( this.result.TryGetValue( locReq.ForeignId, out trackerState ) )
+            if ( this.result.TryGetValue( locReq.Id, out trackerState ) )
             {
-              substResult.Add( locReq.ForeignId, trackerState );
+              substResult.Add( locReq.Id, trackerState );
             }
             else
             {
-              LocationRequest.TimedOutRequestsLog.ErrorFormat( "Location request hasn't finished for lrid {0}, tracker id {1}", locReq.Lrid, locReq.ForeignId );
+              LocationRequest.TimedOutRequestsLog.ErrorFormat( "Location request hasn't finished for lrid {0}, tracker id {1}", locReq.Lrid, locReq.Id );
               ThreadPool.QueueUserWorkItem( AsyncAbortRequest, locReq );
               LocationRequest.TimedOutRequestsLog.ErrorFormat( "Location request with lrid {0} queued for abort.", locReq.Lrid );
 
               hasAbortedRequests = true;
 
-              substResult.Add( locReq.ForeignId, new TrackerState( exc.Message, "None" ) );
+              substResult.Add( locReq.Id, new TrackerState( exc.Message, "None" ) );
             }
           }
         }
@@ -239,6 +239,8 @@ namespace FlyTrace.Service
 
     private static void AsyncAbortRequest( object state )
     {
+      Global.SetUpThreadCulture( );
+
       long? lrid = 0;
       try
       {
@@ -280,12 +282,12 @@ namespace FlyTrace.Service
         try
         {
           TrackerState trackerState = locationRequest.EndReadLocation( ar );
-          AddTrackerData( locationRequest.ForeignId, trackerState );
+          AddTrackerData( locationRequest.Id, trackerState );
         }
         catch ( Exception exc )
         {
           Log.Error( "Can't end reading locations", exc );
-          AddTrackerError( locationRequest.ForeignId, exc );
+          AddTrackerError( locationRequest.Id, exc );
         }
       }
       catch ( Exception exc2 )

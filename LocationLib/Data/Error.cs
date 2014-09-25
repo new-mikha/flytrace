@@ -62,7 +62,8 @@ namespace FlyTrace.LocationLib.Data
 
     public static bool AreErrorsEqual( Error x, Error y )
     {
-      if ( ReferenceEquals( x, y ) ) return true;
+      if ( ReferenceEquals( x, y ) )  // returns true also if both are null
+        return true;
 
       // at this point at least one is not null because of ReferenceEquals above.
       if ( x == null || y == null ) return false;

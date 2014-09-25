@@ -102,6 +102,8 @@
     <Compile Include="Administration\serviceLogConfig.aspx.designer.cs">
       <DependentUpon>serviceLogConfig.aspx</DependentUpon>
     </Compile>
+    <Compile Include="CallData.cs" />
+    <Compile Include="RevisionPersister.cs" />
     <Compile Include="Scheduler.cs" />
     <Compile Include="Data.cs" />
     <Compile Include="DemoTrackers.cs" />
@@ -130,6 +132,7 @@
     </Compile>
     <Compile Include="Test\TestSource.cs" />
     <Compile Include="TrackerDataManager.cs" />
+    <Compile Include="TrackerDataManager2.cs" />
     <Compile Include="TrackerStateHolder.cs" />
     <Compile Include="TrackerService.asmx.cs">
       <DependentUpon>TrackerService.asmx</DependentUpon>
@@ -137,6 +140,7 @@
     </Compile>
     <Compile Include="TrackersListRequest.cs" />
     <Compile Include="RevisedTrackerState.cs" />
+    <Compile Include="Tuple.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />
