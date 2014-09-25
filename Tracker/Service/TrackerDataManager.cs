@@ -332,7 +332,7 @@ namespace FlyTrace.Service
 
     public IAsyncResult BeginGetCoordinates( int group, string clientSeed, AsyncCallback callback, object state )
     {
-      Global.SetDefaultCultureToThread( );
+      Global.SetUpThreadCulture( );
 
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
@@ -520,7 +520,7 @@ namespace FlyTrace.Service
      * small response data saying "no change". But if there is a change to some trackers then in the incremental update server 
      * returns only those trackers that have changed after the client's seed version.
      * 
-     * Figuring out an actual response for incremental update has several steps.
+     * Figuring out the actual response for an incremental update has several steps.
      * 
      * First, the server should know if the set of trackers on the client is the same as it is now in DB for the group the 
      * client is requesting. A new tracker could be added to the group, or another could be removed, or renamed, or many of 
@@ -532,8 +532,8 @@ namespace FlyTrace.Service
      * its set of trackers.
      * 
      * Next, a version data for actual trackers needs to be specified in a seed. A trivial solution would be to choose time
-     * of a tracker creation, and then take a maximum time of trackers returning in the call. However, a time on the computer can 
-     * be adjusted which would mess things. So instead of time a revision number is used. This is a singleton number that 
+     * of a tracker creation, and then take a maximum time of trackers returning in the call. However, a time on the server could
+     * be adjusted which would stuff the things up. So instead of time a revision number is used. This is a singleton number that 
      * increments with each update to any tracker. When all trackers are ready to be returned, a maximum revison number of returned
      * trackers is written to the call returning seed. On subsequent calls, revision number from client is compared with actual
      * (potentially changed) revisions of trackers ready to be returned, and only fresh updates are returned.
@@ -585,7 +585,7 @@ namespace FlyTrace.Service
            * position snapshot (missed in this call where C3 is returned) will be missed on next incremental 
            * updates call from the same client.
            * 
-           * In other words, reading of several Snapshot has to be atomic here.
+           * In other words, reading of several Snapshot has to be atomic.
            */
 
           snapshots =
@@ -1090,6 +1090,7 @@ namespace FlyTrace.Service
 
     private void Log4NetBufferingAppendersFlushWorker( object state )
     {
+      Global.SetUpThreadCulture( );
       ILog log = LogManager.GetLogger( "LogFlush" );
 
       string errName = "";
@@ -1126,7 +1127,7 @@ namespace FlyTrace.Service
 
     private void RefreshThreadWorker( )
     {
-      Global.SetDefaultCultureToThread( );
+      Global.SetUpThreadCulture( );
 
       DateTime nextAllowedRequestTime = DateTime.UtcNow;
 
@@ -1331,7 +1332,7 @@ namespace FlyTrace.Service
       out long callId // temporary debug thing, to be removed.
     )
     {
-      Global.SetDefaultCultureToThread( );
+      Global.SetUpThreadCulture( );
 
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
@@ -1397,7 +1398,7 @@ namespace FlyTrace.Service
 
     private void GetTrackerIdResponseForTracks( IAsyncResult ar )
     {
-      Global.SetDefaultCultureToThread( );
+      Global.SetUpThreadCulture( );
 
       var callData = ( CallData ) ar.AsyncState;
 

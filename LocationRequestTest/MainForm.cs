@@ -253,7 +253,7 @@ namespace LocationRequestTest
           SpotLocationRequest locationRequest = ( SpotLocationRequest ) ar.AsyncState;
 
           StringBuilder sb = new StringBuilder( );
-          sb.AppendFormat( "Result for {0}:\r\n", locationRequest.ForeignId );
+          sb.AppendFormat( "Result for {0}:\r\n", locationRequest.Id );
 
           TrackerState trackerRequestResult = locationRequest.EndReadLocation( ar );
 

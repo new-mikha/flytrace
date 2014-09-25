@@ -36,15 +36,22 @@ namespace FlyTrace.Service
 {
   public class Global : System.Web.HttpApplication
   {
-    internal static readonly CultureInfo DefaultCulture = CultureInfo.GetCultureInfo( "en-AU" );
+    internal readonly static CultureInfo DefaultCulture = CultureInfo.GetCultureInfo( "en-AU" );
 
-    internal static void SetDefaultCultureToThread( )
+    private readonly static ILog Log = LogManager.GetLogger( "Service.Global" );
+
+    internal static void SetUpThreadCulture( )
     {
-      Thread.CurrentThread.CurrentCulture = DefaultCulture;
-      Thread.CurrentThread.CurrentUICulture = DefaultCulture;
+      try
+      {
+        Thread.CurrentThread.CurrentCulture = DefaultCulture;
+        Thread.CurrentThread.CurrentUICulture = DefaultCulture;
+      }
+      catch ( Exception exc )
+      {
+        Log.Error( "Can't set culture to the thread", exc );
+      }
     }
-
-    private readonly ILog Log = LogManager.GetLogger( "Service.Global" );
 
     private Mutex serviceMutex;
 
@@ -98,7 +105,11 @@ namespace FlyTrace.Service
     private void DelayAction( int milliseconds, Action action )
     {
       new System.Threading.Timer(
-        unused => action( ),
+        unused =>
+        {
+          SetUpThreadCulture( );
+          action( );
+        },
         null,
         milliseconds,
         System.Threading.Timeout.Infinite );

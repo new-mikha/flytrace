@@ -82,6 +82,7 @@ namespace FlyTrace.Service
     }
 
     /// <summary>
+    /// TODO: remove from here after upgrading to the new scheduler because it was moved to TrackerState
     /// Merges data from existing tracker state that was loaded earlier and updated state that just came from the
     /// foreign server. It is actually "merge" because if old location is not null and new error is not null than 
     /// the result would have old location and new error. Also it checks if result is the same as the existing tracker 
@@ -110,7 +111,7 @@ namespace FlyTrace.Service
       if ( oldResult.Position != null && newResult.Position != null )
       {
         if ( oldResult.Position.CurrPoint.ForeignTime > newResult.Position.CurrPoint.ForeignTime )
-        { // should be the rare case, but still possible. E.g. it could be like this:
+        { // should be a rare case, but still possible. E.g. it could be like this:
           // - unoffical request with very fresh data succeeded (see LocationRequests internals)
           // - 15 seconds later unoffical request fails, and official started, returning old data.
           position = oldResult.Position;

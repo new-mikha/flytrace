@@ -95,39 +95,189 @@ namespace FlyTrace.Service
      *   call for the same tracker (always counted from the prev.call start)
      */
 
+    static TrackerDataManager2( )
+    {
+      // TODO: remove
+      Log.InfoFormat(
+        "AvgAllowedMsBetweenCalls at the moment of this instance start: {0}",
+        Settings.Default.AvgAllowedMsBetweenCalls
+      );
+    }
+
+    /// <summary>Constructor is private to make the instance accessible only via the <see cref="Singleton"/> field.</summary>
+    private TrackerDataManager2( )
+    {
+      try
+      {
+        InitRevisionGenerator( );
+
+        this.refreshThread = new Thread( RefreshThreadWorker );
+        this.refreshThread.Name = "LocWorker";
+        this.refreshThread.IsBackground = true;
+        this.refreshThread.Start( ); // it waits until refreshThreadEvent set.
+
+        this.refreshThreadEvent.Set( );
+      }
+      catch ( Exception exc )
+      {
+        Log.Error( "Error on starting-up", exc );
+        throw;
+      }
+
+      InfoLog.Info( "Started." );
+    }
+
+    private Thread refreshThread;
+
+    private Dictionary<ForeignId, TrackerStateHolder> trackers =
+      new Dictionary<ForeignId, TrackerStateHolder>( );
+
+    internal Dictionary<ForeignId, TrackerStateHolder> Trackers { get { return this.trackers; } }
+
     private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 
-    /// <summary>
-    /// TODO: the comment is obsolete.
-    /// If all trackers required by a call to the web service are presented in the main dictionary, then 
-    /// the call returns immediately (after reading DB for group info). But if not all trackers been there 
-    /// at the moment of call, then it waits for the required trackers to be retrieved. This wait has timeout
-    /// which is defined by this constant. Timed out trackers returned with "wait" type.
-    /// </summary>
-    private const int MaxSecondsToDelayReturn = 20;
+    private void RefreshThreadWorker( )
+    {
+      Global.SetUpThreadCulture( );
 
-    /// <summary>
-    /// Time between wake-ups of refresh worker. But it actually refreshes not more than Settings.RefreshChunk
-    /// which have oldest RefreshTime that is greater than RefreshThresholdSec
-    /// </summary>
-    private const int RefreshMs = 3000;
+      // It's OK to use "new" everywhere in this method and in methods it 
+      // calls, because it's doesn't hit too often.
+      // LINQ and enumerators are safe here for the same reason.
 
-    /// <summary>
-    /// Trackers updated longer than that number of seconds ago are considered as requiring update.
-    /// </summary>
-    private const int RefreshThresholdSec = 15;
+      while ( true )
+      {
+        try
+        {
+          PokeLog4NetBufferingAppendersSafe( );
 
-    /// <summary>In minutes. A tracker that has not been accessed for more than the number of minutes 
-    /// specified by this constant is considered as "old" (see other properties and methods) and is subject 
-    /// to remove from <see cref="this.trackers"/></summary>
-    private const int TrackerLifetimeWithoutAccess = 20;
+          List<TrackerStateHolder> trackersToRequest = WaitForTimeOfNextRequest( );
 
-    /// <summary>Trackers are removed from <see cref="this.trackers"/> under one of the following conditions:
-    /// - All trackers there are "old", see <see cref="TrackerLifetimeWithoutAccess"/> constant for details.
-    /// OR
-    /// - A number of trackers that are "old", is equal or greater than this constant.
-    /// </summary>
-    private const int TrackersKillChunk = 5;
+          if ( this.isStoppingWorkerThread )
+            break;
+
+          foreach ( TrackerStateHolder trackerStateHolder in trackersToRequest )
+          {
+            BeginRequest( trackerStateHolder );
+          }
+        }
+        catch ( Exception exc )
+        {
+          Log.Error( "RefreshThreadWorker", exc );
+
+          // Normally there should be no exception and this catch is the absolutely last resort.
+          // So it's possible that such an unexpected error is not a single one and moreover 
+          // it prevents the thread from waiting the reasonable time until requesting the 
+          // next tracker etc. So put a Sleep here to prevent possible near-100% processor 
+          // load of this thread. If the error is just something occasional, this Sleep is
+          // not a problem because it wouldn't block any IO or user interaction, just the 
+          // refresh would be delayed a bit:
+          Thread.Sleep( 1000 );
+        }
+      }
+
+      Log.Info( "Finishing worker thread..." );
+    }
+
+    private volatile bool isStoppingWorkerThread = false;
+
+    private int requestCounter = 0;
+
+    private List<TrackerStateHolder> WaitForTimeOfNextRequest( )
+    {
+      return null;
+    }
+
+    private object holdersAccessLock = new object( );
+
+    private void BeginRequest( TrackerStateHolder trackerStateHolder )
+    {
+      LocationRequest locationRequest =
+        ForeignAccessCentral
+          .LocationRequestFactories[trackerStateHolder.ForeignId.Type]
+          .CreateRequest( trackerStateHolder.ForeignId.Id );
+
+      lock ( this.holdersAccessLock )
+      {
+        trackerStateHolder.CurrentRequest = locationRequest;
+      }
+
+      // Despite TrackerStateHolder having CurrentRequest field, locationRequest still need to 
+      // be passed as a implicit parameter because there is no guarantee that at the moment when 
+      // OnEndReadLocation is called there will be no other request started. E.g. this request 
+      // can be stuck, aborted, and then suddenly pop in again in OnEndReadLocation. It's unlikely
+      // but still possible. So pass locationRequest to avoid any chance that EndReadLocation is
+      // called on wrong locationRequest.
+      var paramTuple =
+        new Tuple<TrackerStateHolder, LocationRequest>( trackerStateHolder, locationRequest );
+
+      locationRequest.BeginReadLocation( OnEndReadLocation, paramTuple );
+    }
+
+    private void OnEndReadLocation( IAsyncResult ar )
+    {
+      Global.SetUpThreadCulture( );
+
+      ForeignId foreignId = default( ForeignId );
+      try
+      {
+        TrackerStateHolder trackerStateHolder;
+        LocationRequest locationRequest;
+        {
+          var paramTuple = ( Tuple<TrackerStateHolder, LocationRequest> ) ar.AsyncState;
+
+          trackerStateHolder = paramTuple.Item1;
+          locationRequest = paramTuple.Item2;
+        }
+
+        TrackerState trackerState = locationRequest.EndReadLocation( ar );
+
+        // Merge is an expensive operation with new, lock etc inside, so keep
+        // it out of lock.
+        Thread.MemoryBarrier( ); // to prevent reading of Snapshot way earlier
+        RevisedTrackerState oldTrackerState = trackerStateHolder.Snapshot;
+        Thread.MemoryBarrier( ); // to prevent multiple reads of Snapshot
+        RevisedTrackerState mergedResult =
+          RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState );
+
+        lock ( this.holdersAccessLock )
+        { // See "Incremental update algorithm explanation" comment above.
+
+          // This request might be just too slow:
+          if ( trackerStateHolder.CurrentRequest != locationRequest )
+            return;
+
+          trackerStateHolder.CurrentRequest = null;
+
+          if ( !ReferenceEquals( oldTrackerState, trackerStateHolder.Snapshot ) )
+          { // It is possible but extra-highly unlikely. So log it as an error, assuming 
+            // that errors go to SmtpAppender or alike. Too many errors of that kind mean
+            // that something is wrong:
+            Log.ErrorFormat(
+              "Potential break of MT logic for lrid {0} ({1}).\r\nPre-lock snapshot: {2}\r\nCurrent snapshot: {3}",
+              locationRequest.Lrid,
+              locationRequest.ForeignId,
+              oldTrackerState,
+              trackerStateHolder.Snapshot
+            );
+
+            // ...and try to recover. Merge is an expensive operation with lock and 
+            // other stuff inside, so hoping for the best doing that inside a lock.
+            // As noted above, normally it shouldn't happen so this code is just an
+            // attempt to recover.
+            mergedResult =
+              RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState );
+
+            InfoLog.InfoFormat( "Result for lrid {0} recovered: {1}", locationRequest.Lrid, mergedResult );
+          }
+
+          trackerStateHolder.Snapshot = mergedResult;
+        }
+      }
+      catch ( Exception exc )
+      {
+        Log.ErrorFormat( "Can't end read location for {0}: {1}", foreignId, exc );
+      }
+    }
 
     private static ILog Log = LogManager.GetLogger( "TDM" );
 
@@ -138,14 +288,6 @@ namespace FlyTrace.Service
 
     private static ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
-    static TrackerDataManager2( )
-    {
-      Log.InfoFormat(
-        "AvgAllowedMsBetweenCalls at the moment of this instance start: {0}",
-        Settings.Default.AvgAllowedMsBetweenCalls
-      );
-    }
-
     // It could be just a static class, but I don't want to bother with 'static' everywhere.
     // So making it just a singleton. Note that initializing of this field shouldn't be 
     // protected by 'lock', 'volatile' or whatever, because it's guaranteed by CLR to be 
@@ -153,30 +295,6 @@ namespace FlyTrace.Service
     public static readonly TrackerDataManager2 Singleton = new TrackerDataManager2( );
 
     public AdminAlerts AdminAlerts = new AdminAlerts( );
-
-    /// <summary>Constructor is private to make the instance accessible only via the <see cref="Singleton"/> field.</summary>
-    private TrackerDataManager2( )
-    {
-      try
-      {
-        InitRevisionGenerator( );
-
-        this.timer = new Timer( TimerCallback );
-        this.timer.Change( RefreshMs, RefreshMs ); // just sets this.refreshThreadEvent every RefreshMs milliseconds
-
-        this.refreshThread = new Thread( RefreshThreadWorker );
-        this.refreshThread.Name = "LocWorker";
-        this.refreshThread.IsBackground = true;
-        this.refreshThread.Start( ); // it waits until refreshThreadEvent set.
-      }
-      catch ( Exception exc )
-      {
-        Log.Error( "Error on starting-up", exc );
-        throw;
-      }
-
-      InfoLog.Info( "Started." );
-    }
 
     private bool isAlwaysFullGroup;
 
@@ -264,132 +382,11 @@ namespace FlyTrace.Service
       }
     }
 
-    // Making CallData a type parameter for AsyncChainedState<> seems to be the easiest way 
-    // to pass CallData to End* methods (note there are more than one End method returning 
-    // different types). Alternative would be passing a separate class having both Names and 
-    // TrackerStateHolder collections, which means additional "new" operation etc.
-    private class CallData : AsyncChainedState<CallData>
-    {
-      private static long idSource = 0;
-
-      public CallData( int group, string clientSeed, AsyncCallback outerCallback, Object outerAsyncState )
-        : base( outerCallback, outerAsyncState )
-      {
-        Group = group;
-        TrackRequests = null;
-        SourceSeed = clientSeed;
-        CallId = Interlocked.Increment( ref idSource );
-      }
-
-      public readonly long CallId;
-
-      public CallData( int group, TrackRequestItem[] trackRequests, AsyncCallback outerCallback, Object outerAsyncState )
-        : base( outerCallback, outerAsyncState )
-      {
-        Group = group;
-        TrackRequests = trackRequests;
-        CallId = Interlocked.Increment( ref idSource );
-      }
-
-      public readonly DateTime CallStartTime = DateTime.UtcNow;
-      public readonly int Group;
-      public readonly string SourceSeed;
-      public readonly GroupFacade GroupFacade = new GroupFacade( );
-
-      /// <summary>Used only for GetFullTrack</summary>
-      public readonly TrackRequestItem[] TrackRequests;
-
-      public List<TrackerId> TrackerIds;
-      public TrackerStateHolder[] TrackerStateHolders;
-
-      public int ActualGroupVersion;
-
-      public bool ShowUserMessages;
-
-      public DateTime? StartTs;
-
-      public bool IsReady
-      {
-        get
-        {
-          for ( int i = 0; i < TrackerStateHolders.Length; i++ )
-          {
-            // Snapshot is not volatile, but this method is called inside lock() whose boundaries have full 
-            // fence semantics. Reordering inside the lock is not a problem.
-            if ( TrackerStateHolders[i].Snapshot == null )
-              return false;
-          }
-
-          return true;
-        }
-      }
-
-      /// <summary>
-      /// A valid client seed looks like that: "25;54215" where 1st value is the group version,
-      /// and 2nd value is the maximum client tracker revision, both received by the client earlier by
-      /// a similar call to this web service. Result is not null only if the group version from client seed 
-      /// is equal to the current actual group version kept in Seed.ActualGroupVersion. There are also some other
-      /// checks to ensure that the extracted revision is healthy. If anything's wrong then null returned,
-      /// and as a result the client receives a full actual group info.
-      /// </summary>
-      /// <returns></returns>
-      public int? TryParseThresholdRevision( )
-      {
-        if ( SourceSeed == null )
-          return null;
-
-        if ( !TrackerIds.Any( ) ) // if group is empty it should be full update
-          return null;
-
-        string[] elements = SourceSeed.Split( ';' );
-        if ( elements == null || elements.Length != 2 )
-          return null;
-
-        {
-          int clientGroupVersion;
-
-          if ( !int.TryParse( elements[0], out clientGroupVersion ) )
-            return null;
-
-          if ( clientGroupVersion < 0 )
-            return null;
-
-          if ( clientGroupVersion != ActualGroupVersion )
-          {
-            if ( TrackerDataManager2.IncrLog.IsInfoEnabled )
-            {
-              TrackerDataManager2.IncrLog.InfoFormat
-              (
-                "Call id {0}, actual group version ({1}) is different from one came from the client ({2}), so this call is not incremental",
-                CallId,
-                ActualGroupVersion,
-                clientGroupVersion
-              );
-            }
-
-            return null;
-          }
-        }
-
-        {
-          int thresholdRevision;
-
-          if ( !int.TryParse( elements[1], out thresholdRevision ) )
-            return null;
-
-          if ( thresholdRevision < 0 )
-            return null;
-
-          return thresholdRevision;
-        }
-      }
-    }
-
     private int simultaneousCallCount = 0;
 
     public IAsyncResult BeginGetCoordinates( int group, string clientSeed, AsyncCallback callback, object state )
     {
-      Global.SetDefaultCultureToThread( );
+      Global.SetUpThreadCulture( );
 
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
@@ -400,12 +397,10 @@ namespace FlyTrace.Service
          * But not right now :)
          */
 
-        CallData callData = new CallData( group, clientSeed, callback, state );
+        CallData2 callData = new CallData2( group, clientSeed, callback, state );
 
         if ( IncrLog.IsInfoEnabled )
           IncrLog.InfoFormat( "Call id {0}, for group {1}, client seed is \"{2}\"", callData.CallId, callData.Group, clientSeed );
-
-        LogCallCount( callCount );
 
         if ( Log.IsDebugEnabled )
         {
@@ -434,34 +429,12 @@ namespace FlyTrace.Service
       }
     }
 
-    private static void LogCallCount( int callCount )
-    {
-      if ( !Log.IsDebugEnabled ) return;
-
-      if ( callCount > 100 )
-      {
-        Log.DebugFormat( "Got callCount > 100 , i.e. {0}", callCount );
-      }
-      else if ( callCount > 10 )
-      {
-        Log.DebugFormat( "Got callCount > 10 , i.e. {0}", callCount );
-      }
-      else if ( callCount > 5 )
-      {
-        Log.DebugFormat( "Got callCount > 5 , i.e. {0}", callCount );
-      }
-      else if ( callCount > 3 )
-      {
-        Log.DebugFormat( "Got callCount > 3 , i.e. {0}", callCount );
-      }
-    }
-
     private void GetTrackerIdResponseForCoords( IAsyncResult ar )
     {
       if ( Log.IsDebugEnabled )
         Log.DebugFormat( "Finishing getting group trackers id, sync flag {0}...", ar.CompletedSynchronously );
 
-      CallData callData = ( CallData ) ar.AsyncState;
+      CallData2 callData = ( CallData2 ) ar.AsyncState;
 
       if ( Log.IsDebugEnabled )
         Log.DebugFormat( "Finishing getting group trackers ids with call id {0}, group {1}...", callData.CallId, callData.Group );
@@ -509,7 +482,7 @@ namespace FlyTrace.Service
     /// FinishGetCoordsCall when everything's ready.
     /// </summary>
     /// <param name="callData"></param>
-    private void TrackerIdsReady( CallData callData )
+    private void TrackerIdsReady( CallData2 callData )
     {
       callData.TrackerStateHolders = new TrackerStateHolder[callData.TrackerIds.Count];
 
@@ -528,7 +501,7 @@ namespace FlyTrace.Service
           TrackerStateHolder trackerStateHolder;
           if ( !this.trackers.TryGetValue( trackerId.ForeignId, out trackerStateHolder ) )
           {
-            trackerStateHolder = new TrackerStateHolder( ); // no data yet, so leave its Snapshot field null for the moment.
+            trackerStateHolder = new TrackerStateHolder( trackerId.ForeignId ); // no data yet, so leave its Snapshot field null for the moment.
             this.trackers.Add( trackerId.ForeignId, trackerStateHolder );
           }
 
@@ -542,7 +515,7 @@ namespace FlyTrace.Service
       FinishGetCoordsCall( callData );
     }
 
-    private void FinishGetCoordsCall( CallData callData )
+    private void FinishGetCoordsCall( CallData2 callData )
     {
       try
       {
@@ -577,7 +550,7 @@ namespace FlyTrace.Service
      * small response data saying "no change". But if there is a change to some trackers then in the incremental update server 
      * returns only those trackers that have changed after the client's seed version.
      * 
-     * Figuring out an actual response for incremental update has several steps.
+     * Figuring out the actual response for an incremental update has several steps.
      * 
      * First, the server should know if the set of trackers on the client is the same as it is now in DB for the group the 
      * client is requesting. A new tracker could be added to the group, or another could be removed, or renamed, or many of 
@@ -589,16 +562,14 @@ namespace FlyTrace.Service
      * its set of trackers.
      * 
      * Next, a version data for actual trackers needs to be specified in a seed. A trivial solution would be to choose time
-     * of a tracker creation, and then take a maximum time of trackers returning in the call. However, a time on the computer can 
-     * be adjusted which would mess things. So instead of time a revision number is used. This is a singleton number that 
+     * of a tracker creation, and then take a maximum time of trackers returning in the call. However, a time on the server could
+     * be adjusted which would stuff the things up. So instead of time a revision number is used. This is a singleton number that 
      * increments with each update to any tracker. When all trackers are ready to be returned, a maximum revison number of returned
      * trackers is written to the call returning seed. On subsequent calls, revision number from client is compared with actual
      * (potentially changed) revisions of trackers ready to be returned, and only fresh updates are returned.
      * 
      */
     #endregion
-
-    private object snapshotAccessSync = new object( );
 
     private Random debugRnd = new Random( );
 
@@ -611,9 +582,9 @@ namespace FlyTrace.Service
 
       try
       {
-        AsyncResult<CallData> finalAsyncResult = ( AsyncResult<CallData> ) asyncResult;
+        AsyncResult<CallData2> finalAsyncResult = ( AsyncResult<CallData2> ) asyncResult;
 
-        CallData callData = finalAsyncResult.EndInvoke( );
+        CallData2 callData = finalAsyncResult.EndInvoke( );
 
         callId = callData.CallId;
 
@@ -888,7 +859,7 @@ namespace FlyTrace.Service
       }
     }
 
-    private string GetResultSeed( CallData callData, int nextThresholdRevision )
+    private string GetResultSeed( CallData2 callData, int nextThresholdRevision )
     {
       return
         callData.ActualGroupVersion.ToString( )
@@ -985,17 +956,6 @@ namespace FlyTrace.Service
       }
     }
 
-    private List<CallData> waitingToRetrieveList = new List<CallData>( );
-
-    private Timer timer;
-
-    private Thread refreshThread;
-
-    private Dictionary<ForeignId, TrackerStateHolder> trackers =
-      new Dictionary<ForeignId, TrackerStateHolder>( );
-
-    internal Dictionary<ForeignId, TrackerStateHolder> Trackers { get { return this.trackers; } }
-
     private CoordResponseItem TrackerFromTrackerSnapshot
     (
       string trackerName,
@@ -1069,54 +1029,7 @@ namespace FlyTrace.Service
     {
       // wake up main thread:
       this.refreshThreadEvent.Set( );
-
-      // Call OnTimeToCheckWaitingList asynchronously to save time in this cycle.
-      // Furthermore, this method has a lock inside so minimize probability of a deadlock by
-      // calling it asynchronously:
-      EventHandler timeToCheckWaitingListEventHandler = OnTimeToCheckWaitingList;
-      timeToCheckWaitingListEventHandler.BeginInvoke( this,
-        EventArgs.Empty,
-        OnTimeToCheckWaitingListAsyncCallback,
-        timeToCheckWaitingListEventHandler );
     }
-
-    private void OnTimeToCheckWaitingListAsyncCallback( IAsyncResult ar )
-    {
-      // we don't need to do much here, just end the call:
-      EventHandler timeToCheckWaitingListEventHandler = ( EventHandler ) ( ar.AsyncState );
-      timeToCheckWaitingListEventHandler.EndInvoke( ar );
-    }
-
-    private void OnTimeToCheckWaitingList( object sender, EventArgs e )
-    {
-      List<CallData> finishingList = new List<CallData>( );
-
-      lock ( this.waitingToRetrieveList )
-      {
-        foreach ( var asyncState in this.waitingToRetrieveList )
-        {
-          if ( asyncState.IsReady ||
-               asyncState.CallStartTime.AddSeconds( MaxSecondsToDelayReturn ) < DateTime.UtcNow )
-          {
-            finishingList.Add( asyncState );
-          }
-        }
-
-        foreach ( var finishingAsyncChainedState in finishingList )
-        {
-          this.waitingToRetrieveList.Remove( finishingAsyncChainedState );
-        }
-      }
-
-      foreach ( var finishingCallData in finishingList )
-      {
-        // make sure that the result knows that it was completed asynchronously:
-        finishingCallData.CheckSynchronousFlag( false );
-
-        FinishGetCoordsCall( finishingCallData );
-      }
-    }
-
     private DateTime prevBufferingAppendersPokingTs = DateTime.UtcNow;
 
     /// <summary>
@@ -1153,6 +1066,7 @@ namespace FlyTrace.Service
 
     private void Log4NetBufferingAppendersFlushWorker( object state )
     {
+      Global.SetUpThreadCulture( );
       ILog log = LogManager.GetLogger( "LogFlush" );
 
       string errName = "";
@@ -1185,95 +1099,6 @@ namespace FlyTrace.Service
       }
     }
 
-    private volatile bool isStoppingWorkerThread = false;
-
-    private void RefreshThreadWorker( )
-    {
-      Global.SetDefaultCultureToThread( );
-
-      // It's OK to use "new" everywhere in this method and in methods it 
-      // calls, because it's doesn't hit too often.
-      // LINQ and enumerators are safe here for the same reason.
-
-      while ( true )
-      {
-        try
-        {
-          PokeLog4NetBufferingAppendersSafe( );
-
-          Dictionary<ForeignId, TrackerStateHolder> trackersToRequest =
-            WaitForNextRequest( );
-
-          if ( this.isStoppingWorkerThread )
-            break;
-        }
-        catch ( Exception exc )
-        {
-          Log.Error( "RefreshThreadWorker", exc );
-
-          // Normally there should be no exception and this catch is the absolutely last resort.
-          // So it's possible that such an unexpected error is not a single one and moreover 
-          // it prevents the thread from waiting the reasonable time until requesting the 
-          // next tracker etc. So put a Sleep here to prevent possible near-100% processor 
-          // load of this thread. If the error is just something occasional, this Sleep is
-          // not a problem because it wouldn't block any IO or user interaction, just the 
-          // refresh would be delayed a bit:
-          Thread.Sleep( 1000 );
-        }
-      }
-
-      Log.Info( "Finishing worker thread..." );
-    }
-
-    private int requestCounter = 0;
-
-    private Dictionary<ForeignId, TrackerStateHolder> WaitForNextRequest( )
-    {
-      Dictionary<ForeignId, TrackerStateHolder> result = new Dictionary<ForeignId, TrackerStateHolder>( );
-
-      lock ( this.trackers )
-      {
-        
-        {
-          var newTrackers =
-            ( from pair in this.trackers
-              where pair.Value.Snapshot == null // Snapshot set in other method under the same lock
-                && !pair.Value.IsRequesting
-              orderby Interlocked.Read( ref pair.Value.AccessTimestamp )
-              select pair );
-
-          foreach ( var pair in newTrackers )
-          {
-            result.Add( pair.Key, pair.Value );
-            if ( result.Count >= refreshChunk )
-              break;
-          }
-        }
-
-        if ( result.Count < refreshChunk )
-        {
-          DateTime threshold = DateTime.UtcNow.AddSeconds( -RefreshThresholdSec );
-
-          // Snapshot is not volatile but it's the thread that sets this value:
-          var expiredTrackers =
-            ( from pair in this.trackers
-              where pair.Value.Snapshot != null &&
-                pair.Value.Snapshot.RefreshTime < threshold
-              orderby pair.Value.Snapshot.RefreshTime
-              select pair );
-
-          foreach ( var pair in expiredTrackers )
-          {
-            result.Add( pair.Key, pair.Value );
-            if ( result.Count >= refreshChunk )
-              break;
-          }
-        }
-      }
-
-      return result;
-    }
-
     private DateTime GetRefreshThreshold( string foreignServerType )
     {
       Dictionary<string, LocationRequestFactory> factories =
@@ -1297,15 +1122,13 @@ namespace FlyTrace.Service
       out long callId // temporary debug thing, to be removed.
     )
     {
-      Global.SetDefaultCultureToThread( );
+      Global.SetUpThreadCulture( );
 
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
-      LogCallCount( callCount );
-
       try
       {
-        CallData callData = new CallData( group, trackRequests, callback, asyncState );
+        CallData2 callData = new CallData2( group, trackRequests, callback, asyncState );
 
         Log.DebugFormat(
           "Getting tracks for group {0}, call id {1}, tracks requested: {2}, call count: {3}",
@@ -1363,9 +1186,9 @@ namespace FlyTrace.Service
 
     private void GetTrackerIdResponseForTracks( IAsyncResult ar )
     {
-      Global.SetDefaultCultureToThread( );
+      Global.SetUpThreadCulture( );
 
-      var callData = ( CallData ) ar.AsyncState;
+      var callData = ( CallData2 ) ar.AsyncState;
 
       callData.CheckSynchronousFlag( ar.CompletedSynchronously );
 
@@ -1428,9 +1251,9 @@ namespace FlyTrace.Service
       try
       {
         // Thread.Sleep( 2000 );
-        AsyncResult<CallData> finalAsyncResult = ( AsyncResult<CallData> ) asyncResult;
+        AsyncResult<CallData2> finalAsyncResult = ( AsyncResult<CallData2> ) asyncResult;
 
-        CallData callData = finalAsyncResult.EndInvoke( );
+        CallData2 callData = finalAsyncResult.EndInvoke( );
 
         callId = callData.CallId;
 

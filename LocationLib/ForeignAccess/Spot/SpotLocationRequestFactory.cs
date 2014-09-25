@@ -51,7 +51,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       this.consequentErrorsCounter = consequentErrorsCounter;
     }
 
-    public override LocationRequest CreateRequest( ForeignId foreignId )
+    public override LocationRequest CreateRequest( string foreignId )
     {
       LocationRequest locationRequest =
         new SpotLocationRequest( foreignId, this.appAuxLogFolder, this.consequentErrorsCounter, GetSanitizedAttemptsOrder( ) );
@@ -125,7 +125,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       return result.ToArray( );
     }
 
-    public override LocationRequest CreateTestRequest( ForeignId foreignId, string testSource )
+    public override LocationRequest CreateTestRequest( string foreignId, string testSource )
     {
       return new SpotLocationRequest( foreignId, testSource, FeedKind.Feed_2_0, this.appAuxLogFolder );
     }
