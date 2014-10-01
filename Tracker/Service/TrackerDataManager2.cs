@@ -187,7 +187,7 @@ namespace FlyTrace.Service
       return null;
     }
 
-    private object holdersAccessLock = new object( );
+    private ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim( );
 
     private void BeginRequest( TrackerStateHolder trackerStateHolder )
     {
@@ -196,9 +196,19 @@ namespace FlyTrace.Service
           .LocationRequestFactories[trackerStateHolder.ForeignId.Type]
           .CreateRequest( trackerStateHolder.ForeignId.Id );
 
-      lock ( this.holdersAccessLock )
+      if ( !this.rwLock.TryEnterWriteLock( 1000 ) )
+      {
+        Log.ErrorFormat( "Can't enter read mode in BeginRequest for {0}", trackerStateHolder.ForeignId );
+        return;
+      }
+
+      try
       {
         trackerStateHolder.CurrentRequest = locationRequest;
+      }
+      finally
+      {
+        this.rwLock.ExitWriteLock( );
       }
 
       // Despite TrackerStateHolder having CurrentRequest field, locationRequest still need to 
@@ -213,15 +223,16 @@ namespace FlyTrace.Service
       locationRequest.BeginReadLocation( OnEndReadLocation, paramTuple );
     }
 
+    private int trackerStateRevision;
+
     private void OnEndReadLocation( IAsyncResult ar )
     {
       Global.SetUpThreadCulture( );
 
-      ForeignId foreignId = default( ForeignId );
+      LocationRequest locationRequest = null;
+      TrackerStateHolder trackerStateHolder = null;
       try
       {
-        TrackerStateHolder trackerStateHolder;
-        LocationRequest locationRequest;
         {
           var paramTuple = ( Tuple<TrackerStateHolder, LocationRequest> ) ar.AsyncState;
 
@@ -231,51 +242,78 @@ namespace FlyTrace.Service
 
         TrackerState trackerState = locationRequest.EndReadLocation( ar );
 
-        // Merge is an expensive operation with new, lock etc inside, so keep
-        // it out of lock.
-        Thread.MemoryBarrier( ); // to prevent reading of Snapshot way earlier
-        RevisedTrackerState oldTrackerState = trackerStateHolder.Snapshot;
-        Thread.MemoryBarrier( ); // to prevent multiple reads of Snapshot
-        RevisedTrackerState mergedResult =
-          RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState );
+        //// Merge is an expensive operation with new, lock etc inside, so keep
+        //// it out of lock.
+        //Thread.MemoryBarrier( ); // to prevent reading of Snapshot way earlier
+        //RevisedTrackerState oldTrackerState = trackerStateHolder.Snapshot;
+        //Thread.MemoryBarrier( ); // to prevent multiple reads of Snapshot
+        //RevisedTrackerState mergedResult =
+        //  RevisedTrackerState.Merge( oldTrackerState, trackerState );
 
-        lock ( this.holdersAccessLock )
-        { // See "Incremental update algorithm explanation" comment above.
+        //// Create a new object with old Pos and Err - to have new RefreshTime. Note that updating oldResult.RefreshTime is
+        //// not allowed because every RevisedTrackerState instance can be referenced as a snapshot in many places, which 
+        //// is considered immutable. That's why this field (as all others) is read-only.
 
-          // This request might be just too slow:
-          if ( trackerStateHolder.CurrentRequest != locationRequest )
-            return;
+        //lock ( this.holdersAccessLock )
+        //{ // See "Incremental update algorithm explanation" comment above.
 
-          trackerStateHolder.CurrentRequest = null;
+        //  // It's possible that this request was just too slow, and it's not the current one any longer:
+        //  if ( trackerStateHolder.CurrentRequest != locationRequest )
+        //    return;
 
-          if ( !ReferenceEquals( oldTrackerState, trackerStateHolder.Snapshot ) )
-          { // It is possible but extra-highly unlikely. So log it as an error, assuming 
-            // that errors go to SmtpAppender or alike. Too many errors of that kind mean
-            // that something is wrong:
-            Log.ErrorFormat(
-              "Potential break of MT logic for lrid {0} ({1}).\r\nPre-lock snapshot: {2}\r\nCurrent snapshot: {3}",
-              locationRequest.Lrid,
-              locationRequest.ForeignId,
-              oldTrackerState,
-              trackerStateHolder.Snapshot
-            );
+        //  trackerStateHolder.CurrentRequest = null;
 
-            // ...and try to recover. Merge is an expensive operation with lock and 
-            // other stuff inside, so hoping for the best doing that inside a lock.
-            // As noted above, normally it shouldn't happen so this code is just an
-            // attempt to recover.
-            mergedResult =
-              RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState );
+        //  trackerStateHolder.Snapshot = mergedResult;
+        //}
 
-            InfoLog.InfoFormat( "Result for lrid {0} recovered: {1}", locationRequest.Lrid, mergedResult );
+        if ( !this.rwLock.TryEnterUpgradeableReadLock( 1000 ) )
+          throw new ApplicationException( "Can't enter upgradeable mode" );
+
+        try
+        {
+          // only one thread can be in updradable mode (others can be in read & cannot be in write)
+
+          // Use that to increment the revision generator, assuming this is the only 
+          // place where its value is being read (not counting init, shutdown & reading admin stats)
+          // This saves reading threads from blocking when merge and revgenupdates happens
+
+          RevisedTrackerState mergedResult =
+            RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState );
+
+          if ( !this.rwLock.TryEnterWriteLock( 1000 ) )
+            throw new ApplicationException( "Can't enter write mode" );
+
+          try
+          {
+            // If an exception thrown before and it didn't come to this point, the request will 
+            // be aborted & set to null after a timeout. But normally it's set to null here:
+            trackerStateHolder.CurrentRequest = null;
+            trackerStateHolder.Snapshot = mergedResult;
           }
-
-          trackerStateHolder.Snapshot = mergedResult;
+          finally
+          {
+            this.rwLock.ExitWriteLock( );
+          }
         }
+        finally
+        {
+          this.rwLock.ExitUpgradeableReadLock( );
+        }
+
       }
       catch ( Exception exc )
       {
-        Log.ErrorFormat( "Can't end read location for {0}: {1}", foreignId, exc );
+        ForeignId foreignId =
+          trackerStateHolder == null
+          ? default( ForeignId )
+          : trackerStateHolder.ForeignId;
+
+        long? lrid =
+                locationRequest == null
+                ? ( long? ) null
+                : locationRequest.Lrid;
+
+        Log.ErrorFormat( "Can't end read location for lrid {0}, {1}: {2}", lrid, foreignId, exc );
       }
     }
 
