@@ -29,38 +29,20 @@ using System.Text;
 
 namespace FlyTrace.Service
 {
-  /// <summary>All of the public members are thread UNSAFE.</summary>
-  public static class RevisionPersister
+  /// <summary>All members are thread UNSAFE.</summary>
+  public class RevisionPersister
   {
-    private static ILog log = LogManager.GetLogger( "RevGen" );
+    private ILog log = LogManager.GetLogger( "RevGen" );
 
-    private static FileStream persistingFileStream;
+    private FileStream persistingFileStream;
 
-    public static bool IsActive { get; private set; }
+    public bool IsActive { get; private set; }
 
-    private static int revision;
-
-    private static readonly Encoding FileEncoding = Encoding.UTF8;
+    private readonly Encoding FileEncoding = Encoding.UTF8;
 
     private const string ClosedAck = "closed";
 
-    public static int RevisionThreadUnsafe
-    {
-      get
-      {
-        return revision;
-      }
-    }
-
-    public static int IncrementThreadUnsafe( )
-    {
-      if ( !IsActive )
-        throw new InvalidOperationException( "Non initialized" );
-
-      revision++;
-
-      return revision;
-    }
+    public int? ThreadUnsafeRevision;
 
     /// <summary>
     /// Initializes revision generator. If false returned, it's initialised but revision hasn't been restored from the file
@@ -69,7 +51,7 @@ namespace FlyTrace.Service
     /// </summary>
     /// <param name="persistingFilePath"></param>
     /// <returns></returns>
-    public static bool Init( string persistingFilePath, out string initWarnings )
+    public bool Init( string persistingFilePath, out string initWarnings )
     {
       if ( IsActive )
         throw new InvalidOperationException( "Already initialized" );
@@ -92,8 +74,8 @@ namespace FlyTrace.Service
             line1 != null &&
             line2 != null &&
             ( rest == null || rest.Trim( ) == "" ) &&
-            int.TryParse( line1, out revision ) &&
-            revision >= 0 &&
+            int.TryParse( line1, out ThreadUnsafeRevision ) &&
+            ThreadUnsafeRevision >= 0 &&
             line2 == ClosedAck;
 
           if ( result )
@@ -112,7 +94,7 @@ namespace FlyTrace.Service
         }
 
         StreamWriter sw = new StreamWriter( persistingFileStream, FileEncoding );
-        sw.Write( revision );
+        sw.Write( ThreadUnsafeRevision );
         sw.Flush( );
         persistingFileStream.Flush( );
 
@@ -140,7 +122,7 @@ namespace FlyTrace.Service
       }
     }
 
-    public static int Shutdown( )
+    public int Shutdown( )
     {
       if ( !IsActive )
         throw new InvalidOperationException( "Not initialized" );
@@ -154,7 +136,7 @@ namespace FlyTrace.Service
           persistingFileStream.Seek( 0, SeekOrigin.Begin );
 
           StreamWriter sw = new StreamWriter( persistingFileStream, FileEncoding );
-          sw.WriteLine( revision );
+          sw.WriteLine( ThreadUnsafeRevision );
           sw.Write( ClosedAck );
           sw.Flush( );
 
@@ -171,7 +153,7 @@ namespace FlyTrace.Service
         }
       }
 
-      return revision;
+      return ThreadUnsafeRevision;
     }
   }
 }

@@ -26,14 +26,14 @@ using log4net;
 
 namespace FlyTrace.Service
 {
+  public enum UpdateReason { BrandNew, NewPos, NewErr, NoChange };
+
   /// <summary>
   /// RevisedTrackerState means "TrackerState with Revision" (where Revision is a number like SVN revision)
   /// </summary>
   public class RevisedTrackerState : LocationLib.TrackerState
   {
     private static ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
-
-    public enum UpdateReason { BrandNew, NewPos, NewErr, NoChange };
 
     /// <summary>
     /// Identifies Position and Error data inside, but NOT the object itself. There could be more than one instances 
@@ -50,7 +50,7 @@ namespace FlyTrace.Service
       LocationLib.Data.Error error,
       string tag,
       UpdateReason updatedPart,
-      int revision
+      int? revision
     )
       : base( position, error, tag )
     {
@@ -279,5 +279,10 @@ namespace FlyTrace.Service
       return UpdateReason.NewPos;
     } // Merge
 
+
+    internal static RevisedTrackerState Merge( RevisedTrackerState revisedTrackerState, LocationLib.TrackerState trackerState, int? newRevisionToUse )
+    {
+      throw new NotImplementedException( );
+    }
   }
 }

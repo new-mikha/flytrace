@@ -103,6 +103,7 @@
       <DependentUpon>serviceLogConfig.aspx</DependentUpon>
     </Compile>
     <Compile Include="CallData.cs" />
+    <Compile Include="ReaderWriterLockSlimEx.cs" />
     <Compile Include="RevisionPersister.cs" />
     <Compile Include="Scheduler.cs" />
     <Compile Include="Data.cs" />

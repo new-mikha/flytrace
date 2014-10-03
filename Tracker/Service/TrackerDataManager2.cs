@@ -109,7 +109,7 @@ namespace FlyTrace.Service
     {
       try
       {
-        InitRevisionGenerator( );
+        InitRevisionPersister( );
 
         this.refreshThread = new Thread( RefreshThreadWorker );
         this.refreshThread.Name = "LocWorker";
@@ -187,7 +187,7 @@ namespace FlyTrace.Service
       return null;
     }
 
-    private ReaderWriterLockSlim rwLock = new ReaderWriterLockSlim( );
+    private ReaderWriterLockSlimEx rwLock = new ReaderWriterLockSlimEx( 1000 );
 
     private void BeginRequest( TrackerStateHolder trackerStateHolder )
     {
@@ -196,7 +196,7 @@ namespace FlyTrace.Service
           .LocationRequestFactories[trackerStateHolder.ForeignId.Type]
           .CreateRequest( trackerStateHolder.ForeignId.Id );
 
-      if ( !this.rwLock.TryEnterWriteLock( 1000 ) )
+      if ( !this.rwLock.TryEnterWriteLock( ) )
       {
         Log.ErrorFormat( "Can't enter read mode in BeginRequest for {0}", trackerStateHolder.ForeignId );
         return;
@@ -229,10 +229,14 @@ namespace FlyTrace.Service
     {
       Global.SetUpThreadCulture( );
 
-      LocationRequest locationRequest = null;
-      TrackerStateHolder trackerStateHolder = null;
+      RevisedTrackerState newTrackerState = null;
+      ForeignId foreignId = default( ForeignId );
+      long? lrid = null;
+
       try
       {
+        LocationRequest locationRequest;
+        TrackerStateHolder trackerStateHolder;
         {
           var paramTuple = ( Tuple<TrackerStateHolder, LocationRequest> ) ar.AsyncState;
 
@@ -240,55 +244,51 @@ namespace FlyTrace.Service
           locationRequest = paramTuple.Item2;
         }
 
+        lrid = locationRequest.Lrid;
+        foreignId = trackerStateHolder.ForeignId;
+
+        // Need to end it even if trackerStateHolder.CurrentRequest != locationRequest (see below)
         TrackerState trackerState = locationRequest.EndReadLocation( ar );
 
-        //// Merge is an expensive operation with new, lock etc inside, so keep
-        //// it out of lock.
-        //Thread.MemoryBarrier( ); // to prevent reading of Snapshot way earlier
-        //RevisedTrackerState oldTrackerState = trackerStateHolder.Snapshot;
-        //Thread.MemoryBarrier( ); // to prevent multiple reads of Snapshot
-        //RevisedTrackerState mergedResult =
-        //  RevisedTrackerState.Merge( oldTrackerState, trackerState );
-
-        //// Create a new object with old Pos and Err - to have new RefreshTime. Note that updating oldResult.RefreshTime is
-        //// not allowed because every RevisedTrackerState instance can be referenced as a snapshot in many places, which 
-        //// is considered immutable. That's why this field (as all others) is read-only.
-
-        //lock ( this.holdersAccessLock )
-        //{ // See "Incremental update algorithm explanation" comment above.
-
-        //  // It's possible that this request was just too slow, and it's not the current one any longer:
-        //  if ( trackerStateHolder.CurrentRequest != locationRequest )
-        //    return;
-
-        //  trackerStateHolder.CurrentRequest = null;
-
-        //  trackerStateHolder.Snapshot = mergedResult;
-        //}
-
-        if ( !this.rwLock.TryEnterUpgradeableReadLock( 1000 ) )
-          throw new ApplicationException( "Can't enter upgradeable mode" );
+        this.rwLock.AttemptEnterUpgradeableReadLock( );
+        // when we're here, other thread can be in read mode & no other can be in write or upgr. modes
 
         try
         {
-          // only one thread can be in updradable mode (others can be in read & cannot be in write)
+          // It's possible that this request was just too slow, and it's not the current one any longer:
+          if ( trackerStateHolder.CurrentRequest != locationRequest )
+            return;
 
-          // Use that to increment the revision generator, assuming this is the only 
-          // place where its value is being read (not counting init, shutdown & reading admin stats)
-          // This saves reading threads from blocking when merge and revgenupdates happens
+          // Do not save new one back to the persister yet because it's not write mode yet
+          // (logically can do that - see above the note about current mode - but it's not nice)
+          int? newRevisionToUse =
+              this.revisionPersister.IsActive
+                ? ( this.revisionPersister.ThreadUnsafeRevision + 1 )
+                : ( int? ) null;
 
+          // This doesn't write anything too, just a local var so far:
           RevisedTrackerState mergedResult =
-            RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState );
+            RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState, newRevisionToUse );
 
-          if ( !this.rwLock.TryEnterWriteLock( 1000 ) )
-            throw new ApplicationException( "Can't enter write mode" );
+          this.rwLock.AttemptEnterWriteLock( );
 
           try
-          {
+          { // Rolling through the write mode as quick as possible:
+
             // If an exception thrown before and it didn't come to this point, the request will 
             // be aborted & set to null after a timeout. But normally it's set to null here:
             trackerStateHolder.CurrentRequest = null;
-            trackerStateHolder.Snapshot = mergedResult;
+
+            // Merge can return the old tracker if no change occured:
+            if ( !ReferenceEquals( trackerStateHolder.Snapshot, mergedResult ) )
+            {
+              trackerStateHolder.Snapshot = newTrackerState = mergedResult;
+
+              if ( newRevisionToUse.HasValue ) // if so the revisionPersister.IsActive==true too
+                this.revisionPersister.ThreadUnsafeRevision = newRevisionToUse.Value;
+            }
+
+            trackerStateHolder.RefreshTime = DateTime.UtcNow;
           }
           finally
           {
@@ -299,21 +299,16 @@ namespace FlyTrace.Service
         {
           this.rwLock.ExitUpgradeableReadLock( );
         }
-
       }
       catch ( Exception exc )
       {
-        ForeignId foreignId =
-          trackerStateHolder == null
-          ? default( ForeignId )
-          : trackerStateHolder.ForeignId;
-
-        long? lrid =
-                locationRequest == null
-                ? ( long? ) null
-                : locationRequest.Lrid;
-
         Log.ErrorFormat( "Can't end read location for lrid {0}, {1}: {2}", lrid, foreignId, exc );
+      }
+      finally
+      {
+        // Keep logging out of rwLock to make latter as short as possible
+        if ( newTrackerState != null && IncrLog.IsDebugEnabled )
+          IncrLog.DebugFormat( "New data obtained by lrid {0}: {1}", lrid, newTrackerState );
       }
     }
 
@@ -336,7 +331,9 @@ namespace FlyTrace.Service
 
     private bool isAlwaysFullGroup;
 
-    private void InitRevisionGenerator( )
+    private readonly RevisionPersister revisionPersister = new RevisionPersister( );
+
+    private void InitRevisionPersister( )
     {
       if ( !Settings.Default.AllowIncrementalUpdates )
       {
@@ -351,21 +348,21 @@ namespace FlyTrace.Service
         string revisionFilePath = HttpContext.Current.Server.MapPath( @"~/App_Data/revision.bin" );
         string initWarnings;
 
-        if ( RevisionGenerator.Init( revisionFilePath, out initWarnings ) )
+        if ( this.revisionPersister.Init( revisionFilePath, out initWarnings ) )
         {
           // Log it as an error (while it's actually not) to make sure it's logged:
           IncrLog.InfoFormat(
             "Revgen restored from '{0}' successfuly: current value is {1}",
             revisionFilePath,
-            RevisionGenerator.Revision
+            this.revisionPersister.ThreadUnsafeRevision
           );
         }
         else
-        {
+        { // If Init didn't throw an error, then it's was inited
           IncrLog.ErrorFormat(
             "Revgen failed to restore from '{0}', so re-init it starting from {1}, and will try now to update all group versions in DB",
             revisionFilePath,
-            RevisionGenerator.Revision
+            this.revisionPersister.ThreadUnsafeRevision
           );
 
           string connString = Data.GetConnectionString( );
@@ -385,7 +382,7 @@ namespace FlyTrace.Service
           AdminAlerts["Revgen init warning"] = initWarnings;
         }
 
-        AdminAlerts["Revgen initialised at"] = RevisionGenerator.Revision.ToString( );
+        AdminAlerts["Revgen initialised at"] = RevisionPersister.Revision.ToString( );
       }
       catch ( Exception exc )
       {
@@ -393,8 +390,8 @@ namespace FlyTrace.Service
 
         this.isAlwaysFullGroup = true;
 
-        if ( RevisionGenerator.IsActive )
-          RevisionGenerator.Shutdown( );
+        if ( this.revisionPersister.IsActive )
+          this.revisionPersister.Shutdown( );
 
         AdminAlerts["Revgen Init Error"] = exc.Message;
       }
@@ -405,8 +402,8 @@ namespace FlyTrace.Service
       this.isStoppingWorkerThread = true;
 
       int closingRevision = -1;
-      if ( RevisionGenerator.IsActive )
-        closingRevision = RevisionGenerator.Shutdown( );
+      if ( this.revisionPersister.IsActive )
+        closingRevision = this.revisionPersister.Shutdown( );
 
       this.refreshThreadEvent.Set( );
       if ( this.refreshThread.Join( 30000 ) )

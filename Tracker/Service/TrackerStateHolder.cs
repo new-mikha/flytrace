@@ -58,9 +58,15 @@ namespace FlyTrace.Service
     public RevisedTrackerState Snapshot;
 
     /// <summary>
-    /// Not null when the request is in progress for the tracker, null otherwise. NOT volatile. Accessed from multiple threads.
+    /// Not null when the request is in progress for the tracker, null otherwise. 
+    /// NOT volatile. Accessed from multiple threads.
     /// </summary>
     public LocationLib.ForeignAccess.LocationRequest CurrentRequest;
+
+    /// <summary>UTC time of the latest refresh from the foreign server.
+    /// NOT volatile. Accessed from multiple threads.
+    /// </summary>
+    public DateTime RefreshTime;
 
     /// <summary>UTC time of the latest access</summary>
     public long AccessTimestamp = DateTime.UtcNow.ToFileTime( );
