@@ -90,6 +90,16 @@ namespace FlyTrace.Service
     public DateTime? StartTs;
 
     public long CallId;
+
+    public override string ToString( )
+    {
+      return
+        string.Format(
+          "Trackers: {0}; Res: [{1}]; Src: [{2}]; Ver: {3}; IncrSurr: {4}; StartTs: {5}, CallId: {6}",
+          Trackers == null ? 0 : Trackers.Count,
+          Res, Src, Ver, IncrSurr, StartTs, CallId 
+        );
+    }
   }
 
   /// <summary>

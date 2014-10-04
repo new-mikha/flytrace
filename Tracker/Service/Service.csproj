@@ -102,10 +102,8 @@
     <Compile Include="Administration\serviceLogConfig.aspx.designer.cs">
       <DependentUpon>serviceLogConfig.aspx</DependentUpon>
     </Compile>
-    <Compile Include="CallData.cs" />
     <Compile Include="ReaderWriterLockSlimEx.cs" />
     <Compile Include="RevisionPersister.cs" />
-    <Compile Include="Scheduler.cs" />
     <Compile Include="Data.cs" />
     <Compile Include="DemoTrackers.cs" />
     <Compile Include="Global.asax.cs">
@@ -119,6 +117,8 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="Services\CoordinatesService.cs" />
+    <Compile Include="Services\TrackerServiceBase.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="SimpleObjects.cs" />
     <Compile Include="SystemEvents\HiddenForm.cs">
@@ -141,7 +141,7 @@
     </Compile>
     <Compile Include="TrackersListRequest.cs" />
     <Compile Include="RevisedTrackerState.cs" />
-    <Compile Include="Tuple.cs" />
+    <Compile Include="Tuple2.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />
@@ -169,6 +169,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="obj\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />

@@ -38,7 +38,22 @@ using log4net.Appender;
 
 namespace FlyTrace.Service
 {
-  internal class TrackerDataManager
+  // TODO: remove
+  internal interface ITrackerService
+  {
+    IAsyncResult BeginGetTracks
+    (
+      int group,
+      TrackRequestItem[] trackRequests,
+      AsyncCallback callback,
+      object asyncState,
+      out long callId
+    );
+
+    List<TrackResponseItem> EndGetTracks( IAsyncResult asyncResult );
+  }
+
+  internal class TrackerDataManager : Services.ICoordinatesService, ITrackerService
   {
     /// <summary>
     /// TODO: the comment is obsolete.
@@ -332,7 +347,7 @@ namespace FlyTrace.Service
 
     public IAsyncResult BeginGetCoordinates( int group, string clientSeed, AsyncCallback callback, object state )
     {
-      Global.SetUpThreadCulture( );
+      Global.ConfigureThreadCulture( );
 
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
@@ -1090,7 +1105,7 @@ namespace FlyTrace.Service
 
     private void Log4NetBufferingAppendersFlushWorker( object state )
     {
-      Global.SetUpThreadCulture( );
+      Global.ConfigureThreadCulture( );
       ILog log = LogManager.GetLogger( "LogFlush" );
 
       string errName = "";
@@ -1127,7 +1142,7 @@ namespace FlyTrace.Service
 
     private void RefreshThreadWorker( )
     {
-      Global.SetUpThreadCulture( );
+      Global.ConfigureThreadCulture( );
 
       DateTime nextAllowedRequestTime = DateTime.UtcNow;
 
@@ -1332,7 +1347,7 @@ namespace FlyTrace.Service
       out long callId // temporary debug thing, to be removed.
     )
     {
-      Global.SetUpThreadCulture( );
+      Global.ConfigureThreadCulture( );
 
       int callCount = Interlocked.Increment( ref this.simultaneousCallCount );
 
@@ -1398,7 +1413,7 @@ namespace FlyTrace.Service
 
     private void GetTrackerIdResponseForTracks( IAsyncResult ar )
     {
-      Global.SetUpThreadCulture( );
+      Global.ConfigureThreadCulture( );
 
       var callData = ( CallData ) ar.AsyncState;
 

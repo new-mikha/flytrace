@@ -40,7 +40,7 @@ namespace FlyTrace.Service
 
     private readonly static ILog Log = LogManager.GetLogger( "Service.Global" );
 
-    internal static void SetUpThreadCulture( )
+    internal static void ConfigureThreadCulture( )
     {
       try
       {
@@ -102,12 +102,12 @@ namespace FlyTrace.Service
       new Thread( RunMessagePump ).Start( );
     }
 
-    private void DelayAction( int milliseconds, Action action )
+    public static void DelayAction( int milliseconds, Action action )
     {
       new System.Threading.Timer(
         unused =>
         {
-          SetUpThreadCulture( );
+          ConfigureThreadCulture( );
           action( );
         },
         null,

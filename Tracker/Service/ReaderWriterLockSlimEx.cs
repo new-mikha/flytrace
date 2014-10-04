@@ -56,21 +56,21 @@ namespace FlyTrace.Service
     public void AttemptEnterReadLock( )
     {
       if ( !TryEnterReadLock( waitTimeout ) )
-        throw new TimeoutException( "Can't enter read mode because timeout has expired" );
+        throw new TimeoutException( "Can't enter read mode: timeout has expired" );
     }
 
     /// <summary>Tries to enter, throws a TimeoutException if std timeout expires</summary>
     public void AttemptEnterWriteLock( )
     {
       if ( !TryEnterWriteLock( waitTimeout ) )
-        throw new TimeoutException( "Can't enter write mode because timeout has expired" );
+        throw new TimeoutException( "Can't enter write mode: timeout has expired" );
     }
 
     /// <summary>Tries to enter, throws a TimeoutException if std timeout expires</summary>
     public void AttemptEnterUpgradeableReadLock( )
     {
       if ( !TryEnterUpgradeableReadLock( waitTimeout ) )
-        throw new TimeoutException( "Can't enter upgradeable mode because timeout has expired" );
+        throw new TimeoutException( "Can't enter upgradeable mode: timeout has expired" );
     }
   }
 }

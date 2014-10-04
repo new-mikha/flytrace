@@ -239,7 +239,7 @@ namespace FlyTrace.Service
 
     private static void AsyncAbortRequest( object state )
     {
-      Global.SetUpThreadCulture( );
+      Global.ConfigureThreadCulture( );
 
       long? lrid = 0;
       try

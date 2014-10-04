@@ -1,12 +1,11 @@
-﻿// TODO: remove after moving to .NET 4.x
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 
 namespace FlyTrace.Service
 {
+  // TODO: remove after moving to .NET 4.x
   [Serializable]
   public class Tuple<T1, T2> : IEquatable<Tuple<T1, T2>>, IComparable<Tuple<T1, T2>>
   {
