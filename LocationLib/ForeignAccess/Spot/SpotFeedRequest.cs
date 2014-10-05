@@ -46,7 +46,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     /// <summary>If point is older than number of hours defined by this const, it's ignored, unless it's the newest point.</summary>
     private const int FullTrackPointAgeToIgnore = 12;
 
-    private string trackerForeignId;
+    private readonly string trackerForeignId;
 
     public readonly FeedKind FeedKind;
 
@@ -62,7 +62,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       this.iAttempt = iAttempt;
     }
 
-    private string testXml;
+    private readonly string testXml;
 
     public SpotFeedRequest( FeedKind feedKind, string trackerForeignId, string testXml, long callId )
     {
@@ -81,7 +81,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private int bufferedDataLength = 0;
 
-    private static ILog Log = LogManager.GetLogger( "TDM.FeedReq" );
+    private static readonly ILog Log = LogManager.GetLogger( "TDM.FeedReq" );
 
     public IAsyncResult BeginRequest( AsyncCallback callback, object state )
     {
@@ -478,7 +478,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
-    private static TrackPointDataTimeEqualityComparer timeEqualityComparer =
+    private static readonly TrackPointDataTimeEqualityComparer timeEqualityComparer =
       new TrackPointDataTimeEqualityComparer( );
 
     //private static Random rand = new Random( );

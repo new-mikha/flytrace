@@ -53,7 +53,7 @@ namespace FlyTrace.Service
     List<TrackResponseItem> EndGetTracks( IAsyncResult asyncResult );
   }
 
-  internal class TrackerDataManager : Services.ICoordinatesService, ITrackerService
+  internal class TrackerDataManager : Subservices.ICoordinatesService, ITrackerService
   {
     /// <summary>
     /// TODO: the comment is obsolete.
@@ -87,14 +87,14 @@ namespace FlyTrace.Service
     /// </summary>
     private const int TrackersKillChunk = 5;
 
-    private static ILog Log = LogManager.GetLogger( "TDM" );
+    private static readonly ILog Log = LogManager.GetLogger( "TDM" );
 
     /// <summary>
     /// Supposed to be always in at least for INFO level, i.e. don't use it too often. E.g. start/stop messages could go there.
     /// </summary>
-    private static ILog InfoLog = LogManager.GetLogger( "InfoLog" );
+    private static readonly ILog InfoLog = LogManager.GetLogger( "InfoLog" );
 
-    private static ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
+    private static readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
     static TrackerDataManager( )
     {
@@ -486,7 +486,7 @@ namespace FlyTrace.Service
           TrackerStateHolder trackerStateHolder;
           if ( !this.trackers.TryGetValue( trackerId.ForeignId, out trackerStateHolder ) )
           {
-            trackerStateHolder = new TrackerStateHolder( ); // no data yet, so leave its Snapshot field null for the moment.
+            trackerStateHolder = new TrackerStateHolder( trackerId.ForeignId ); // no data yet, so leave its Snapshot field null for the moment.
             this.trackers.Add( trackerId.ForeignId, trackerStateHolder );
           }
 
@@ -556,9 +556,9 @@ namespace FlyTrace.Service
      */
     #endregion
 
-    private object snapshotAccessSync = new object( );
+    private readonly object snapshotAccessSync = new object( );
 
-    private Random debugRnd = new Random( );
+    private readonly Random debugRnd = new Random( );
 
     public GroupData EndGetCoordinates( IAsyncResult asyncResult )
     {
@@ -943,15 +943,15 @@ namespace FlyTrace.Service
       }
     }
 
-    private List<CallData> waitingToRetrieveList = new List<CallData>( );
+    private readonly List<CallData> waitingToRetrieveList = new List<CallData>( );
 
     private Timer timer;
 
-    private Thread refreshThread;
+    private readonly Thread refreshThread;
 
-    private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
+    private readonly AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 
-    private Dictionary<ForeignId, TrackerStateHolder> trackers =
+    private readonly Dictionary<ForeignId, TrackerStateHolder> trackers =
       new Dictionary<ForeignId, TrackerStateHolder>( );
 
     internal Dictionary<ForeignId, TrackerStateHolder> Trackers { get { return this.trackers; } }
@@ -1053,7 +1053,7 @@ namespace FlyTrace.Service
 
       lock ( this.waitingToRetrieveList )
       {
-        foreach ( var asyncState in this.waitingToRetrieveList )
+        foreach ( CallData asyncState in this.waitingToRetrieveList )
         {
           if ( asyncState.IsReady ||
                asyncState.CallStartTime.AddSeconds( MaxSecondsToDelayReturn ) < DateTime.UtcNow )
@@ -1062,13 +1062,13 @@ namespace FlyTrace.Service
           }
         }
 
-        foreach ( var finishingAsyncChainedState in finishingList )
+        foreach ( CallData finishingAsyncChainedState in finishingList )
         {
           this.waitingToRetrieveList.Remove( finishingAsyncChainedState );
         }
       }
 
-      foreach ( var finishingCallData in finishingList )
+      foreach ( CallData finishingCallData in finishingList )
       {
         // make sure that the result knows that it was completed asynchronously:
         finishingCallData.CheckSynchronousFlag( false );
@@ -1249,7 +1249,7 @@ namespace FlyTrace.Service
           { // Now remove trackers that haven't been accessed for a long time.
             List<ForeignId> oldTrackersIds = new List<ForeignId>( );
             long threshold2Remove = DateTime.UtcNow.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
-            foreach ( var pair in this.trackers )
+            foreach ( KeyValuePair<ForeignId, TrackerStateHolder> pair in this.trackers )
             {
               if ( Interlocked.Read( ref pair.Value.AccessTimestamp ) < threshold2Remove )
               {
@@ -1300,13 +1300,13 @@ namespace FlyTrace.Service
       lock ( this.trackers )
       {
         {
-          var newTrackers =
+          IOrderedEnumerable<KeyValuePair<ForeignId, TrackerStateHolder>> newTrackers =
             ( from pair in this.trackers
               where pair.Value.Snapshot == null // Snapshot is not volatile but it's the thread that sets this value
               orderby Interlocked.Read( ref pair.Value.AccessTimestamp )
               select pair );
 
-          foreach ( var pair in newTrackers )
+          foreach ( KeyValuePair<ForeignId, TrackerStateHolder> pair in newTrackers )
           {
             result.Add( pair.Key, pair.Value );
             if ( result.Count >= refreshChunk )
@@ -1319,14 +1319,14 @@ namespace FlyTrace.Service
           DateTime threshold = DateTime.UtcNow.AddSeconds( -RefreshThresholdSec );
 
           // Snapshot is not volatile but it's the thread that sets this value:
-          var expiredTrackers =
+          IOrderedEnumerable<KeyValuePair<ForeignId, TrackerStateHolder>> expiredTrackers =
             ( from pair in this.trackers
               where pair.Value.Snapshot != null &&
                 pair.Value.Snapshot.RefreshTime < threshold
               orderby pair.Value.Snapshot.RefreshTime
               select pair );
 
-          foreach ( var pair in expiredTrackers )
+          foreach ( KeyValuePair<ForeignId, TrackerStateHolder> pair in expiredTrackers )
           {
             result.Add( pair.Key, pair.Value );
             if ( result.Count >= refreshChunk )
@@ -1415,7 +1415,7 @@ namespace FlyTrace.Service
     {
       Global.ConfigureThreadCulture( );
 
-      var callData = ( CallData ) ar.AsyncState;
+      CallData callData = ( CallData ) ar.AsyncState;
 
       callData.CheckSynchronousFlag( ar.CompletedSynchronously );
 

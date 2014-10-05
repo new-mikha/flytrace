@@ -19,9 +19,6 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace FlyTrace.LocationLib.Data
 {
@@ -53,7 +50,7 @@ namespace FlyTrace.LocationLib.Data
     public readonly string UserMessage;
 
     // EqualityExpressionCheck checks that all fields/properties of the type are included into the expression
-    private static Func<TrackPointData, TrackPointData, bool> equalityExpression =
+    private static readonly Func<TrackPointData, TrackPointData, bool> EqualityExpression =
       Utils.EqualityExpressionCheck<TrackPointData>(
         ( x, y ) =>
           x.LocationType == y.LocationType &&
@@ -72,7 +69,7 @@ namespace FlyTrace.LocationLib.Data
 
       // so now both are not nulls and different instances.
 
-      return equalityExpression( x, y );
+      return EqualityExpression( x, y );
     }
 
     internal static bool ArePointArraysEqual( TrackPointData[] x, TrackPointData[] y )
@@ -108,7 +105,7 @@ namespace FlyTrace.LocationLib.Data
           Latitude,
           Longitude,
           ForeignTime.ToString( "u" ),
-          Tools.GetAgeStr( ForeignTime ),
+          Tools.GetAgeStr( ForeignTime, true ),
           UserMessage
         );
     }

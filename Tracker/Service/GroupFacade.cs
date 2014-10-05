@@ -20,14 +20,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Data.SqlClient;
 using System.Diagnostics;
-using System.IO;
-using System.Reflection;
 using System.Threading;
-using System.Web;
-using System.Web.Configuration;
 
 using FlyTrace.LocationLib;
 
@@ -36,20 +31,16 @@ using log4net;
 namespace FlyTrace.Service
 {
   [DebuggerDisplay( "{Name} - {ForeignId}" )]
-  internal struct TrackerId
+  public struct TrackerId
   {
     public string Name;
 
     public ForeignId ForeignId;
   }
 
-  internal class GroupFacade
+  public class GroupFacade
   {
-    public GroupFacade( )
-    {
-    }
-
-    private static ILog Log = LogManager.GetLogger( "GrpFcde" );
+    private static readonly ILog Log = LogManager.GetLogger( "GrpFcde" );
 
     private SqlCommand sqlCmd;
 
@@ -87,7 +78,7 @@ namespace FlyTrace.Service
        * - When a call to this class finds that the dictionary value is dirty, it should wait for for the 
        *    retrieve thread.
        * 
-       * ... but all of the above looks too dramatic to implement at the moment, so keeping it as TODO and 
+       * ... but all of the above looks too dramatic to implement at the moment, so keeping it as TO DO and 
        * just reading DB every time in the recommended asynchronous way.
        */
 
@@ -266,7 +257,8 @@ namespace FlyTrace.Service
       //    execution plan for the query.
       // 2. Get the name too because Name column's collation is case-insensitive, so get the right writing 
       //    (not sure if it's really needed, but it costs nothing)
-      string sql = "SELECT [Name], [TrackerForeignId] FROM [GroupTracker] WHERE GroupId = @GroupId AND [Name] = @TrackerName";
+      const string sql = 
+        "SELECT [Name], [TrackerForeignId] FROM [GroupTracker] WHERE GroupId = @GroupId AND [Name] = @TrackerName";
 
       SqlConnection sqlConn = new SqlConnection( connString );
       sqlConn.Open( );

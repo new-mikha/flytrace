@@ -32,7 +32,7 @@ namespace FlyTrace.Service
   /// <summary>All members are thread UNSAFE.</summary>
   public class RevisionPersister
   {
-    private ILog log = LogManager.GetLogger( "RevGen" );
+    private readonly ILog log = LogManager.GetLogger( "RevGen" );
 
     private FileStream persistingFileStream;
 
@@ -42,7 +42,7 @@ namespace FlyTrace.Service
 
     private const string ClosedAck = "closed";
 
-    public int? ThreadUnsafeRevision;
+    public int ThreadUnsafeRevision;
 
     /// <summary>
     /// Initializes revision generator. If false returned, it's initialised but revision hasn't been restored from the file

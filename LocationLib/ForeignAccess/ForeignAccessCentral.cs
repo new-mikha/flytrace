@@ -10,7 +10,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
   {
     private static Dictionary<string, LocationRequestFactory> locationRequestFactories;
 
-    private static object sync = new object( );
+    private static readonly object sync = new object( );
 
     private static string logFolder = null;
 

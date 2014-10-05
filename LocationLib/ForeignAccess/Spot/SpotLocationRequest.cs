@@ -118,12 +118,12 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     public SpotLocationRequest
     (
-      ForeignId foreignId,
+      string foreignId,
       string testXml,
       FeedKind requestType,
       string appAuxLogFolder
     )
-      : base( foreignId.Id )
+      : base( foreignId )
     {
       this.testXml = testXml;
       this.appAuxLogFolder = appAuxLogFolder;

@@ -20,22 +20,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Web;
-using System.IO;
-using System.Diagnostics;
+using System.Data.SqlClient;
 using System.Threading;
-using System.Linq;
+using System.Web;
 
 using log4net;
+using log4net.Appender;
 
 using FlyTrace.LocationLib;
-using System.Text;
-using FlyTrace.Service.Properties;
-using System.Data.SqlClient;
-using FlyTrace.LocationLib.Data;
-using log4net.Repository;
-using log4net.Appender;
 using FlyTrace.LocationLib.ForeignAccess;
+using FlyTrace.Service.Properties;
+using log4net.Repository;
 
 namespace FlyTrace.Service
 {
@@ -110,6 +105,8 @@ namespace FlyTrace.Service
     // atomic set. No thread can use it until it's set & initialized.
     public static readonly TrackerDataManager2 Singleton = new TrackerDataManager2( );
 
+    private readonly Thread refreshThread;
+
     /// <summary>Constructor is private to make the instance accessible only via the <see cref="Singleton"/> field.</summary>
     private TrackerDataManager2( )
     {
@@ -117,9 +114,7 @@ namespace FlyTrace.Service
       {
         InitRevisionPersister( );
 
-        this.refreshThread = new Thread( RefreshThreadWorker );
-        this.refreshThread.Name = "LocWorker";
-        this.refreshThread.IsBackground = true;
+        this.refreshThread = new Thread( RefreshThreadWorker ) { Name = "LocWorker", IsBackground = true };
         this.refreshThread.Start( ); // it waits until refreshThreadEvent set.
 
         this.refreshThreadEvent.Set( );
@@ -153,18 +148,18 @@ namespace FlyTrace.Service
       }
     }
 
-    private static ILog Log = LogManager.GetLogger( "TDM" );
+    private static readonly ILog Log = LogManager.GetLogger( "TDM" );
 
     /// <summary>
     /// Supposed to be always in at least for INFO level, i.e. don't use it too often. E.g. start/stop messages could go there.
     /// </summary>
-    private static ILog InfoLog = LogManager.GetLogger( "InfoLog" );
+    private static readonly ILog InfoLog = LogManager.GetLogger( "InfoLog" );
 
-    private static ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
+    private static readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
     public AdminAlerts AdminAlerts = new AdminAlerts( );
 
-    private bool isAlwaysFullGroup;
+    public bool IsAlwaysFullGroup;
 
     private readonly RevisionPersister revisionPersister = new RevisionPersister( );
 
@@ -172,7 +167,7 @@ namespace FlyTrace.Service
     {
       if ( !Settings.Default.AllowIncrementalUpdates )
       {
-        this.isAlwaysFullGroup = true;
+        this.IsAlwaysFullGroup = true;
         IncrLog.Info( "Starting in 'always full group' mode" );
         return;
       }
@@ -217,13 +212,13 @@ namespace FlyTrace.Service
           AdminAlerts["Revgen init warning"] = initWarnings;
         }
 
-        AdminAlerts["Revgen initialised at"] = RevisionPersister.Revision.ToString( );
+        AdminAlerts["Revgen initialised at"] = this.revisionPersister.ThreadUnsafeRevision.ToString( );
       }
       catch ( Exception exc )
       {
         IncrLog.ErrorFormat( "Can't init Revgen properly or update all groups versions: {0}", exc );
 
-        this.isAlwaysFullGroup = true;
+        this.IsAlwaysFullGroup = true;
 
         if ( this.revisionPersister.IsActive )
           this.revisionPersister.Shutdown( );
@@ -232,14 +227,12 @@ namespace FlyTrace.Service
       }
     }
 
-    private Thread refreshThread;
-
-    private Dictionary<ForeignId, TrackerStateHolder> trackers =
+    private readonly Dictionary<ForeignId, TrackerStateHolder> trackers =
       new Dictionary<ForeignId, TrackerStateHolder>( );
 
     internal Dictionary<ForeignId, TrackerStateHolder> Trackers { get { return this.trackers; } }
 
-    private AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
+    private readonly AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 
     private void RefreshThreadWorker( )
     {
@@ -255,7 +248,7 @@ namespace FlyTrace.Service
         {
           PokeLog4NetBufferingAppendersSafe( );
 
-          List<TrackerStateHolder> trackersToRequest = WaitForTimeOfNextRequest( );
+          IEnumerable<TrackerStateHolder> trackersToRequest = WaitForTimeOfNextRequest( );
 
           if ( this.isStoppingWorkerThread )
             break;
@@ -283,14 +276,12 @@ namespace FlyTrace.Service
       Log.Info( "Finishing worker thread..." );
     }
 
-    private List<TrackerStateHolder> WaitForTimeOfNextRequest( )
+    private IEnumerable<TrackerStateHolder> WaitForTimeOfNextRequest( )
     {
       throw new NotImplementedException( );
     }
 
-    private volatile bool isStoppingWorkerThread = false;
-
-    private int requestCounter = 0;
+    private volatile bool isStoppingWorkerThread;
 
     public readonly ReaderWriterLockSlimEx RwLock = new ReaderWriterLockSlimEx( 1000 );
 
@@ -322,13 +313,11 @@ namespace FlyTrace.Service
       // can be stuck, aborted, and then suddenly pop in again in OnEndReadLocation. It's unlikely
       // but still possible. So pass locationRequest to avoid any chance that EndReadLocation is
       // called on wrong locationRequest.
-      var paramTuple =
+      Tuple<TrackerStateHolder, LocationRequest> paramTuple =
         new Tuple<TrackerStateHolder, LocationRequest>( trackerStateHolder, locationRequest );
 
       locationRequest.BeginReadLocation( OnEndReadLocation, paramTuple );
     }
-
-    private int trackerStateRevision;
 
     private void OnEndReadLocation( IAsyncResult ar )
     {
@@ -343,7 +332,7 @@ namespace FlyTrace.Service
         LocationRequest locationRequest;
         TrackerStateHolder trackerStateHolder;
         {
-          var paramTuple = ( Tuple<TrackerStateHolder, LocationRequest> ) ar.AsyncState;
+          Tuple<TrackerStateHolder, LocationRequest> paramTuple = ( Tuple<TrackerStateHolder, LocationRequest> ) ar.AsyncState;
 
           trackerStateHolder = paramTuple.Item1;
           locationRequest = paramTuple.Item2;
@@ -454,8 +443,7 @@ namespace FlyTrace.Service
                 Log.DebugFormat( "Adding '{0}' / {1}...", trackerId.Name, trackerId.ForeignId );
 
               // no data yet, so leave its Snapshot field null for the moment:
-              TrackerStateHolder trackerStateHolder =
-                new TrackerStateHolder( trackerId.ForeignId );
+              TrackerStateHolder trackerStateHolder = new TrackerStateHolder( trackerId.ForeignId );
 
               this.trackers.Add( trackerId.ForeignId, trackerStateHolder );
             }
@@ -520,7 +508,7 @@ namespace FlyTrace.Service
         // TODO: experimental feature, all hard-coded values to be removed later:
         DateTime destTime = DateTime.Now.AddHours( 8 );
 
-        ILoggerRepository defaultRepository = log4net.LogManager.GetRepository( );
+        ILoggerRepository defaultRepository = LogManager.GetRepository( );
 
         foreach ( IAppender appender in defaultRepository.GetAppenders( ) )
         {

@@ -31,7 +31,7 @@ namespace FlyTrace.Service
   /// </summary>
   public class ReaderWriterLockSlimEx : ReaderWriterLockSlim
   {
-    private int waitTimeout;
+    private readonly int waitTimeout;
 
     /// <summary>
     /// 

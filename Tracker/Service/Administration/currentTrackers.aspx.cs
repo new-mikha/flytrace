@@ -92,7 +92,7 @@ namespace FlyTrace.Service.Administration
 
           DateTime accessTime = DateTime.FromFileTime( Interlocked.Read( ref kvp.Value.AccessTimestamp ) ).ToUniversalTime( );
           item.AccessTime = accessTime;
-          item.AccessTimeStr = accessTime.ToString( "u" ) + "<br />" + Tools.GetAgeStr( accessTime );
+          item.AccessTimeStr = accessTime.ToString( "u" ) + "<br />" + Tools.GetAgeStr( accessTime, true );
 
           // No need to lock on TrackerDataManager.snapshotAccessSync once it doesn't matter if one of the snapshots is
           // updated during the cycle. MemoryBarrier for atomic read of a single Snapshot below is enough, it makes sure
@@ -107,7 +107,7 @@ namespace FlyTrace.Service.Administration
             item.RefreshTime = tracker.RefreshTime;
             item.RefreshTimeStr =
               tracker.RefreshTime.ToString( "u" ) + "<br />" +
-              Tools.GetAgeStr( tracker.RefreshTime );
+              Tools.GetAgeStr( tracker.RefreshTime, true );
 
             if ( tracker.Position != null )
             {
@@ -116,7 +116,7 @@ namespace FlyTrace.Service.Administration
               {
                 TrackPointData currPoint = tracker.Position.CurrPoint;
                 item.CurrentTs = currPoint.ForeignTime;
-                item.CurrentCoord = string.Format( "{0}, {1}, {2}", currPoint.Latitude, currPoint.Longitude, Tools.GetAgeStr( currPoint.ForeignTime ) );
+                item.CurrentCoord = string.Format( "{0}, {1}, {2}", currPoint.Latitude, currPoint.Longitude, Tools.GetAgeStr( currPoint.ForeignTime, true ) );
                 item.CurrentTsStr = string.Format( "{0}", currPoint.ForeignTime.ToString( "u" ) );
               }
 
@@ -125,7 +125,7 @@ namespace FlyTrace.Service.Administration
                 if ( prevPoint != null )
                 {
                   item.PrevTs = prevPoint.ForeignTime;
-                  item.PrevCoord = string.Format( "{0}, {1}, {2}", prevPoint.Latitude, prevPoint.Longitude, Tools.GetAgeStr( prevPoint.ForeignTime ) );
+                  item.PrevCoord = string.Format( "{0}, {1}, {2}", prevPoint.Latitude, prevPoint.Longitude, Tools.GetAgeStr( prevPoint.ForeignTime, true ) );
                   item.PrevTsStr = string.Format( "{0}", prevPoint.ForeignTime.ToString( "u" ) );
                 }
               }

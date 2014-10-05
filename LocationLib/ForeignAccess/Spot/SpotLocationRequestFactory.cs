@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
 using log4net;
 
 namespace FlyTrace.LocationLib.ForeignAccess.Spot
@@ -61,7 +62,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       return locationRequest;
     }
 
-    private static ILog Log = LogManager.GetLogger( "SLRF" );
+    private static readonly ILog Log = LogManager.GetLogger( "SLRF" );
 
     /// <summary>
     /// Normally this.attemptsOrder should have all values from FeedKind enum except None. But it's very 
@@ -70,7 +71,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     /// a bug, and do that synchronzing access to this.attemptsOrder.
     /// </summary>
     /// <returns></returns>
-    private FeedKind[] GetSanitizedAttemptsOrder( )
+    private IEnumerable<FeedKind> GetSanitizedAttemptsOrder( )
     {
       List<FeedKind> result;
       lock ( this.statSync )
@@ -130,16 +131,16 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       return new SpotLocationRequest( foreignId, testSource, FeedKind.Feed_2_0, this.appAuxLogFolder );
     }
 
-    private object statSync = new object( );
+    private readonly object statSync = new object( );
 
     private readonly List<FeedKind> attemptsOrder =
       new List<FeedKind>( SpotLocationRequest.DefaultAttemptsOrder );
 
-    private Dictionary<FeedKind, DateTime> feedsSuccTimes = new Dictionary<FeedKind, DateTime>( );
+    private readonly Dictionary<FeedKind, DateTime> feedsSuccTimes = new Dictionary<FeedKind, DateTime>( );
 
     private int feedCheckStat;
 
-    private Dictionary<FeedKind, int> feedsSuccStats = new Dictionary<FeedKind, int>( );
+    private readonly Dictionary<FeedKind, int> feedsSuccStats = new Dictionary<FeedKind, int>( );
 
     private void locationRequest_ReadLocationFinished( LocationRequest locationRequest, TrackerState result )
     {
@@ -150,10 +151,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       {
         FeedKind feedKind = ( ( SpotLocationRequest ) locationRequest ).CurrentFeedKind;
 
-        DateTime otherFeedSuccTime;
-
         lock ( this.statSync )
         {
+          DateTime otherFeedSuccTime;
           if ( !this.feedsSuccTimes.TryGetValue( feedKind, out otherFeedSuccTime ) ||
                otherFeedSuccTime < result.RefreshTime )
           {
@@ -165,7 +165,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
       catch ( Exception exc )
       { // don't really expect an exception here, but just to be on the safe side:
-        log4net.LogManager.GetLogger( GetType( ) ).Error( exc );
+        LogManager.GetLogger( GetType( ) ).Error( exc );
       }
     }
 

@@ -1,22 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using log4net;
 using System.Threading;
+using log4net;
 
-namespace FlyTrace.Service.Services
+namespace FlyTrace.Service.Subservices
 {
   public class TrackerServiceBase
   {
-    protected readonly int group;
-    protected readonly long callId;
-    protected readonly DateTime callStartTime = DateTime.UtcNow;
+    protected readonly int Group;
+    protected readonly long CallId;
+    protected readonly DateTime CallStartTime = DateTime.UtcNow;
 
     protected TrackerServiceBase( int group )
     {
-      this.group = group;
-      this.callId = Interlocked.Increment( ref CallIdSource );
+      Group = group;
+      CallId = Interlocked.Increment( ref CallIdSource );
     }
 
     protected static readonly ILog IncrTestLog = LogManager.GetLogger( "IncrTest" );
@@ -25,10 +22,10 @@ namespace FlyTrace.Service.Services
     protected static readonly ILog Log = LogManager.GetLogger( "TDM" );
 
     protected static int SimultaneousCallCount;
+
     private static long CallIdSource;
 
-
-    protected readonly GroupFacade groupFacade = new GroupFacade( );
+    protected readonly GroupFacade GroupFacade = new GroupFacade( );
 
     protected static void LogCallCount( int callCount )
     {
@@ -51,8 +48,5 @@ namespace FlyTrace.Service.Services
         Log.DebugFormat( "Got callCount > 3 , i.e. {0}", callCount );
       }
     }
-
-
-
   }
 }

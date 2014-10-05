@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using FlyTrace.LocationLib.Data;
 using log4net;
 
 namespace FlyTrace.Service
@@ -33,7 +34,7 @@ namespace FlyTrace.Service
   /// </summary>
   public class RevisedTrackerState : LocationLib.TrackerState
   {
-    private static ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
+    private static readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
     /// <summary>
     /// Identifies Position and Error data inside, but NOT the object itself. There could be more than one instances 
@@ -162,7 +163,7 @@ namespace FlyTrace.Service
        *   one still have Position set (and probably error - if the new one has it).
        */
 
-      LocationLib.Data.Error error = newResult.Error;
+      Error error = newResult.Error;
 
       bool arePositionsEqual = LocationLib.Data.Position.ArePositionsEqual( oldResult.Position, position );
       bool areErrorsEqual = LocationLib.Data.Error.AreErrorsEqual( oldResult.Error, error );

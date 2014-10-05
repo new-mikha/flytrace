@@ -32,9 +32,9 @@ namespace FlyTrace.Service
   /// <summary>All of the public members are thread safe.</summary>
   public static class RevisionGenerator
   {
-    private static object sync = new object( );
+    private static readonly object sync = new object( );
 
-    private static ILog log = LogManager.GetLogger( "RevGen" );
+    private static readonly ILog log = LogManager.GetLogger( "RevGen" );
 
     private static FileStream persistingFileStream;
 

@@ -17,7 +17,7 @@ namespace FlyTrace.Service.SystemEvents
       InitializeComponent( );
     }
 
-    private System.ComponentModel.IContainer components = null;
+    private readonly System.ComponentModel.IContainer components = null;
 
     protected override void Dispose( bool disposing )
     {
@@ -45,7 +45,7 @@ namespace FlyTrace.Service.SystemEvents
 
     #endregion
 
-    private static ILog Log = LogManager.GetLogger( "TimeChange" );
+    private static readonly ILog Log = LogManager.GetLogger( "TimeChange" );
 
     private const int WM_TIMECHANGE = 0x1E;
 

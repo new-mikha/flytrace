@@ -19,10 +19,6 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Linq.Expressions;
 
 namespace FlyTrace.LocationLib.Data
 {
@@ -51,7 +47,7 @@ namespace FlyTrace.LocationLib.Data
     public readonly string AuxMessage;
 
     // EqualityExpressionCheck checks that all fields/properties of the type are included into the expression
-    private static Func<Error, Error, bool> equalityExpression =
+    private static readonly Func<Error, Error, bool> EqualityExpression =
       Utils.EqualityExpressionCheck<Error>(
         ( x, y ) =>
           x.Type == y.Type &&
@@ -70,7 +66,7 @@ namespace FlyTrace.LocationLib.Data
 
       // so now both are not nulls and different instances.
 
-      return equalityExpression( x, y );
+      return EqualityExpression( x, y );
     }
 
     public override string ToString( )

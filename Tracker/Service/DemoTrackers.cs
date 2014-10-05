@@ -35,7 +35,7 @@ namespace FlyTrace.Service
 
     public static DemoTrackers Singleton = new DemoTrackers( );
 
-    private string[] names = new string[]
+    private readonly string[] names = new string[]
       {
         "Artur", "Anton", "Julia", "Zhenya", "Jonny", "Dave", 
         "Trent", "Curt", "Alex", "Gerolf", "Kathryn", "Manfred"

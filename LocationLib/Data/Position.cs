@@ -21,8 +21,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Linq.Expressions;
 
 namespace FlyTrace.LocationLib.Data
 {
@@ -33,9 +31,11 @@ namespace FlyTrace.LocationLib.Data
       if ( fullTrack == null )
         throw new ArgumentNullException( "fullTrack" );
 
-      CurrPoint = fullTrack.First( ); // throws an exception if it's empty - it's ok (because it shouldn't be empty)
-      PreviousPoint = fullTrack.Skip( 1 ).FirstOrDefault( ); // could be null
-      FullTrack = fullTrack.ToArray( );
+      var fullTrackArray = fullTrack as TrackPointData[] ?? fullTrack.ToArray();
+
+      CurrPoint = fullTrackArray.First( ); // throws an exception if it's empty - it's ok (because it shouldn't be empty)
+      PreviousPoint = fullTrackArray.Skip( 1 ).FirstOrDefault( ); // could be null
+      FullTrack = fullTrackArray.ToArray( );
       // If adding new field/property - don't forget to add it to equalityExpression below
     }
 
@@ -57,7 +57,7 @@ namespace FlyTrace.LocationLib.Data
     public readonly TrackPointData[] FullTrack;
 
     // EqualityExpressionCheck checks that all fields/properties of the type are included into the expression.
-    private static Func<Position, Position, bool> equalityExpression =
+    private static readonly Func<Position, Position, bool> EqualityExpression =
       Utils.EqualityExpressionCheck<Position>(
         ( x, y ) =>
           x.Type == y.Type &&  // Although Type and UserMessage are functions of Curr, which in turn is a function 
@@ -83,7 +83,7 @@ namespace FlyTrace.LocationLib.Data
 
       // so now both are not nulls and different instances.
 
-      return equalityExpression( x, y );
+      return EqualityExpression( x, y );
     }
   }
 }

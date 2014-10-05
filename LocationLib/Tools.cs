@@ -49,7 +49,7 @@ namespace FlyTrace.LocationLib
       Thread.CurrentThread.CurrentUICulture = DefaultCulture;
     }
 
-    public static string GetAgeStr( DateTime dateTime, bool withSec = true )
+    public static string GetAgeStr( DateTime dateTime, bool withSec )
     {
       double unusedTotalDays;
 
