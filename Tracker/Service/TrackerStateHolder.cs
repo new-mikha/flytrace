@@ -19,9 +19,6 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 
 namespace FlyTrace.Service
 {
@@ -50,7 +47,7 @@ namespace FlyTrace.Service
 
     public readonly LocationLib.ForeignId ForeignId;
 
-    /// <summary>The value of this field (i.e.reference to <see cref="Tracker"/> class) could be changed at 
+    /// <summary>The value of this field (i.e. a reference to <see cref="RevisedTrackerState"/> class) could be changed at 
     /// any time by different threads. So to access members of the referenced instance, either put it under the same lock 
     /// as the one that writes to that property, or first read it into a local variable then work with the local variable. 
     /// Note that it's NOT volatile, so make volatile reads to prevent reordering.
@@ -68,8 +65,9 @@ namespace FlyTrace.Service
     /// </summary>
     public DateTime RefreshTime;
 
-    /// <summary>UTC time of the latest access</summary>
-    public long AccessTimestamp = DateTime.UtcNow.ToFileTime( );
+    /// <summary>UTC time of the latest access. Used for diag only. 
+    /// Writing to that can be done OUT OF LOCK, see its usage.</summary>
+    public long ThreadDesynchronizedAccessTimestamp = DateTime.UtcNow.ToFileTime( );
 
     public override string ToString( )
     {

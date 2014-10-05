@@ -256,7 +256,7 @@ namespace FlyTrace
               LocationRequestFactory locationRequestFactory =
                ForeignAccessCentral.LocationRequestFactories[ForeignId.SPOT];
 
-              LocationRequest locationRequest = locationRequestFactory.CreateRequest( foreignId );
+              LocationRequest locationRequest = locationRequestFactory.CreateRequest( foreignId.Id );
 
               TrackerState tracker = locationRequest.ReadLocation( );
               if ( tracker.Error != null &&

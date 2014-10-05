@@ -20,10 +20,8 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Web;
 
 using log4net;
 
@@ -72,7 +70,6 @@ namespace FlyTrace.Service
 
         // Blog search: http://www.google.com.au/search?tbm=blg&hl=en&source=hp&biw=1440&bih=738&q=http%3A%2F%2Fshare.findmespot.com%2Fshared%2Ffaces%2F&btnG=Search&gbv=2#q=http://share.findmespot.com/shared/faces/&hl=en&gbv=2&tbm=blg&source=lnt&tbs=qdr:w&sa=X&ei=3cXYTurKGojSmAX-4LXnCw&ved=0CBEQpwUoBA&bav=on.2,or.r_gc.r_pw.,cf.osb&fp=536e09847cd89619&biw=1440&bih=738
 
-        string appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "logs" );
         foreach ( ForeignId trackerForeignId in trackerForeignIds )
         { // We fill the this.requests list PRIOR to actually starting any web request. List is thread-safe for 
           // reading when none writes to it, so later we don't care about sycnronization when accessing it.
@@ -97,7 +94,7 @@ namespace FlyTrace.Service
           }
           catch ( Exception exc )
           {
-            Log.ErrorFormat( "Can't read location for {0}: {1}", trackerForeignId.Id, exc.ToString( ) );
+            Log.ErrorFormat( "Can't read location for {0}: {1}", trackerForeignId.Id, exc );
             AddTrackerError( trackerForeignId, exc );
           }
         }
@@ -111,14 +108,14 @@ namespace FlyTrace.Service
           }
           catch ( Exception exc )
           {
-            Log.ErrorFormat( "Can't read location for {0}: {1}", locationRequest.Id, exc.ToString( ) );
+            Log.ErrorFormat( "Can't read location for {0}: {1}", locationRequest.Id, exc );
             AddTrackerError( locationRequest.ForeignId, exc );
           }
         }
       }
       catch ( Exception exc2 )
       {
-        Log.ErrorFormat( "Can't get trackers locations: {0}", exc2.ToString( ) );
+        Log.ErrorFormat( "Can't get trackers locations: {0}", exc2 );
         Interlocked.Decrement( ref multiCallCheck );
         this.asyncChainedState.SetAsCompleted( exc2 );
       }
@@ -186,7 +183,7 @@ namespace FlyTrace.Service
       }
     }
 
-    private static readonly Dictionary<long, AbortStat> queuedAborts = new Dictionary<long, AbortStat>( );
+    private static readonly Dictionary<long, AbortStat> QueuedAborts = new Dictionary<long, AbortStat>( );
 
     private static readonly ILog TimedOutAbortsLog = LogManager.GetLogger( "TimedOutAborts" );
 
@@ -197,10 +194,10 @@ namespace FlyTrace.Service
         DateTime threshold = DateTime.UtcNow.AddMinutes( -5 );
 
         KeyValuePair<long, AbortStat>[] timedOutAborts;
-        lock ( queuedAborts )
+        lock ( QueuedAborts )
         {
           timedOutAborts =
-            queuedAborts
+            QueuedAborts
             .Where
             (
               kvp =>
@@ -218,12 +215,12 @@ namespace FlyTrace.Service
               "Abort for lrid {0} timed out at stage {1} for {2}", kvp.Key, kvp.Value.Stage, timespan );
           }
 
-          lock ( queuedAborts )
+          lock ( QueuedAborts )
           {
             foreach ( long lrid in timedOutAborts.Select( kvp => kvp.Key ) )
             {
-              if ( queuedAborts.ContainsKey( lrid ) )
-                queuedAborts.Remove( lrid );
+              if ( QueuedAborts.ContainsKey( lrid ) )
+                QueuedAborts.Remove( lrid );
             }
           }
         }
@@ -239,17 +236,17 @@ namespace FlyTrace.Service
     {
       Global.ConfigureThreadCulture( );
 
-      long? lrid = 0;
+      long? lrid = null;
       try
       {
         LocationRequest locReq = ( LocationRequest ) state;
         lrid = locReq.Lrid;
 
         AbortStat abortStat;
-        lock ( queuedAborts )
+        lock ( QueuedAborts )
         {
           abortStat = new AbortStat( );
-          queuedAborts.Add( lrid.Value, abortStat );
+          QueuedAborts.Add( lrid.Value, abortStat );
         }
 
         locReq.SafelyAbortRequest( abortStat );
@@ -263,9 +260,9 @@ namespace FlyTrace.Service
       {
         if ( lrid.HasValue )
         {
-          lock ( queuedAborts )
+          lock ( QueuedAborts )
           {
-            queuedAborts.Remove( lrid.Value );
+            QueuedAborts.Remove( lrid.Value );
           }
         }
       }

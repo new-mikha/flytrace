@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Web;
 using System.IO;
 using System.Diagnostics;
@@ -38,22 +39,7 @@ using log4net.Appender;
 
 namespace FlyTrace.Service
 {
-  // TODO: remove
-  internal interface ITrackerService
-  {
-    IAsyncResult BeginGetTracks
-    (
-      int group,
-      TrackRequestItem[] trackRequests,
-      AsyncCallback callback,
-      object asyncState,
-      out long callId
-    );
-
-    List<TrackResponseItem> EndGetTracks( IAsyncResult asyncResult );
-  }
-
-  internal class TrackerDataManager : Subservices.ICoordinatesService, ITrackerService
+  internal class TrackerDataManager : Subservices.ICoordinatesService, Subservices.ITrackerService
   {
     /// <summary>
     /// TODO: the comment is obsolete.
@@ -428,15 +414,10 @@ namespace FlyTrace.Service
 
       try
       {
-        List<TrackerId> trackerIds =
-          callData.GroupFacade.EndGetGroupTrackerIds
-          (
-            ar,
-            out callData.ActualGroupVersion,
-            out callData.ShowUserMessages,
-            out callData.StartTs
-           );
-        callData.TrackerIds = trackerIds;
+        GroupConfig groupConfig =
+          callData.GroupFacade.EndGetGroupTrackerIds( ar );
+
+        callData.TrackerIds = groupConfig.TrackerIds;
 
         if ( Log.IsDebugEnabled )
         {
@@ -706,7 +687,7 @@ namespace FlyTrace.Service
             }
 
             // Interlocked used to make sure the operation is atomic:
-            Interlocked.Exchange( ref trackerStateHolder.AccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
+            Interlocked.Exchange( ref trackerStateHolder.ThreadDesynchronizedAccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
           }
 
           #region Log
@@ -1251,7 +1232,7 @@ namespace FlyTrace.Service
             long threshold2Remove = DateTime.UtcNow.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
             foreach ( KeyValuePair<ForeignId, TrackerStateHolder> pair in this.trackers )
             {
-              if ( Interlocked.Read( ref pair.Value.AccessTimestamp ) < threshold2Remove )
+              if ( Interlocked.Read( ref pair.Value.ThreadDesynchronizedAccessTimestamp ) < threshold2Remove )
               {
                 oldTrackersIds.Add( pair.Key );
               }
@@ -1303,7 +1284,7 @@ namespace FlyTrace.Service
           IOrderedEnumerable<KeyValuePair<ForeignId, TrackerStateHolder>> newTrackers =
             ( from pair in this.trackers
               where pair.Value.Snapshot == null // Snapshot is not volatile but it's the thread that sets this value
-              orderby Interlocked.Read( ref pair.Value.AccessTimestamp )
+              orderby Interlocked.Read( ref pair.Value.ThreadDesynchronizedAccessTimestamp )
               select pair );
 
           foreach ( KeyValuePair<ForeignId, TrackerStateHolder> pair in newTrackers )
@@ -1424,22 +1405,15 @@ namespace FlyTrace.Service
         int unusedGroupVersion;
         bool unusedShowUserMessages;
 
-        List<TrackerId> trackerIds =
-          callData.GroupFacade.EndGetGroupTrackerIds
-          (
-            ar,
-            out unusedGroupVersion,
-            out unusedShowUserMessages,
-            out callData.StartTs
-          );
+        GroupConfig groupConfig = callData.GroupFacade.EndGetGroupTrackerIds( ar );
 
         callData.TrackerIds = new List<TrackerId>( );
 
         // We need only those TrackerIds whose names present in TrackRequests array. So intersect both lists.
         // Avoid "foreach" and LINQ in frequent operation because both use too much "new" operatons
-        for ( int iTrackerId = 0; iTrackerId < trackerIds.Count; iTrackerId++ )
+        for ( int iTrackerId = 0; iTrackerId < groupConfig.TrackerIds.Count; iTrackerId++ )
         {
-          TrackerId trackerId = trackerIds[iTrackerId];
+          TrackerId trackerId = groupConfig.TrackerIds[iTrackerId];
 
           for ( int iReq = 0; iReq < callData.TrackRequests.Length; iReq++ )
           {
@@ -1562,7 +1536,7 @@ namespace FlyTrace.Service
           }
 
           // Interlocked used to make sure the operation is atomic:
-          Interlocked.Exchange( ref trackerStateHolder.AccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
+          Interlocked.Exchange( ref trackerStateHolder.ThreadDesynchronizedAccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
         }
 
         Log.DebugFormat( "Finishing EndGetTracks, call id {0}, got {1} tracks", callId, result.Count );

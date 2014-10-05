@@ -19,9 +19,6 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Threading;
 
 namespace FlyTrace.Service
@@ -38,7 +35,6 @@ namespace FlyTrace.Service
     /// </summary>
     /// <param name="waitTimeout">Timeout in milliseconds to wait for *WithFiniteWaiting methods</param>
     public ReaderWriterLockSlimEx( int waitTimeout )
-      : base( )
     {
       if ( this.waitTimeout <= 0 )
         throw new ArgumentException( "Value should be positive", "waitTimeout" );

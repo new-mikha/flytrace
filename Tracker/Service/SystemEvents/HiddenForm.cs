@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using log4net;
-using System.Windows.Forms;
 using System.Threading;
+using System.Windows.Forms;
+
+using log4net;
 
 namespace FlyTrace.Service.SystemEvents
 {
@@ -31,22 +29,27 @@ namespace FlyTrace.Service.SystemEvents
     private void InitializeComponent( )
     {
       this.SuspendLayout( );
+      // 
+      // HiddenForm
+      // 
       this.AutoScaleDimensions = new System.Drawing.SizeF( 6F, 13F );
-      this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-      this.ClientSize = new System.Drawing.Size( 0, 0 );
-      this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+      this.AutoScaleMode = AutoScaleMode.Font;
+      this.ClientSize = new System.Drawing.Size( 300, 243 );
+      this.FormBorderStyle = FormBorderStyle.None;
       this.Name = "HiddenForm";
       this.Text = "HiddenForm";
-      this.WindowState = System.Windows.Forms.FormWindowState.Minimized;
-      this.Load += new System.EventHandler( this.HiddenForm_Load );
-      this.FormClosing += new System.Windows.Forms.FormClosingEventHandler( this.HiddenForm_FormClosing );
+      this.WindowState = FormWindowState.Minimized;
+      this.FormClosing += this.HiddenForm_FormClosing;
+      this.Load += this.HiddenForm_Load;
       this.ResumeLayout( false );
+
     }
 
     #endregion
 
     private static readonly ILog Log = LogManager.GetLogger( "TimeChange" );
 
+    // ReSharper disable once InconsistentNaming
     private const int WM_TIMECHANGE = 0x1E;
 
     public event EventHandler TimeChanged;
@@ -63,7 +66,7 @@ namespace FlyTrace.Service.SystemEvents
         // so take measures to read & use it atomically:
         EventHandler timeChanged = TimeChanged;
         Thread.MemoryBarrier( );
-        
+
         if ( timeChanged != null )
         {
           try
@@ -89,16 +92,5 @@ namespace FlyTrace.Service.SystemEvents
     {
       Log.Info( "HiddenForm_FormClosing" );
     }
-
-    //private void SystemEvents_TimeChanged( object sender, EventArgs e )
-    //{
-    //  Log.Info( "SystemEvents_TimeChanged" );
-    //}
-
-    //private void SystemEvents_UPCChanged( object sender, UserPreferenceChangedEventArgs e )
-    //{
-    //  Log.Info( "SystemEvents_UPCChanged" );
-    //}
-
   }
 }

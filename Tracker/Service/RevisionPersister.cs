@@ -19,13 +19,10 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Threading;
 using System.IO;
-using log4net;
 using System.Text;
+
+using log4net;
 
 namespace FlyTrace.Service
 {
@@ -38,7 +35,7 @@ namespace FlyTrace.Service
 
     public bool IsActive { get; private set; }
 
-    private readonly Encoding FileEncoding = Encoding.UTF8;
+    private readonly Encoding fileEncoding = Encoding.UTF8;
 
     private const string ClosedAck = "closed";
 
@@ -49,8 +46,6 @@ namespace FlyTrace.Service
     /// so it's restarted from zero. If exception is thrown, it's not initialised and shouldn't be used. After a succeessful
     /// call to this it can't be called for a second time without calling Shutdown first.
     /// </summary>
-    /// <param name="persistingFilePath"></param>
-    /// <returns></returns>
     public bool Init( string persistingFilePath, out string initWarnings )
     {
       if ( IsActive )
@@ -65,7 +60,7 @@ namespace FlyTrace.Service
           persistingFileStream = File.Open( persistingFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read );
 
           // parse & check the file
-          StreamReader sr = new StreamReader( persistingFileStream, FileEncoding );
+          StreamReader sr = new StreamReader( persistingFileStream, fileEncoding );
           string line1 = sr.ReadLine( );
           string line2 = sr.ReadLine( );
           string rest = sr.ReadToEnd( );
@@ -73,7 +68,7 @@ namespace FlyTrace.Service
           result =
             line1 != null &&
             line2 != null &&
-            ( rest == null || rest.Trim( ) == "" ) &&
+            rest.Trim( ) == "" &&
             int.TryParse( line1, out ThreadUnsafeRevision ) &&
             ThreadUnsafeRevision >= 0 &&
             line2 == ClosedAck;
@@ -93,7 +88,7 @@ namespace FlyTrace.Service
           result = false;
         }
 
-        StreamWriter sw = new StreamWriter( persistingFileStream, FileEncoding );
+        StreamWriter sw = new StreamWriter( persistingFileStream, fileEncoding );
         sw.Write( ThreadUnsafeRevision );
         sw.Flush( );
         persistingFileStream.Flush( );
@@ -135,7 +130,7 @@ namespace FlyTrace.Service
         {
           persistingFileStream.Seek( 0, SeekOrigin.Begin );
 
-          StreamWriter sw = new StreamWriter( persistingFileStream, FileEncoding );
+          StreamWriter sw = new StreamWriter( persistingFileStream, fileEncoding );
           sw.WriteLine( ThreadUnsafeRevision );
           sw.Write( ClosedAck );
           sw.Flush( );

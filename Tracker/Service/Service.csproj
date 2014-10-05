@@ -119,8 +119,8 @@
     </Compile>
     <Compile Include="Subservices\CoordinatesService.cs" />
     <Compile Include="Subservices\TrackerServiceBase.cs" />
-    <Compile Include="Settings.cs" />
     <Compile Include="SimpleObjects.cs" />
+    <Compile Include="Subservices\TracksService.cs" />
     <Compile Include="SystemEvents\HiddenForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -170,6 +170,11 @@
   <ItemGroup>
     <Folder Include="App_Data\" />
     <Folder Include="obj\" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="SystemEvents\HiddenForm.resx">
+      <DependentUpon>HiddenForm.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />

@@ -90,7 +90,7 @@ namespace FlyTrace.Service.Administration
           TrackerDisplayItem item = new TrackerDisplayItem( );
           item.SpotId = kvp.Key.Id;
 
-          DateTime accessTime = DateTime.FromFileTime( Interlocked.Read( ref kvp.Value.AccessTimestamp ) ).ToUniversalTime( );
+          DateTime accessTime = DateTime.FromFileTime( Interlocked.Read( ref kvp.Value.ThreadDesynchronizedAccessTimestamp ) ).ToUniversalTime( );
           item.AccessTime = accessTime;
           item.AccessTimeStr = accessTime.ToString( "u" ) + "<br />" + Tools.GetAgeStr( accessTime, true );
 

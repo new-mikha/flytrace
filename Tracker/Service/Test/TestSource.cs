@@ -18,7 +18,6 @@
  * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -45,10 +44,10 @@ namespace FlyTrace.Service.Test
       lock ( this.sync )
       {
         EnsureDataLoaded( );
-        List<TrackerId> result = new List<TrackerId>( );
+
         groupVersion = 1;
 
-        result =
+        List<TrackerId> result =
           (
             from name in this.sourceData.Keys
             select new TrackerId
@@ -68,7 +67,7 @@ namespace FlyTrace.Service.Test
 
     private readonly object sync = new object( );
 
-    private SortedList<string, XDocument> sourceData = null;
+    private SortedList<string, XDocument> sourceData;
 
     private void EnsureDataLoaded( )
     {
@@ -84,7 +83,7 @@ namespace FlyTrace.Service.Test
       foreach ( string filePath in filesPaths )
       {
         string fileName = Path.GetFileNameWithoutExtension( filePath );
-        if ( fileName.StartsWith( "_" ) )
+        if ( fileName == null || fileName.StartsWith( "_" ) )
           continue;
 
         XDocument doc = XDocument.Load( filePath );
@@ -154,12 +153,13 @@ namespace FlyTrace.Service.Test
             .Element( "messages" )
             .Elements( "message" );
 
-        int sourceMessagesCount = messages.Count( );
+        var messagesArray = messages as XElement[] ?? messages.ToArray();
+        int sourceMessagesCount = messagesArray.Count( );
 
         if ( nMaxFromThisSource < sourceMessagesCount )
         {
           XElement[] elementsToRemove =
-            messages
+            messagesArray
             .Take( sourceMessagesCount - nMaxFromThisSource )
             .ToArray( );
 

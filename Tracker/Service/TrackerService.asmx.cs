@@ -42,6 +42,9 @@ namespace FlyTrace.Service
   {
     private bool isNew = false;
 
+    private static readonly ILog IncrTestLog = LogManager.GetLogger( "IncrTest" );
+    private static readonly ILog Log = LogManager.GetLogger( "TDM" );
+
     [WebMethod]
     public GroupData GetCoordinates( int group, string srcSeed, DateTime scrTime /* this parameter to preven client-side response caching */ )
     {
@@ -61,11 +64,14 @@ namespace FlyTrace.Service
     [WebMethod]
     public List<TrackResponseItem> GetTracks( int group, TrackRequest trackRequest, DateTime scriptCurrTimet )
     {
-      ITrackerService trackerService;
+      Subservices.ITrackerService trackerService;
+      if (isNew)
+        trackerService = new Subservices.TracksService( group, trackRequest );
+      else
         trackerService = TrackerDataManager.Singleton;
 
       long callId;
-      IAsyncResult ar = TrackerDataManager.Singleton.BeginGetTracks( group, trackRequest.Items, null, null, out callId );
+      IAsyncResult ar = trackerService.BeginGetTracks( group, trackRequest.Items, null, null, out callId );
 
       bool handleSignaled;
       if ( AsyncResultNoResult.DefaultEndWaitTimeout > 0 )
@@ -79,13 +85,8 @@ namespace FlyTrace.Service
         return null;
       }
 
-      return new List<TrackResponseItem>( TrackerDataManager.Singleton.EndGetTracks( ar ) );
+      return new List<TrackResponseItem>( trackerService.EndGetTracks( ar ) );
     }
-
-    protected static readonly ILog IncrTestLog = LogManager.GetLogger( "IncrTest" );
-    protected static readonly ILog InfoLog = LogManager.GetLogger( "InfoLog" );
-    protected static readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
-    protected static readonly ILog Log = LogManager.GetLogger( "TDM" );
 
     [WebMethod]
     public void TestCheck( string msg )

@@ -20,30 +20,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using FlyTrace;
 
 namespace FlyTrace.Service
 {
   public class DemoTrackers
   {
-    private DemoTrackers( )
-    {
-      this.waitEnded = new bool[names.Length];
-    }
-
     public static DemoTrackers Singleton = new DemoTrackers( );
-
-    private readonly string[] names = new string[]
-      {
-        "Artur", "Anton", "Julia", "Zhenya", "Jonny", "Dave", 
-        "Trent", "Curt", "Alex", "Gerolf", "Kathryn", "Manfred"
-      };
-
-    private Random rand = new Random( 0 );
-
-    private bool[] waitEnded;
 
     public GroupData GetDemo( )
     {

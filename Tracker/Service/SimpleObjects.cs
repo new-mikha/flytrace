@@ -20,11 +20,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Web;
 using System.Xml.Serialization;
-
-using FlyTrace.LocationLib;
-using System.Runtime.Serialization;
 
 namespace FlyTrace.Service
 {
@@ -70,8 +66,8 @@ namespace FlyTrace.Service
   /// 3. Incremental non-empty
   /// 4. Incremental empty (no update)
   /// 
-  /// empty/non-empty: Trackers field (null is Empty)
-  /// Full/incremental: SrcSeed field (null if Full)
+  /// empty/non-empty: Trackers field (null if Empty)
+  /// Full/incremental: Src field (null if Full)
   /// 
   /// empty incremental: only Res has a value which is "nil"
   /// </summary>
@@ -144,7 +140,7 @@ namespace FlyTrace.Service
 
     public bool ShouldSerializeIsHidden( )
     {
-      return IsHidden == true;
+      return IsHidden;
     }
 
     public bool ShouldSerializeLat( )
@@ -159,7 +155,7 @@ namespace FlyTrace.Service
 
     public bool ShouldSerializeIsOfficial( )
     {
-      return IsOfficial == true;
+      return IsOfficial;
     }
 
     public bool ShouldSerializeTs( )

@@ -29,14 +29,9 @@ namespace FlyTrace.Service.Subservices
 
     public IAsyncResult BeginGetCoordinates( int unused1, string unused2, AsyncCallback callback, object state )
     {
-      AsyncChainedState<GroupData> asyncChainedState = new AsyncChainedState<GroupData>( callback, state );
-
-      return BeginGetCoordinates( asyncChainedState );
-    }
-
-    public IAsyncResult BeginGetCoordinates( AsyncChainedState<GroupData> asyncChainedState )
-    {
       Global.ConfigureThreadCulture( );
+
+      AsyncChainedState<GroupData> asyncChainedState = new AsyncChainedState<GroupData>( callback, state );
 
       int callCount = Interlocked.Increment( ref SimultaneousCallCount );
       try
@@ -94,211 +89,300 @@ namespace FlyTrace.Service.Subservices
 
       try
       {
-        int actualGroupVersion;
-        bool showUserMessages;
-        DateTime? groupStartTs;
+        GroupConfig groupConfig = GroupFacade.EndGetGroupTrackerIds( ar );
 
-        List<TrackerId> trackerIds =
-          GroupFacade.EndGetGroupTrackerIds
-          (
-            ar,
-            out actualGroupVersion,
-            out showUserMessages,
-            out groupStartTs
-           );
+        List<TrackerId> trackerIds = groupConfig.TrackerIds;
+
+        RevisedTrackerState[] snapshots = GetSnapshots( trackerIds, groupConfig );
+
+        bool isDebugFullGroup = IsDebugFullGroup( );
+
+        bool isFullGroup = IsFullGroup( snapshots );
+
+        int? thresholdRevision;
+        int nextThresholdRevision;
+        int incrLogicIncludeCount;
+        List<CoordResponseItem> resultTrackers =
+          GetResultTrackers(
+            snapshots,
+            trackerIds,
+            groupConfig,
+            isFullGroup,
+            isDebugFullGroup,
+            out thresholdRevision,
+            out nextThresholdRevision,
+            out incrLogicIncludeCount
+          );
+
+        GroupData result =
+          BuildGroupData(
+            resultTrackers,
+            isDebugFullGroup,
+            isFullGroup,
+            groupConfig,
+            nextThresholdRevision,
+            thresholdRevision,
+            incrLogicIncludeCount,
+            trackerIds.Count
+          );
+
+        if ( IncrLog.IsInfoEnabled )
+        {
+          IncrLog.InfoFormat(
+            "Call id {0}, {1} tracker(s) in total, and returning {2} in this call ({3} by incr.logic). Res.seed is \"{4}\"",
+            CallId,
+            snapshots.Length,
+            resultTrackers.Count,
+            incrLogicIncludeCount,
+            result.Res
+            );
+        }
 
         if ( Log.IsDebugEnabled )
         {
           TimeSpan timespan = DateTime.UtcNow - CallStartTime;
           Log.DebugFormat(
-            "Got {0} trackers ids for call id {1}, group {2} with version {3} in {4} ms, getting their data now...",
-            trackerIds.Count, CallId, Group, actualGroupVersion, ( int ) timespan.TotalMilliseconds );
+            "Finishing EndGetCoordinates, call id {0}, got {1} trackers, took {2} ms.",
+            CallId,
+            resultTrackers.Count,
+            ( int ) timespan.TotalMilliseconds
+            );
         }
 
-        TrackerDataManager2 dataManager = TrackerDataManager2.Singleton;
+        asyncChainedState.SetAsCompleted( result );
+      }
+      catch ( Exception exc )
+      {
+        Log.ErrorFormat( "GetTrackerIdResponseForCoords: call id {0}: {1}", CallId, exc );
+        asyncChainedState.SetAsCompleted( exc );
+      }
+    }
 
-        TrackerStateHolder[] holders = new TrackerStateHolder[trackerIds.Count];
-        RevisedTrackerState[] snapshots = new RevisedTrackerState[trackerIds.Count];
-        List<CoordResponseItem> resultTrackers = new List<CoordResponseItem>( trackerIds.Count );
+    private GroupData BuildGroupData(
+      List<CoordResponseItem> resultTrackers,
+      bool isDebugFullGroup,
+      bool isFullGroup,
+      GroupConfig groupConfig,
+      int nextThresholdRevision,
+      int? thresholdRevision,
+      int incrLogicIncludeCount,
+      int totalGroupTrackersCountCount
+    )
+    {
+      GroupData result;
 
-        if ( Log.IsDebugEnabled )
-          Log.DebugFormat( "Acquiring read lock for call id {0}, group {1}...", CallId, Group );
+      result.Trackers = resultTrackers.Count > 0 ? resultTrackers : null;
 
-        dataManager.RwLock.AttemptEnterReadLock( );
-        try
+      result.IncrSurr = isDebugFullGroup;
+
+      if ( isFullGroup )
+      {
+        result.Res = null;
+        result.Src = null;
+      }
+      else
+      {
+        result.Res = groupConfig.VersionInDb + ";" + nextThresholdRevision;
+
+        if ( thresholdRevision == null )
         {
-          #region Why under read lock
-          // under read lock to make sure that following situation is avoided in incremental update:
-          // 
-          // Read | Write
-          //      |
-          // A1   | 
-          // B2   | 
-          // C3   | 
-          //      | C4
-          //      | D5
-          // D5   |
-          // 
-          // Here Read is this thread; Write is thread where Snapshot is set; A,B,C,etc are trackers; and 1,2,3,etc 
-          // are revisions. If this happens, maximum revision of snapshots collectons would be 5, so newer C4 
-          // position snapshot (missed in this call where C3 is returned) will be missed on next incremental 
-          // updates call from the same client.
-          // 
-          // In other words, reading of several Snapshot has to be atomic here.
-          #endregion
+          result.Src = null;
+        }
+        else
+        {
+          result.Src = this.clientSeed;
 
-          if ( Log.IsDebugEnabled )
-            Log.DebugFormat( "Inside read lock for call id {0}, group {1}...", CallId, Group );
-
-          int notNullCount = 0;
-          for ( int i = 0; i < trackerIds.Count; i++ )
+          if ( incrLogicIncludeCount == 0 || result.Src == result.Res )
           {
-            TrackerId trackerId = trackerIds[i];
-            TrackerStateHolder trackerStateHolder;
-
-            // so i'th elements might be null if the tracker in not in dataManager yet:
-            if ( dataManager.Trackers.TryGetValue( trackerId.ForeignId, out trackerStateHolder ) )
+            if ( !isDebugFullGroup )
             {
-              notNullCount++;
-              holders[i] = trackerStateHolder;
-              snapshots[i] = trackerStateHolder.Snapshot;
+              // In "no update case" both and any of the checks above should be true.
+              // At this point's it that case, so check that none of them is false:
+              if ( incrLogicIncludeCount != 0 || result.Src != result.Res )
+              {
+                string errMessage =
+                  string.Format(
+                    "Incremental update error, reverting to full groups. Group id {0}, call id {1}, {2} tracker(s) in total, and returning {3} in this call, src seed is {4}, res seed is {5}",
+                    Group,
+                    CallId,
+                    totalGroupTrackersCountCount,
+                    resultTrackers.Count,
+                    result.Src,
+                    result.Res
+                    );
+                IncrLog.Fatal( errMessage );
+
+                DataManager.AdminAlerts["Incremental Logic Error"] = errMessage;
+                DataManager.IsAlwaysFullGroup = true;
+
+                throw new ApplicationException( "Incremental updates error" );
+                // will go to map page status string, so don't make it lengthy
+              }
             }
+
+            // reduce data in result struct to save amount of data returned in most cases:
+            result.Src = null;
+            result.Res = "NIL";
           }
-
-          if ( Log.IsDebugEnabled )
-            Log.DebugFormat(
-              "Got {0} tracker(s) ({1} not null) under read lock for call id {2}",
-              trackerIds.Count, notNullCount, CallId );
         }
-        finally
-        {
-          dataManager.RwLock.ExitReadLock( );
-          if ( Log.IsDebugEnabled )
-            Log.DebugFormat( "Left lock in GetTrackerIdResponse for call id {0}", CallId );
-        }
+      }
 
-        if ( holders.Any( h => h == null ) )
-        { // add it in a separate thread to return the call asap (adding might be blocked by another thread)
-          ThreadPool.QueueUserWorkItem( unused => dataManager.AddMissingTrackers( trackerIds ) );
-        }
+      result.StartTs =
+        result.Src == null
+          ? groupConfig.StartTs
+          : null;
 
-        DateTime? dtNewestForeignTime = null;
-        double newestLat = 0;
-        double newestLon = 0;
+      result.Ver = Settings.Default.Version;
 
-        // If the client seed is valid for incremental update, call below extracts a time threshold 
-        // from there to compare with snapshot.ModificationTime. Otherwise null is returned:
-        int? thresholdRevision = null;
+      result.CallId = CallId;
+      return result;
+    }
 
+    private bool IsFullGroup( IEnumerable<RevisedTrackerState> snapshots )
+    {
+      bool isFullGroup;
+      {
         // If any DataRevision is null it's an emergency mode and isAlwaysFullGroup should be true anyway. 
         // But make sure it really true.
         int nullSnapshotsCount = snapshots.Count( sn => sn == null || sn.DataRevision == null );
 
         // if any snaphot is null then hold incremental stuff for the moment. 
-        bool isFullGroup = dataManager.IsAlwaysFullGroup || nullSnapshotsCount > 0;
-
-        bool isDebugFullGroup = false;
-
-        double incrDebugRatio = Settings.Default.IncrDebugRatio;
-
-        if ( incrDebugRatio > 0.0 )
-        {
-          if ( incrDebugRatio >= 1.0 )
-            isDebugFullGroup = true;
-          else
-          {
-            lock ( debugRnd )
-            {
-              isDebugFullGroup = debugRnd.NextDouble( ) <= incrDebugRatio;
-            }
-          }
-        }
-
-        Thread.MemoryBarrier( ); // make sure isAlwaysFullGroup read once only, because it might be set in another thread
-
-        if ( !isFullGroup && trackerIds.Any( ) )
-          thresholdRevision = TryParseThresholdRevision( actualGroupVersion );
+        isFullGroup = DataManager.IsAlwaysFullGroup || nullSnapshotsCount > 0;
 
         if ( IncrLog.IsInfoEnabled )
         {
           IncrLog.InfoFormat(
-            "Call id {0}, input threshold revision {1}, isFullGroup {2}, null snapshots count {3}",
+            "Call id {0}, isFullGroup {1}, null snapshots count {2}",
             CallId,
-            thresholdRevision,
             isFullGroup,
             nullSnapshotsCount
-          );
+            );
         }
+      }
+      return isFullGroup;
+    }
 
-        int nextThresholdRevision = 0;
-        int incrLogicIncludeCount = 0;
+    private bool IsDebugFullGroup( )
+    {
+      bool isDebugFullGroup = false;
 
-        for ( int i = 0; i < snapshots.Length; i++ )
+      double incrDebugRatio = Settings.Default.IncrDebugRatio;
+
+      if ( incrDebugRatio > 0.0 )
+      {
+        if ( incrDebugRatio >= 1.0 )
+          isDebugFullGroup = true;
+        else
         {
-          string trackerName = trackerIds[i].Name;
-          RevisedTrackerState nullableSnapshot = snapshots[i]; // null means that position is not retrieved yet from the foreign server 
-
-          if ( nullableSnapshot != null && nullableSnapshot.DataRevision != null )
-            nextThresholdRevision = Math.Max( nextThresholdRevision, nullableSnapshot.DataRevision.Value );
-
-          bool isIncluded = false;
-
-          bool includeByNormalIncrLogic =
-            nullableSnapshot == null ||
-            nullableSnapshot.DataRevision == null ||
-            thresholdRevision == null ||
-            nullableSnapshot.DataRevision.Value > thresholdRevision.Value;
-
-          if ( includeByNormalIncrLogic )
-            incrLogicIncludeCount++;
-
-          if ( includeByNormalIncrLogic || isDebugFullGroup )
+          lock ( debugRnd )
           {
-            CoordResponseItem coordResponseItem =
-              TrackerFromTrackerSnapshot
+            isDebugFullGroup = debugRnd.NextDouble( ) <= incrDebugRatio;
+          }
+        }
+      }
+
+      if ( IncrLog.IsInfoEnabled )
+      {
+        IncrLog.InfoFormat( "Call id {0}, isDebugFullGroup {1}", CallId, isDebugFullGroup );
+      }
+
+      return isDebugFullGroup;
+    }
+
+    private List<CoordResponseItem> GetResultTrackers
+    (
+      RevisedTrackerState[] snapshots,
+      List<TrackerId> trackerIds,
+      GroupConfig groupConfig,
+      bool isFullGroup,
+      bool isDebugFullGroup,
+      out int? thresholdRevision,
+      out int nextThresholdRevision,
+      out int incrLogicIncludeCount )
+    {
+      DateTime? dtNewestForeignTime = null;
+      double newestLat = 0;
+      double newestLon = 0;
+
+      // If the client seed is valid for incremental update, call below extracts a time threshold 
+      // from there to compare with snapshot.ModificationTime. Otherwise null is returned:
+      thresholdRevision = null;
+
+      Thread.MemoryBarrier( ); // make sure isAlwaysFullGroup read once only, because it might be set in another thread
+
+      if ( !isFullGroup && trackerIds.Any( ) )
+        thresholdRevision = TryParseThresholdRevision( groupConfig.VersionInDb );
+
+      if ( IncrLog.IsInfoEnabled )
+        IncrLog.InfoFormat( "Call id {0}, input threshold revision {1}", CallId, thresholdRevision );
+
+      nextThresholdRevision = 0;
+      incrLogicIncludeCount = 0;
+
+      var resultTrackers = new List<CoordResponseItem>( trackerIds.Count );
+
+      for ( int i = 0; i < snapshots.Length; i++ )
+      {
+        string trackerName = trackerIds[i].Name;
+        RevisedTrackerState nullableSnapshot = snapshots[i];
+        // null means that position is not retrieved yet from the foreign server 
+
+        if ( nullableSnapshot != null && nullableSnapshot.DataRevision != null )
+          nextThresholdRevision = Math.Max( nextThresholdRevision, nullableSnapshot.DataRevision.Value );
+
+        bool isIncluded = false;
+
+        bool includeByNormalIncrLogic =
+          nullableSnapshot == null ||
+          nullableSnapshot.DataRevision == null ||
+          thresholdRevision == null ||
+          nullableSnapshot.DataRevision.Value > thresholdRevision.Value;
+
+        if ( includeByNormalIncrLogic )
+          incrLogicIncludeCount++;
+
+        if ( includeByNormalIncrLogic || isDebugFullGroup )
+        {
+          CoordResponseItem coordResponseItem =
+            TrackerFromTrackerSnapshot
               (
                 trackerName,
                 nullableSnapshot,
                 includeByNormalIncrLogic,
-                showUserMessages,
-                groupStartTs
+                groupConfig.ShowUserMessages,
+                groupConfig.StartTs
               );
 
-            resultTrackers.Add( coordResponseItem );
-            isIncluded = true;
+          resultTrackers.Add( coordResponseItem );
+          isIncluded = true;
 
-            if ( coordResponseItem.ShouldSerializeTs( ) ) // i.e. if lat, lon are not zero
+          if ( coordResponseItem.ShouldSerializeTs( ) ) // i.e. if lat, lon are not zero
+          {
+            if ( dtNewestForeignTime == null ||
+                dtNewestForeignTime.Value < coordResponseItem.Ts )
             {
-              if ( dtNewestForeignTime == null ||
-                   dtNewestForeignTime.Value < coordResponseItem.Ts )
-              {
-                dtNewestForeignTime = coordResponseItem.Ts;
-                newestLat = coordResponseItem.Lat;
-                newestLon = coordResponseItem.Lon;
-              }
-            }
-
-            TrackerStateHolder trackerStateHolder = holders[i];
-            if ( trackerStateHolder != null )
-            { // Interlocked used to make sure the operation is atomic:
-              Interlocked.Exchange( ref trackerStateHolder.AccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
+              dtNewestForeignTime = coordResponseItem.Ts;
+              newestLat = coordResponseItem.Lat;
+              newestLon = coordResponseItem.Lon;
             }
           }
+        }
 
-          #region Log
+        #region Log
 
-          if ( IncrLog.IsInfoEnabled )
+        if ( IncrLog.IsInfoEnabled )
+        {
+          if ( nullableSnapshot == null )
           {
-            if ( nullableSnapshot == null )
-            {
-              // DebugFormat is not a mistake here despite IsInfoEnabled above
-              IncrLog.DebugFormat(
-                "Call id {0}, got NULL tracker {1} - {2} (included as it's null)",
-                CallId, trackerIds[i].Name, trackerIds[i].ForeignId );
-            }
-            else if ( thresholdRevision.HasValue && ( IncrLog.IsDebugEnabled || includeByNormalIncrLogic ) )
-            { // should be InfoFormat despite IsDebugEnabled above
-              IncrLog.InfoFormat
+            // DebugFormat is not a mistake here despite IsInfoEnabled above
+            IncrLog.DebugFormat(
+              "Call id {0}, got NULL tracker {1} - {2} (included as it's null)",
+              CallId, trackerIds[i].Name, trackerIds[i].ForeignId );
+          }
+          else if ( thresholdRevision.HasValue && ( IncrLog.IsDebugEnabled || includeByNormalIncrLogic ) )
+          {
+            // should be InfoFormat despite IsDebugEnabled above
+            IncrLog.InfoFormat
               (
                 "Call id {0}, got tracker {1} - {2} with foreign time {3}, refresh time {4}, revision {5} ({6}), included: {7}",
                 CallId,
@@ -310,110 +394,104 @@ namespace FlyTrace.Service.Subservices
                 nullableSnapshot.UpdatedPart,
                 isIncluded
               );
-            }
           }
-          #endregion
         }
 
-        // Update statistics for the group: number of calls, latest coords
-        UpdateStatFields( dtNewestForeignTime, newestLat, newestLon );
+        #endregion
+      }
 
-        GroupData result;
+      // Update statistics for the group: number of calls, latest coords
+      UpdateStatFields( dtNewestForeignTime, newestLat, newestLon );
 
-        result.Trackers = resultTrackers.Count > 0 ? resultTrackers : null;
+      return resultTrackers;
+    }
 
-        result.IncrSurr = isDebugFullGroup;
+    private RevisedTrackerState[] GetSnapshots( List<TrackerId> trackerIds, GroupConfig groupConfig )
+    {
+      if ( Log.IsDebugEnabled )
+      {
+        TimeSpan timespan = DateTime.UtcNow - CallStartTime;
+        Log.DebugFormat(
+          "Got {0} trackers ids for call id {1}, group {2} with version {3} in {4} ms, getting their data now...",
+          trackerIds.Count, CallId, Group, groupConfig.VersionInDb, ( int ) timespan.TotalMilliseconds );
+      }
 
-        if ( isFullGroup )
+      TrackerStateHolder[] holders = new TrackerStateHolder[trackerIds.Count];
+      RevisedTrackerState[] snapshots = new RevisedTrackerState[trackerIds.Count];
+
+      if ( Log.IsDebugEnabled )
+        Log.DebugFormat( "Acquiring read lock for call id {0}, group {1}...", CallId, Group );
+
+      DataManager.RwLock.AttemptEnterReadLock( );
+      try
+      {
+        #region Why under read lock
+
+        // under read lock to make sure that following situation is avoided in incremental update:
+        // 
+        // Read | Write
+        //      |
+        // A1   | 
+        // B2   | 
+        // C3   | 
+        //      | C4
+        //      | D5
+        // D5   |
+        // 
+        // Here Read is this thread; Write is thread where Snapshot is set; A,B,C,etc are trackers; and 1,2,3,etc 
+        // are revisions. If this happens, maximum revision of snapshots collectons would be 5, so newer C4 
+        // position snapshot (missed in this call where C3 is returned) will be missed on next incremental 
+        // updates call from the same client.
+        // 
+        // In other words, reading of several Snapshot has to be atomic here.
+
+        #endregion
+
+        if ( Log.IsDebugEnabled )
+          Log.DebugFormat( "Inside read lock for call id {0}, group {1}...", CallId, Group );
+
+        int notNullCount = 0;
+        for ( int i = 0; i < trackerIds.Count; i++ )
         {
-          result.Res = null;
-          result.Src = null;
-        }
-        else
-        {
-          result.Res = actualGroupVersion + ";" + nextThresholdRevision;
+          TrackerId trackerId = trackerIds[i];
+          TrackerStateHolder trackerStateHolder;
 
-          if ( thresholdRevision == null )
+          // so i'th elements might be null if the tracker in not in dataManager yet:
+          if ( DataManager.Trackers.TryGetValue( trackerId.ForeignId, out trackerStateHolder ) )
           {
-            result.Src = null;
+            notNullCount++;
+            holders[i] = trackerStateHolder;
+            snapshots[i] = trackerStateHolder.Snapshot;
           }
-          else
-          {
-            result.Src = this.clientSeed;
-
-            if ( incrLogicIncludeCount == 0 || result.Src == result.Res )
-            {
-              if ( !isDebugFullGroup )
-              {
-                // In "no update case" both and any of the checks above should be true.
-                // At this point's it that case, so check that none of them is false:
-                if ( incrLogicIncludeCount != 0 || result.Src != result.Res )
-                {
-                  string errMessage =
-                    string.Format(
-                      "Incremental update error, reverting to full groups. Group id {0}, call id {1}, {2} tracker(s) in total, and returning {3} in this call, src seed is {4}, res seed is {5}",
-                      Group,
-                      CallId,
-                      holders.Length,
-                      resultTrackers.Count,
-                      result.Src,
-                      result.Res
-                    );
-                  IncrLog.Fatal( errMessage );
-
-                  dataManager.AdminAlerts["Incremental Logic Error"] = errMessage;
-                  dataManager.IsAlwaysFullGroup = true;
-
-                  throw new ApplicationException( "Incremental updates error" ); // will go to map page status string, so don't make it lengthy
-                }
-              }
-
-              // reduce data in result struct to save amount of data returned in most cases:
-              result.Src = null;
-              result.Res = "NIL";
-            }
-          }
-        }
-
-        result.StartTs =
-          result.Src == null
-          ? groupStartTs
-          : null;
-
-        if ( IncrLog.IsInfoEnabled )
-        {
-          IncrLog.InfoFormat(
-            "Call id {0}, {1} tracker(s) in total, and returning {2} in this call ({3} by incr.logic). Res.seed is \"{4}\"",
-            CallId,
-            snapshots.Length,
-            resultTrackers.Count,
-            incrLogicIncludeCount,
-            result.Res
-          );
         }
 
         if ( Log.IsDebugEnabled )
-        {
-          TimeSpan timespan = DateTime.UtcNow - CallStartTime;
           Log.DebugFormat(
-            "Finishing EndGetCoordinates, call id {0}, got {1} trackers, took {2} ms.",
-            CallId,
-            resultTrackers.Count,
-            ( int ) timespan.TotalMilliseconds
-          );
-        }
-
-        result.Ver = Settings.Default.Version;
-
-        result.CallId = CallId;
-
-        asyncChainedState.SetAsCompleted( result );
+            "Got {0} tracker(s) ({1} not null) under read lock for call id {2}",
+            trackerIds.Count, notNullCount, CallId );
       }
-      catch ( Exception exc )
+      finally
       {
-        Log.ErrorFormat( "GetTrackerIdResponseForCoords: call id {0}: {1}", CallId, exc );
-        asyncChainedState.SetAsCompleted( exc );
+        DataManager.RwLock.ExitReadLock( );
+        if ( Log.IsDebugEnabled )
+          Log.DebugFormat( "Left lock in GetTrackerIdResponse for call id {0}", CallId );
       }
+
+      foreach ( TrackerStateHolder holder in holders )
+      {
+        // that's a bit of a semantics break for rwLock used for MT operations with holders because it's out 
+        // of lock, but AccessTimestamp is used for diag purposes only by a admins. For purists reason, it should
+        // be under write lock, but it would slow down the things so cutting the corner here:
+        Interlocked.Exchange( ref holder.ThreadDesynchronizedAccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
+      }
+
+      if ( holders.Any( h => h == null ) )
+      {
+        // add it in a separate thread to return the call asap (adding might be blocked by another thread)
+        ThreadPool.QueueUserWorkItem( unused => DataManager.AddMissingTrackers( trackerIds ) );
+      }
+
+      return snapshots;
     }
 
     public GroupData EndGetCoordinates( IAsyncResult asyncResult )
@@ -443,8 +521,6 @@ namespace FlyTrace.Service.Subservices
         Interlocked.Decrement( ref SimultaneousCallCount );
       }
     }
-
-
 
     #region Incremental update algorithm explanation
     /* 
@@ -486,7 +562,7 @@ namespace FlyTrace.Service.Subservices
 
     private void UpdateStatFields( DateTime? dtNewestForeignTime, double newestLat, double newestLon )
     {
-      Interlocked.Increment( ref TrackerDataManager2.Singleton.AdminAlerts.CoordAccessCount );
+      Interlocked.Increment( ref DataManager.AdminAlerts.CoordAccessCount );
 
       DateTime updateStart = DateTime.UtcNow;
 
@@ -601,7 +677,7 @@ namespace FlyTrace.Service.Subservices
           result.IsOfficial = false; // obsolete field
           if ( showUserMessage )
             result.UsrMsg = snapshot.Position.UserMessage;
-          result.Age = CalcAge( snapshot.Position.CurrPoint.ForeignTime );
+          result.Age = CalcAgeInSeconds( snapshot.Position.CurrPoint.ForeignTime );
 
           if ( snapshot.Position.PreviousPoint != null )
           {
@@ -611,7 +687,7 @@ namespace FlyTrace.Service.Subservices
               result.PrevLat = snapshot.Position.PreviousPoint.Latitude;
               result.PrevLon = snapshot.Position.PreviousPoint.Longitude;
               result.PrevTs = snapshot.Position.PreviousPoint.ForeignTime;
-              result.PrevAge = CalcAge( snapshot.Position.PreviousPoint.ForeignTime );
+              result.PrevAge = CalcAgeInSeconds( snapshot.Position.PreviousPoint.ForeignTime );
             }
           }
 
@@ -633,7 +709,7 @@ namespace FlyTrace.Service.Subservices
       return result;
     }
 
-    public static int CalcAge( DateTime time )
+    private static int CalcAgeInSeconds( DateTime time )
     {
       if ( time == default( DateTime ) )
         return 0;
@@ -651,7 +727,7 @@ namespace FlyTrace.Service.Subservices
     /// and as a result the client receives a full actual group info.
     /// </summary>
     /// <returns></returns>
-    public int? TryParseThresholdRevision( int actualGroupVersion )
+    private int? TryParseThresholdRevision( int actualGroupVersion )
     {
       if ( this.clientSeed == null )
         return null;

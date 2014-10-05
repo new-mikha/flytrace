@@ -27,6 +27,11 @@ namespace FlyTrace.Service.Subservices
 
     protected readonly GroupFacade GroupFacade = new GroupFacade( );
 
+    protected static TrackerDataManager2 DataManager
+    {
+      get { return TrackerDataManager2.Singleton; }
+    }
+
     protected static void LogCallCount( int callCount )
     {
       if ( !Log.IsDebugEnabled ) return;

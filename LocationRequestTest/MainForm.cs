@@ -185,7 +185,7 @@ namespace LocationRequestTest
         {
           ForeignId foreignId = new ForeignId( ForeignId.SPOT, feedId );
           locationRequest =
-            new SpotLocationRequest( foreignId, appFolder, null, attemptsOrder.ToArray( ) );
+            new SpotLocationRequest( foreignId.Id, appFolder, null, attemptsOrder.ToArray( ) );
         }
         else
         {
@@ -199,7 +199,7 @@ namespace LocationRequestTest
           ForeignId foreignId = new ForeignId( ForeignId.SPOT, "testxml" );
           locationRequest =
             new SpotLocationRequest(
-              foreignId, sampleXml, attemptsOrder[0], appFolder );
+              foreignId.Id, sampleXml, attemptsOrder[0], appFolder );
         }
 
         if ( this.resultTextBox.Text.Length > 0 )
@@ -257,7 +257,8 @@ namespace LocationRequestTest
 
           TrackerState trackerRequestResult = locationRequest.EndReadLocation( ar );
 
-          sb.AppendFormat( "\tRefreshTime: {0} ({1})\r\n", trackerRequestResult.RefreshTime, Tools.GetAgeStr( trackerRequestResult.RefreshTime ) );
+          sb.AppendFormat( "\tRefreshTime: {0} ({1})\r\n", trackerRequestResult.RefreshTime, 
+            Tools.GetAgeStr( trackerRequestResult.RefreshTime, true ) );
 
           if ( trackerRequestResult.Position == null )
           {

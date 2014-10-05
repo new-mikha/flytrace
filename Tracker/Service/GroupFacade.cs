@@ -38,6 +38,17 @@ namespace FlyTrace.Service
     public ForeignId ForeignId;
   }
 
+  public struct GroupConfig
+  {
+    public List<TrackerId> TrackerIds;
+
+    public int VersionInDb;
+
+    public bool ShowUserMessages;
+
+    public DateTime? StartTs;
+  }
+
   public class GroupFacade
   {
     private static readonly ILog Log = LogManager.GetLogger( "GrpFcde" );
@@ -134,7 +145,7 @@ namespace FlyTrace.Service
       }
     }
 
-    public List<TrackerId> EndGetGroupTrackerIds( IAsyncResult asyncResult, out int groupVersion, out bool showUserMessages, out DateTime? startTs )
+    public GroupConfig EndGetGroupTrackerIds( IAsyncResult asyncResult )
     {
       if ( asyncResult is AsyncResult<int> )
       { // it's a test group with faked locations taken from files
@@ -143,10 +154,10 @@ namespace FlyTrace.Service
         if ( group != TestGroup )
           throw new ApplicationException( string.Format( "Unknown test group {0}", group ) );
 
-        startTs = null;
-
-        return GetTestGroup( out groupVersion, out showUserMessages );
+        return GetTestGroup( );
       }
+
+      GroupConfig result;
 
       int prevOp =
         Interlocked.CompareExchange(
@@ -159,7 +170,7 @@ namespace FlyTrace.Service
         throw new InvalidOperationException( "End* call doesn't have a corresponding Begin* call." );
       }
 
-      List<TrackerId> result = new List<TrackerId>( );
+      result.TrackerIds = new List<TrackerId>( );
 
       try
       {
@@ -174,40 +185,40 @@ namespace FlyTrace.Service
             ForeignId foreignId = new ForeignId( "SPOT", sqlDataReader["TrackerForeignId"].ToString( ) );
             trackerId.ForeignId = foreignId;
 
-            result.Add( trackerId );
+            result.TrackerIds.Add( trackerId );
           }
         }
 
         object objValue = this.sqlCmd.Parameters["@Version"].Value;
         if ( objValue is DBNull )
-          groupVersion = 0;
+          result.VersionInDb = 0;
         else
-          groupVersion = Convert.ToInt32( objValue );
+          result.VersionInDb = Convert.ToInt32( objValue );
 
         objValue = this.sqlCmd.Parameters["@DisplayUserMessages"].Value;
         if ( objValue is DBNull )
-          showUserMessages = false;
+          result.ShowUserMessages = false;
         else
-          showUserMessages = Convert.ToBoolean( objValue );
+          result.ShowUserMessages = Convert.ToBoolean( objValue );
 
         try
         {
           object objStartTs = this.sqlCmd.Parameters["@StartTs"].Value;
           if ( objStartTs is DBNull )
-            startTs = null;
+            result.StartTs = null;
           else
           {
             DateTime temp = Convert.ToDateTime( objStartTs );
             if ( temp.Kind == DateTimeKind.Unspecified )
-              startTs = DateTime.SpecifyKind( temp, DateTimeKind.Utc );
+              result.StartTs = DateTime.SpecifyKind( temp, DateTimeKind.Utc );
             else
-              startTs = temp.ToUniversalTime( );
+              result.StartTs = temp.ToUniversalTime( );
           }
         }
         catch ( Exception exc )
         { // It's a service feature, so mainly just ignore the error:
           Log.ErrorFormat( "Can't get StartTs: {0}", exc.Message );
-          startTs = null;
+          result.StartTs = null;
         }
       }
       catch ( Exception exc )
@@ -223,15 +234,19 @@ namespace FlyTrace.Service
       return result;
     }
 
-    private List<TrackerId> GetTestGroup( out int groupVersion, out bool showUserMessages )
+    private GroupConfig GetTestGroup( )
     {
-      return Test.TestSource.Singleton.GetTestGroup( out groupVersion, out showUserMessages );
+      GroupConfig result;
+
+      result.TrackerIds = Test.TestSource.Singleton.GetTestGroup( out result.VersionInDb, out result.ShowUserMessages );
+      result.StartTs = null;
+
+      return result;
     }
 
     public IAsyncResult BeginGetTrackerId( int group, string trackerName, AsyncCallback callback, object asyncState )
     {
-      /* TODO
-       * See TODO in BeginGetGroupTrackerIds - the same approach is applicable to this method too.
+      /* TODO: see comment in BeginGetGroupTrackerIds re caching - the same approach is applicable to this method too.
        */
 
       // Ensure that this instance is not used already for some other call:
@@ -257,7 +272,7 @@ namespace FlyTrace.Service
       //    execution plan for the query.
       // 2. Get the name too because Name column's collation is case-insensitive, so get the right writing 
       //    (not sure if it's really needed, but it costs nothing)
-      const string sql = 
+      const string sql =
         "SELECT [Name], [TrackerForeignId] FROM [GroupTracker] WHERE GroupId = @GroupId AND [Name] = @TrackerName";
 
       SqlConnection sqlConn = new SqlConnection( connString );

@@ -18,22 +18,17 @@
  * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using FlyTrace.LocationLib.Data;
 using log4net;
 
 namespace FlyTrace.Service
 {
-  public enum UpdateReason { BrandNew, NewPos, NewErr, NoChange };
-
   /// <summary>
   /// RevisedTrackerState means "TrackerState with Revision" (where Revision is a number like SVN revision)
   /// </summary>
   public class RevisedTrackerState : LocationLib.TrackerState
   {
+    public enum UpdateReason { BrandNew, NewPos, NewErr, NoChange };
+
     private static readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
     /// <summary>
@@ -45,13 +40,14 @@ namespace FlyTrace.Service
 
     public readonly UpdateReason UpdatedPart;
 
-    public RevisedTrackerState
+    /// <summary>Sets pos, err & revision from parameters, and sets NEW RefreshTime</summary>
+    private RevisedTrackerState
     (
       LocationLib.Data.Position position,
       LocationLib.Data.Error error,
       string tag,
-      UpdateReason updatedPart,
-      int? revision
+      int? revision,
+      UpdateReason updatedPart
     )
       : base( position, error, tag )
     {
@@ -60,7 +56,7 @@ namespace FlyTrace.Service
     }
 
     // TODO: remove
-    /// <summary>Gets pos and err from parameters, and gets NEW DataRevision and RefreshTime</summary>
+    /// <summary>Sets pos and err from parameters, and gets NEW DataRevision and RefreshTime</summary>
     private RevisedTrackerState
     (
       LocationLib.Data.Position position,
@@ -82,7 +78,8 @@ namespace FlyTrace.Service
     }
 
     // TODO: remove
-    /// <summary>Only <see cref="RefreshTime"/> is changed, everything else including DataRevision is the same as in <paramref name="oldResult"/>.</summary>
+    /// <summary>Only <see cref="LocationLib.TrackerState.RefreshTime"/> is changed, everything else 
+    /// including DataRevision is the same as in <paramref name="oldTrackerState"/>.</summary>
     private RevisedTrackerState
     (
       RevisedTrackerState oldTrackerState
@@ -107,11 +104,6 @@ namespace FlyTrace.Service
     /// state, and if so just returns old result, keeping the version of the tracker data. Otherwise result has brand 
     /// new version.
     /// </summary>
-    /// <remarks>
-    /// TODO unit test:
-    /// check that RefreshTime always initilized inside this method, not the one taken from oldResult (which is possible
-    /// e.g. if make type of oldResult RevisedTrackerState and returning it under some circumstances)
-    /// </remarks>
     /// <param name="oldResult"></param>
     /// <param name="newResult"></param>
     /// <returns></returns>
@@ -119,10 +111,10 @@ namespace FlyTrace.Service
     {
       if ( oldResult == null && newResult == null ) return null;
 
-      if ( oldResult == null && newResult != null )
+      if ( oldResult == null ) // means that newResult is not null (see the check above)
         return new RevisedTrackerState( newResult.Position, newResult.Error, newResult.Tag, UpdateReason.BrandNew );
 
-      if ( oldResult != null && newResult == null )
+      if ( newResult == null ) // means that oldResult is not null (see the check above)
         return new RevisedTrackerState( oldResult );
 
       LocationLib.Data.Position position;
@@ -163,7 +155,7 @@ namespace FlyTrace.Service
        *   one still have Position set (and probably error - if the new one has it).
        */
 
-      Error error = newResult.Error;
+      LocationLib.Data.Error error = newResult.Error;
 
       bool arePositionsEqual = LocationLib.Data.Position.ArePositionsEqual( oldResult.Position, position );
       bool areErrorsEqual = LocationLib.Data.Error.AreErrorsEqual( oldResult.Error, error );
@@ -179,9 +171,7 @@ namespace FlyTrace.Service
       }
 
       UpdateReason updatedPart;
-      if ( arePositionsEqual && areErrorsEqual )
-        updatedPart = UpdateReason.NoChange;
-      else if ( arePositionsEqual )
+      if ( arePositionsEqual )
         updatedPart = UpdateReason.NewErr;
       else
         updatedPart = UpdateReason.NewPos;
@@ -189,52 +179,33 @@ namespace FlyTrace.Service
       return new RevisedTrackerState( position, error, newResult.Tag, updatedPart );
     }
 
-    /// <summary>
-    /// Determine which position and error should be taken from choices 
-    /// </summary>
-    /// <param name="oldResult"></param>
-    /// <param name="newResult"></param>
-    /// <param name="position"></param>
-    /// <param name="error"></param>
-    /// <returns></returns>
-    public static UpdateReason Merge(
+    internal static RevisedTrackerState Merge(
       RevisedTrackerState oldResult,
       LocationLib.TrackerState newResult,
-      out LocationLib.Data.Position position,
-      out LocationLib.Data.Error error
+      int? newRevisionToUse
     )
     {
-      if ( oldResult == null && newResult == null )
-      {
-        position = null;
-        error = null;
-        return UpdateReason.NoChange;
-        ;
-      }
+      if ( oldResult == null && newResult == null ) return null;
 
-      if ( oldResult == null && newResult != null )
-      {
-        position = newResult.Position;
-        error = newResult.Error;
-        return UpdateReason.BrandNew;
-      }
+      if ( oldResult == null ) // means that newResult is not null (see the check above)
+        return new RevisedTrackerState(
+          newResult.Position,
+          newResult.Error,
+          newResult.Tag,
+          newRevisionToUse,
+          UpdateReason.BrandNew
+        );
 
-      if ( oldResult != null && newResult == null )
-      {
-        position = oldResult.Position;
-        error = oldResult.Error;
-        return UpdateReason.NoChange;
-      }
+      if ( newResult == null ) // means that oldResult is not null (see the check above)
+        return oldResult;
 
+      LocationLib.Data.Position position;
       if ( oldResult.Position != null && newResult.Position != null )
       {
         if ( oldResult.Position.CurrPoint.ForeignTime > newResult.Position.CurrPoint.ForeignTime )
         { // should be a rare case, but still possible. E.g. it could be like this:
           // - unoffical request with very fresh data succeeded (see LocationRequests internals)
           // - 15 seconds later unoffical request fails, and official started, returning old data.
-
-          // log it as error because there a convention in log4net "send errors by email"
-          IncrLog.ErrorFormat( "'Old' result is actually newer than 'new' result: {0}\r\n{1}", oldResult, newResult );
           position = oldResult.Position;
         }
         else if ( oldResult.Position.CurrPoint.ForeignTime < newResult.Position.CurrPoint.ForeignTime )
@@ -251,39 +222,36 @@ namespace FlyTrace.Service
         position = oldResult.Position;
       }
       else
-      { // oldResult.Position is null, but newResult.Position also could be null here (or could be not)
+      { // oldResult.Position is null, but newResult.Position could be either null or not null here.
         position = newResult.Position;
       }
 
-      error = newResult.Error;
-
-      /* Need to ensure that result has either Position or Error set (or both)
+      /* We need to ensure that result has at either Position or Error set (or both).
        * 
        * - if position is still null here, then both results Position set to null (see checks above). 
-       *   But neither constructor allows both Position and Error to be null => both Errors are not null.
-       *   So output error is set, and the merged one will have at least Error set to the new 
+       *   But neither constructor allows both Position and Error to be null => both Errors are not null,
+       *   So newResult have Error set, and the merged one will have at least Error set to the new 
        *   result Error (and probably Position).
        *   
-       * - if position is not null, then it doesn't matter if output error is null or not - the merged 
-       *   one will still have position set (and probably error - if the new one has it).
+       * - if position is not null, then it doesn't matter if newResult.Error is null or not - the merged 
+       *   one still have Position set (and probably error - if the new one has it).
        */
+
+      LocationLib.Data.Error error = newResult.Error;
 
       bool arePositionsEqual = LocationLib.Data.Position.ArePositionsEqual( oldResult.Position, position );
       bool areErrorsEqual = LocationLib.Data.Error.AreErrorsEqual( oldResult.Error, error );
 
       if ( arePositionsEqual && areErrorsEqual )
-        return UpdateReason.NoChange;
+        return oldResult;
 
+      UpdateReason updatedPart;
       if ( arePositionsEqual )
-        return UpdateReason.NewErr;
+        updatedPart = UpdateReason.NewErr;
+      else
+        updatedPart = UpdateReason.NewPos;
 
-      return UpdateReason.NewPos;
-    } // Merge
-
-
-    internal static RevisedTrackerState Merge( RevisedTrackerState revisedTrackerState, LocationLib.TrackerState trackerState, int? newRevisionToUse )
-    {
-      throw new NotImplementedException( );
+      return new RevisedTrackerState( position, error, newResult.Tag, newRevisionToUse, updatedPart );
     }
   }
 }

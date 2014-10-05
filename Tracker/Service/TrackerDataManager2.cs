@@ -34,7 +34,7 @@ using log4net.Repository;
 
 namespace FlyTrace.Service
 {
-  internal class TrackerDataManager2
+  public class TrackerDataManager2
   {
     /* There is a number of parameters controlling how calls to the foreign servers are scheduled.
      * 
