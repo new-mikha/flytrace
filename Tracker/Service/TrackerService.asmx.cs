@@ -65,7 +65,7 @@ namespace FlyTrace.Service
     public List<TrackResponseItem> GetTracks( int group, TrackRequest trackRequest, DateTime scriptCurrTimet )
     {
       Subservices.ITrackerService trackerService;
-      if (isNew)
+      if ( isNew )
         trackerService = new Subservices.TracksService( group, trackRequest );
       else
         trackerService = TrackerDataManager.Singleton;
@@ -85,7 +85,7 @@ namespace FlyTrace.Service
         return null;
       }
 
-      return new List<TrackResponseItem>( trackerService.EndGetTracks( ar ) );
+      return trackerService.EndGetTracks( ar );
     }
 
     [WebMethod]

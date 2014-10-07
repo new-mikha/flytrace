@@ -1,4 +1,24 @@
-﻿using System;
+﻿/******************************************************************************
+ * Flytrace, online viewer for GPS trackers.
+ * Copyright (C) 2011-2014 Mikhail Karmazin
+ * 
+ * This file is part of Flytrace.
+ * 
+ * Flytrace is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * Flytrace is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
+
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
@@ -17,7 +37,7 @@ namespace FlyTrace.Service.Subservices
     GroupData EndGetCoordinates( IAsyncResult asyncResult );
   }
 
-  public class CoordinatesService : TrackerServiceBase, ICoordinatesService
+  public class CoordinatesService : TrackerServiceBase<GroupData>, ICoordinatesService
   {
     private readonly string clientSeed;
 
@@ -31,9 +51,7 @@ namespace FlyTrace.Service.Subservices
     {
       Global.ConfigureThreadCulture( );
 
-      AsyncChainedState<GroupData> asyncChainedState = new AsyncChainedState<GroupData>( callback, state );
-
-      int callCount = Interlocked.Increment( ref SimultaneousCallCount );
+      IncrementCallCount( );
       try
       {
         /* TODO
@@ -44,8 +62,6 @@ namespace FlyTrace.Service.Subservices
         if ( IncrLog.IsInfoEnabled )
           IncrLog.InfoFormat(
             "Call id {0}, for group {1}, client seed is \"{2}\"", CallId, Group, this.clientSeed );
-
-        LogCallCount( callCount );
 
         if ( Log.IsDebugEnabled )
         {
@@ -58,39 +74,23 @@ namespace FlyTrace.Service.Subservices
             testId = val[0];
           }
 
-          Log.DebugFormat( "Getting coordinates for group {0}, client seed \"{1}\", call id {2} ({3}), call count: {4}",
-                              Group, this.clientSeed, CallId, testId, callCount );
+          Log.DebugFormat(
+            "Getting coordinates for group {0}, client seed \"{1}\", call id {2} ({3}), call count: {4}",
+              Group, this.clientSeed, CallId, testId, DebugCallCount );
         }
 
-
-        GroupFacade.BeginGetGroupTrackerIds( Group, OnEndGettingGroupTrackerIds, asyncChainedState );
-
-        return asyncChainedState.FinalAsyncResult;
+        return BeginGetGroupTrackerIds( callback, state );
       }
       catch ( Exception exc )
       {
         Log.ErrorFormat( "Error in BeginGetCoordinates: {0}", exc );
+        DecrementCallCount( );
         throw;
       }
     }
 
-    private void OnEndGettingGroupTrackerIds( IAsyncResult ar )
+    protected override GroupData GetResult(GroupConfig groupConfig)
     {
-      if ( Log.IsDebugEnabled )
-        Log.DebugFormat( "Finishing getting group trackers id for coords, sync flag {0}...", ar.CompletedSynchronously );
-
-      AsyncChainedState<GroupData> asyncChainedState = ( AsyncChainedState<GroupData> ) ar.AsyncState;
-
-      if ( Log.IsDebugEnabled )
-        Log.DebugFormat(
-          "Finishing getting group trackers ids with call id {0}, group {1}...", CallId, Group );
-
-      asyncChainedState.CheckSynchronousFlag( ar.CompletedSynchronously );
-
-      try
-      {
-        GroupConfig groupConfig = GroupFacade.EndGetGroupTrackerIds( ar );
-
         List<TrackerId> trackerIds = groupConfig.TrackerIds;
 
         RevisedTrackerState[] snapshots = GetSnapshots( trackerIds, groupConfig );
@@ -149,13 +149,7 @@ namespace FlyTrace.Service.Subservices
             );
         }
 
-        asyncChainedState.SetAsCompleted( result );
-      }
-      catch ( Exception exc )
-      {
-        Log.ErrorFormat( "GetTrackerIdResponseForCoords: call id {0}: {1}", CallId, exc );
-        asyncChainedState.SetAsCompleted( exc );
-      }
+      return result;
     }
 
     private GroupData BuildGroupData(
@@ -496,11 +490,11 @@ namespace FlyTrace.Service.Subservices
 
     public GroupData EndGetCoordinates( IAsyncResult asyncResult )
     {
-      if ( Log.IsDebugEnabled )
-        Log.DebugFormat( "Entering EndGetCoordinates for call id {0}, group {1}...", CallId, Group );
-
       try
       {
+        if ( Log.IsDebugEnabled )
+          Log.DebugFormat( "Entering EndGetCoordinates for call id {0}, group {1}...", CallId, Group );
+
         AsyncResult<GroupData> groupDataAsyncResult = ( AsyncResult<GroupData> ) asyncResult;
 
         GroupData result = groupDataAsyncResult.EndInvoke( );
@@ -518,7 +512,7 @@ namespace FlyTrace.Service.Subservices
       }
       finally
       {
-        Interlocked.Decrement( ref SimultaneousCallCount );
+        DecrementCallCount( );
       }
     }
 
