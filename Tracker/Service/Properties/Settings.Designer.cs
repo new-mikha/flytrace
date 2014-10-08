@@ -94,5 +94,14 @@ namespace FlyTrace.Service.Properties {
                 return ((int)(this["SpotConsequentTimedOutRequestsThresold"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("AUS Eastern Standard Time")]
+        public string AdminTimezone {
+            get {
+                return ((string)(this["AdminTimezone"]));
+            }
+        }
     }
 }

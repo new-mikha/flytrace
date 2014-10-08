@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
@@ -530,7 +531,17 @@ namespace LocationRequestTest
 
     private void button6_Click( object sender, EventArgs e )
     {
-      SystemEvents.TimeChanged += new EventHandler( SystemEvents_TimeChanged );
+      ReadOnlyCollection<TimeZoneInfo> timeZones = TimeZoneInfo.GetSystemTimeZones();
+
+      string str = string.Join(
+        "\r\n",
+        timeZones.Select(tz => tz.Id).ToArray()
+        );
+
+      // MessageBox.Show(str);
+
+      //TimeZoneInfo.AdjustmentRule rule = new 
+      //TimeZoneInfo.CreateCustomTimeZone("syd", TimeSpan.FromHours(10), "Sydney", "Sydney", "Sydney");
     }
   }
 }

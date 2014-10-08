@@ -91,9 +91,10 @@ namespace FlyTrace.Service.Subservices
 
     protected override GroupData GetResult(GroupConfig groupConfig)
     {
-        List<TrackerId> trackerIds = groupConfig.TrackerIds;
+        List<TrackerName> trackerNames = groupConfig.TrackerNames;
 
-        RevisedTrackerState[] snapshots = GetSnapshots( trackerIds, groupConfig );
+        RevisedTrackerState[] snapshots = 
+          GetSnapshots( trackerNames, groupConfig );
 
         bool isDebugFullGroup = IsDebugFullGroup( );
 
@@ -105,7 +106,7 @@ namespace FlyTrace.Service.Subservices
         List<CoordResponseItem> resultTrackers =
           GetResultTrackers(
             snapshots,
-            trackerIds,
+            trackerNames,
             groupConfig,
             isFullGroup,
             isDebugFullGroup,
@@ -123,7 +124,7 @@ namespace FlyTrace.Service.Subservices
             nextThresholdRevision,
             thresholdRevision,
             incrLogicIncludeCount,
-            trackerIds.Count
+            trackerNames.Count
           );
 
         if ( IncrLog.IsInfoEnabled )
@@ -286,7 +287,7 @@ namespace FlyTrace.Service.Subservices
     private List<CoordResponseItem> GetResultTrackers
     (
       RevisedTrackerState[] snapshots,
-      List<TrackerId> trackerIds,
+      List<TrackerName> trackerNames,
       GroupConfig groupConfig,
       bool isFullGroup,
       bool isDebugFullGroup,
@@ -304,7 +305,7 @@ namespace FlyTrace.Service.Subservices
 
       Thread.MemoryBarrier( ); // make sure isAlwaysFullGroup read once only, because it might be set in another thread
 
-      if ( !isFullGroup && trackerIds.Any( ) )
+      if ( !isFullGroup && trackerNames.Any( ) )
         thresholdRevision = TryParseThresholdRevision( groupConfig.VersionInDb );
 
       if ( IncrLog.IsInfoEnabled )
@@ -313,11 +314,11 @@ namespace FlyTrace.Service.Subservices
       nextThresholdRevision = 0;
       incrLogicIncludeCount = 0;
 
-      var resultTrackers = new List<CoordResponseItem>( trackerIds.Count );
+      var resultTrackers = new List<CoordResponseItem>( trackerNames.Count );
 
       for ( int i = 0; i < snapshots.Length; i++ )
       {
-        string trackerName = trackerIds[i].Name;
+        string trackerName = trackerNames[i].Name;
         RevisedTrackerState nullableSnapshot = snapshots[i];
         // null means that position is not retrieved yet from the foreign server 
 
@@ -371,7 +372,7 @@ namespace FlyTrace.Service.Subservices
             // DebugFormat is not a mistake here despite IsInfoEnabled above
             IncrLog.DebugFormat(
               "Call id {0}, got NULL tracker {1} - {2} (included as it's null)",
-              CallId, trackerIds[i].Name, trackerIds[i].ForeignId );
+              CallId, trackerNames[i].Name, trackerNames[i].ForeignId );
           }
           else if ( thresholdRevision.HasValue && ( IncrLog.IsDebugEnabled || includeByNormalIncrLogic ) )
           {
@@ -380,8 +381,8 @@ namespace FlyTrace.Service.Subservices
               (
                 "Call id {0}, got tracker {1} - {2} with foreign time {3}, refresh time {4}, revision {5} ({6}), included: {7}",
                 CallId,
-                trackerIds[i].Name,
-                trackerIds[i].ForeignId,
+                trackerNames[i].Name,
+                trackerNames[i].ForeignId,
                 nullableSnapshot.Position != null ? nullableSnapshot.Position.CurrPoint.ForeignTime.ToString( ) : null,
                 nullableSnapshot.RefreshTime,
                 nullableSnapshot.DataRevision,
@@ -398,94 +399,6 @@ namespace FlyTrace.Service.Subservices
       UpdateStatFields( dtNewestForeignTime, newestLat, newestLon );
 
       return resultTrackers;
-    }
-
-    private RevisedTrackerState[] GetSnapshots( List<TrackerId> trackerIds, GroupConfig groupConfig )
-    {
-      if ( Log.IsDebugEnabled )
-      {
-        TimeSpan timespan = DateTime.UtcNow - CallStartTime;
-        Log.DebugFormat(
-          "Got {0} trackers ids for call id {1}, group {2} with version {3} in {4} ms, getting their data now...",
-          trackerIds.Count, CallId, Group, groupConfig.VersionInDb, ( int ) timespan.TotalMilliseconds );
-      }
-
-      TrackerStateHolder[] holders = new TrackerStateHolder[trackerIds.Count];
-      RevisedTrackerState[] snapshots = new RevisedTrackerState[trackerIds.Count];
-
-      if ( Log.IsDebugEnabled )
-        Log.DebugFormat( "Acquiring read lock for call id {0}, group {1}...", CallId, Group );
-
-      DataManager.RwLock.AttemptEnterReadLock( );
-      try
-      {
-        #region Why under read lock
-
-        // under read lock to make sure that following situation is avoided in incremental update:
-        // 
-        // Read | Write
-        //      |
-        // A1   | 
-        // B2   | 
-        // C3   | 
-        //      | C4
-        //      | D5
-        // D5   |
-        // 
-        // Here Read is this thread; Write is thread where Snapshot is set; A,B,C,etc are trackers; and 1,2,3,etc 
-        // are revisions. If this happens, maximum revision of snapshots collectons would be 5, so newer C4 
-        // position snapshot (missed in this call where C3 is returned) will be missed on next incremental 
-        // updates call from the same client.
-        // 
-        // In other words, reading of several Snapshot has to be atomic here.
-
-        #endregion
-
-        if ( Log.IsDebugEnabled )
-          Log.DebugFormat( "Inside read lock for call id {0}, group {1}...", CallId, Group );
-
-        int notNullCount = 0;
-        for ( int i = 0; i < trackerIds.Count; i++ )
-        {
-          TrackerId trackerId = trackerIds[i];
-          TrackerStateHolder trackerStateHolder;
-
-          // so i'th elements might be null if the tracker in not in dataManager yet:
-          if ( DataManager.Trackers.TryGetValue( trackerId.ForeignId, out trackerStateHolder ) )
-          {
-            notNullCount++;
-            holders[i] = trackerStateHolder;
-            snapshots[i] = trackerStateHolder.Snapshot;
-          }
-        }
-
-        if ( Log.IsDebugEnabled )
-          Log.DebugFormat(
-            "Got {0} tracker(s) ({1} not null) under read lock for call id {2}",
-            trackerIds.Count, notNullCount, CallId );
-      }
-      finally
-      {
-        DataManager.RwLock.ExitReadLock( );
-        if ( Log.IsDebugEnabled )
-          Log.DebugFormat( "Left lock in GetTrackerIdResponse for call id {0}", CallId );
-      }
-
-      foreach ( TrackerStateHolder holder in holders )
-      {
-        // that's a bit of a semantics break for rwLock used for MT operations with holders because it's out 
-        // of lock, but AccessTimestamp is used for diag purposes only by a admins. For purists reason, it should
-        // be under write lock, but it would slow down the things so cutting the corner here:
-        Interlocked.Exchange( ref holder.ThreadDesynchronizedAccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
-      }
-
-      if ( holders.Any( h => h == null ) )
-      {
-        // add it in a separate thread to return the call asap (adding might be blocked by another thread)
-        ThreadPool.QueueUserWorkItem( unused => DataManager.AddMissingTrackers( trackerIds ) );
-      }
-
-      return snapshots;
     }
 
     public GroupData EndGetCoordinates( IAsyncResult asyncResult )
@@ -701,15 +614,6 @@ namespace FlyTrace.Service.Subservices
       result.IncrTest = incrTest;
 
       return result;
-    }
-
-    private static int CalcAgeInSeconds( DateTime time )
-    {
-      if ( time == default( DateTime ) )
-        return 0;
-
-      TimeSpan locationAge = DateTime.UtcNow - time;
-      return Math.Max( 0, ( int ) locationAge.TotalSeconds ); // to fix potential error in this server time settings
     }
 
     /// <summary>

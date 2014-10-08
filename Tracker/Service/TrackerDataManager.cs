@@ -243,7 +243,7 @@ namespace FlyTrace.Service
       /// <summary>Used only for GetFullTrack</summary>
       public readonly TrackRequestItem[] TrackRequests;
 
-      public List<TrackerId> TrackerIds;
+      public List<TrackerName> TrackerIds;
       public TrackerStateHolder[] TrackerStateHolders;
 
       public int ActualGroupVersion;
@@ -417,7 +417,7 @@ namespace FlyTrace.Service
         GroupConfig groupConfig =
           callData.GroupFacade.EndGetGroupTrackerIds( ar );
 
-        callData.TrackerIds = groupConfig.TrackerIds;
+        callData.TrackerIds = groupConfig.TrackerNames;
 
         if ( Log.IsDebugEnabled )
         {
@@ -462,7 +462,7 @@ namespace FlyTrace.Service
 
         for ( int i = 0; i < callData.TrackerIds.Count; i++ )
         {
-          TrackerId trackerId = callData.TrackerIds[i];
+          TrackerName trackerId = callData.TrackerIds[i];
 
           TrackerStateHolder trackerStateHolder;
           if ( !this.trackers.TryGetValue( trackerId.ForeignId, out trackerStateHolder ) )
@@ -1407,13 +1407,13 @@ namespace FlyTrace.Service
 
         GroupConfig groupConfig = callData.GroupFacade.EndGetGroupTrackerIds( ar );
 
-        callData.TrackerIds = new List<TrackerId>( );
+        callData.TrackerIds = new List<TrackerName>( );
 
         // We need only those TrackerIds whose names present in TrackRequests array. So intersect both lists.
         // Avoid "foreach" and LINQ in frequent operation because both use too much "new" operatons
-        for ( int iTrackerId = 0; iTrackerId < groupConfig.TrackerIds.Count; iTrackerId++ )
+        for ( int iTrackerId = 0; iTrackerId < groupConfig.TrackerNames.Count; iTrackerId++ )
         {
-          TrackerId trackerId = groupConfig.TrackerIds[iTrackerId];
+          TrackerName trackerId = groupConfig.TrackerNames[iTrackerId];
 
           for ( int iReq = 0; iReq < callData.TrackRequests.Length; iReq++ )
           {

@@ -31,7 +31,7 @@ using log4net;
 namespace FlyTrace.Service
 {
   [DebuggerDisplay( "{Name} - {ForeignId}" )]
-  public struct TrackerId
+  public struct TrackerName
   {
     public string Name;
 
@@ -40,7 +40,7 @@ namespace FlyTrace.Service
 
   public struct GroupConfig
   {
-    public List<TrackerId> TrackerIds;
+    public List<TrackerName> TrackerNames;
 
     public int VersionInDb;
 
@@ -170,7 +170,7 @@ namespace FlyTrace.Service
         throw new InvalidOperationException( "End* call doesn't have a corresponding Begin* call." );
       }
 
-      result.TrackerIds = new List<TrackerId>( );
+      result.TrackerNames = new List<TrackerName>( );
 
       try
       {
@@ -178,14 +178,14 @@ namespace FlyTrace.Service
         {
           while ( sqlDataReader.Read( ) )
           {
-            TrackerId trackerId;
+            TrackerName trackerId;
 
             trackerId.Name = sqlDataReader["Name"].ToString( );
 
             ForeignId foreignId = new ForeignId( "SPOT", sqlDataReader["TrackerForeignId"].ToString( ) );
             trackerId.ForeignId = foreignId;
 
-            result.TrackerIds.Add( trackerId );
+            result.TrackerNames.Add( trackerId );
           }
         }
 
@@ -238,7 +238,7 @@ namespace FlyTrace.Service
     {
       GroupConfig result;
 
-      result.TrackerIds = Test.TestSource.Singleton.GetTestGroup( out result.VersionInDb, out result.ShowUserMessages );
+      result.TrackerNames = Test.TestSource.Singleton.GetTestGroup( out result.VersionInDb, out result.ShowUserMessages );
       result.StartTs = null;
 
       return result;
@@ -299,7 +299,7 @@ namespace FlyTrace.Service
       }
     }
 
-    public TrackerId EndGetTrackerId( IAsyncResult asyncResult )
+    public TrackerName EndGetTrackerId( IAsyncResult asyncResult )
     {
       int prevOp =
         Interlocked.CompareExchange(
@@ -318,7 +318,7 @@ namespace FlyTrace.Service
         {
           if ( sqlDataReader.Read( ) )
           {
-            TrackerId result;
+            TrackerName result;
 
             result.Name = sqlDataReader["Name"].ToString( );
 

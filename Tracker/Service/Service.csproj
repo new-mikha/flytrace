@@ -117,6 +117,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="Subservices\CommonBase.cs" />
     <Compile Include="Subservices\CoordinatesService.cs" />
     <Compile Include="Subservices\TrackerServiceBase.cs" />
     <Compile Include="SimpleObjects.cs" />

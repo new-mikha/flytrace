@@ -23,6 +23,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using FlyTrace.LocationLib;
+using FlyTrace.LocationLib.Data;
 
 namespace FlyTrace.Service.Subservices
 {
@@ -73,7 +75,7 @@ namespace FlyTrace.Service.Subservices
           Group,
           CallId,
           this.trackRequests == null ? 0 : this.trackRequests.Length,
-          callCount
+          DebugCallCount
         );
 
         if ( this.trackRequests == null || this.trackRequests.Length == 0 )
@@ -108,7 +110,7 @@ namespace FlyTrace.Service.Subservices
       }
       catch ( Exception exc )
       {
-        Log.ErrorFormat( "Error in BeginGetTracks: {0}", exc.ToString( ) );
+        Log.ErrorFormat( "Error in BeginGetTracks: {0}", exc );
         DecrementCallCount( );
         throw;
       }
@@ -116,9 +118,11 @@ namespace FlyTrace.Service.Subservices
 
     protected override List<TrackResponseItem> GetResult( GroupConfig groupConfig )
     {
-      var trackerIds =
+      // this not called very often if compared with GetOccrdinates, so should be ok to
+      // use Linq
+      List<TrackerName> trackerNames =
         groupConfig
-          .TrackerIds
+          .TrackerNames
           .Where(
             req =>
               this.trackRequests.Any(
@@ -127,10 +131,87 @@ namespace FlyTrace.Service.Subservices
           )
           .ToList( );
 
-      if ( trackerIds.Count == 0 )
+      if ( trackerNames.Count == 0 )
         return new List<TrackResponseItem>( );
 
-      return null;
+      RevisedTrackerState[] snapshots = GetSnapshots( trackerNames, groupConfig );
+
+      List<TrackResponseItem> result = new List<TrackResponseItem>( snapshots.Length );
+      for ( int iResult = 0; iResult < trackerNames.Count; iResult++ )
+      {
+        string trackerName = trackerNames[iResult].Name;
+        TrackResponseItem trackResponseItem;
+        trackResponseItem.TrackerName = trackerName;
+        trackResponseItem.Track = null;
+
+        //ForeignId trackerForeignId = trackerIds[iResult].ForeignId;
+
+        bool isReqFound = false;
+        TrackRequestItem req = default( TrackRequestItem );
+        for ( int iReq = 0; iReq < this.trackRequests.Length; iReq++ )
+        {
+          if ( string.Equals( this.trackRequests[iReq].TrackerName, trackerName, StringComparison.InvariantCultureIgnoreCase ) )
+          {
+            isReqFound = true;
+            req = this.trackRequests[iReq];
+            break;
+          }
+        }
+
+        if ( !isReqFound )
+        { // Normally should not happen. All in TrackerNames came from TrackRequests.
+          throw new InvalidOperationException( string.Format( "Can't find track request data for {0}", trackerName ) );
+        }
+
+        // No need to lock since it's the only snapshot reading here.
+        TrackerState snapshot = snapshots[iResult];
+        Thread.MemoryBarrier( ); // to make sure that Snapshot (non-volatile field) is read only once. 
+
+        if ( snapshot != null && snapshot.Position != null )
+        {
+          for ( int iPoint = 0; iPoint < snapshot.Position.FullTrack.Length; iPoint++ )
+          {
+            TrackPointData trackPointData = snapshot.Position.FullTrack[iPoint];
+            if ( !req.LaterThan.HasValue ||
+                 trackPointData.ForeignTime > req.LaterThan.Value )
+            {
+              TrackPoint trackPoint;
+              trackPoint.Lat = trackPointData.Latitude;
+              trackPoint.Lon = trackPointData.Longitude;
+              trackPoint.Ts = trackPointData.ForeignTime;
+              trackPoint.Age = CalcAgeInSeconds( trackPointData.ForeignTime );
+
+              if ( iPoint == 0 )
+              {
+                trackPoint.Type = snapshot.Position.Type;
+              }
+              else
+              {
+                trackPoint.Type = null;
+              }
+
+              if ( trackResponseItem.Track == null )
+                trackResponseItem.Track = new List<TrackPoint>( snapshot.Position.FullTrack.Length );
+
+              trackResponseItem.Track.Add( trackPoint );
+            }
+          }
+
+          if ( trackResponseItem.Track != null &&
+               trackResponseItem.Track.Count > 0 ) // Ensure that only not-empty tracks go to the result
+          {
+            // note that trackResponseItem is a struct, so changes made to trackResponseItem variable 
+            // after this point wouldn't go anywhere:
+            result.Add( trackResponseItem );
+          }
+        }
+      }
+
+      if ( Log.IsDebugEnabled )
+        Log.DebugFormat(
+          "Finishing TracksService.GetResult, call id {0}, got {1} tracks", CallId, result.Count );
+
+      return result;
     }
 
     public List<TrackResponseItem> EndGetTracks( IAsyncResult asyncResult )
@@ -157,7 +238,7 @@ namespace FlyTrace.Service.Subservices
       }
       finally
       {
-        DecrementCallCount();
+        DecrementCallCount( );
       }
     }
   }

@@ -420,7 +420,7 @@ namespace FlyTrace.Service
       }
     }
 
-    internal void AddMissingTrackers( List<TrackerId> trackerIds )
+    internal void AddMissingTrackers( List<TrackerName> trackerIds )
     {
       try
       {
@@ -430,7 +430,7 @@ namespace FlyTrace.Service
         RwLock.AttemptEnterWriteLock( );
         try
         {
-          foreach ( TrackerId trackerId in trackerIds )
+          foreach ( TrackerName trackerId in trackerIds )
           {
             if ( this.trackers.ContainsKey( trackerId.ForeignId ) )
             {
@@ -505,8 +505,19 @@ namespace FlyTrace.Service
       string errName = "";
       try
       {
-        // TODO: experimental feature, all hard-coded values to be removed later:
-        DateTime destTime = DateTime.Now.AddHours( 8 );
+        string destTimeString;
+        try
+        {
+          DateTime destTime =
+            TimeZoneInfo.ConvertTimeBySystemTimeZoneId( DateTime.Now, Settings.Default.AdminTimezone );
+
+          destTimeString = destTime + " (admin TZ time)";
+        }
+        catch ( Exception exc )
+        {
+          Log.Warn( "Can't convert to the admin time zone", exc );
+          destTimeString = DateTime.Now + " (server time)";
+        }
 
         ILoggerRepository defaultRepository = LogManager.GetRepository( );
 
@@ -517,7 +528,7 @@ namespace FlyTrace.Service
           errName = logName;
           if ( appender is BufferingAppenderSkeleton )
           {
-            log.InfoFormat( "Flushing {0} at {1}", logName, destTime );
+            log.InfoFormat( "Flushing {0} at {1}", logName, destTimeString );
             BufferingAppenderSkeleton bufferingAppender = appender as BufferingAppenderSkeleton;
             if ( !bufferingAppender.Lossy )
             {

@@ -39,7 +39,7 @@ namespace FlyTrace.Service.Test
 
     public volatile int PositionNumber;
 
-    public List<TrackerId> GetTestGroup( out int groupVersion, out bool showUserMessages )
+    public List<TrackerName> GetTestGroup( out int groupVersion, out bool showUserMessages )
     {
       lock ( this.sync )
       {
@@ -47,10 +47,10 @@ namespace FlyTrace.Service.Test
 
         groupVersion = 1;
 
-        List<TrackerId> result =
+        List<TrackerName> result =
           (
             from name in this.sourceData.Keys
-            select new TrackerId
+            select new TrackerName
             {
               ForeignId = new ForeignId( ForeignId.SPOT, TestIdPrefix + name ),
               Name = name
