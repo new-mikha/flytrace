@@ -60,6 +60,9 @@ namespace FlyTrace.Service
     /// </summary>
     public LocationLib.ForeignAccess.LocationRequest CurrentRequest;
 
+    /// <summary>Time when the tracker was requested for the 1st time</summary>
+    public readonly DateTime AddedTime = DateTime.UtcNow;
+
     /// <summary>UTC time of the latest refresh from the foreign server.
     /// NOT volatile. Accessed from multiple threads.
     /// </summary>
@@ -68,6 +71,8 @@ namespace FlyTrace.Service
     /// <summary>UTC time of the latest access. Used for diag only. 
     /// Writing to that can be done OUT OF LOCK, see its usage.</summary>
     public long ThreadDesynchronizedAccessTimestamp = DateTime.UtcNow.ToFileTime( );
+
+    public DateTime? ScheduledTime;
 
     public override string ToString( )
     {
