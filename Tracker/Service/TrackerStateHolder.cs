@@ -38,7 +38,7 @@ namespace FlyTrace.Service
   /// And that's the reaspo why it's class, not struct (note that structs are value types which wouldn't show to a reader 
   /// of Snapshot updates to it from another thread. Read MSDN if you don't see why)
   /// </remarks>
-  internal class TrackerStateHolder
+  public class TrackerStateHolder
   {
     public TrackerStateHolder( LocationLib.ForeignId foreignId )
     {
@@ -61,18 +61,20 @@ namespace FlyTrace.Service
     public LocationLib.ForeignAccess.LocationRequest CurrentRequest;
 
     /// <summary>Time when the tracker was requested for the 1st time</summary>
-    public readonly DateTime AddedTime = DateTime.UtcNow;
+    public readonly DateTime AddedTime = GetNow( );
 
     /// <summary>UTC time of the latest refresh from the foreign server.
-    /// NOT volatile. Accessed from multiple threads.
+    /// NOT volatile. Accessed from multiple threads. Null if CurrentRequest is null.
     /// </summary>
-    public DateTime RefreshTime;
+    public DateTime? RefreshTime;
 
     /// <summary>UTC time of the latest access. Used for diag only. 
     /// Writing to that can be done OUT OF LOCK, see its usage.</summary>
-    public long ThreadDesynchronizedAccessTimestamp = DateTime.UtcNow.ToFileTime( );
+    public long ThreadDesynchronizedAccessTimestamp = GetNow( ).ToFileTime( );
 
     public DateTime? ScheduledTime;
+
+    public static Func<DateTime> GetNow = ( ) => DateTime.UtcNow;
 
     public override string ToString( )
     {

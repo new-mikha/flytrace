@@ -307,7 +307,7 @@ namespace FlyTrace.Service
           if ( foreignStat.MostStaleTracker == null )
             foreignStat.MostStaleTracker = holder;
           else
-            foreignStat.MostStaleTracker = GetMostStaleTracker( holder, foreignStat.MostStaleTracker );
+            foreignStat.MostStaleTracker = Scheduler.GetMoreStaleTracker( holder, foreignStat.MostStaleTracker );
 
           trackerStat[holder.ForeignId.Type] = foreignStat;
         }
@@ -366,37 +366,9 @@ namespace FlyTrace.Service
       return trackersWithMinWatingTime;
     }
 
-    /// <summary>
-    /// Holders with ScheduledTime set are always less stale than any other.
-    /// Holder without snapshot is always more stale than a holder with a snapshot. 
-    /// From two holders without snapshots, more stale is one with earlier <see cref="TrackerStateHolder.AddedTime"/>.
-    /// From two holders with snapshots, more stale is one with earlier <see cref="TrackerStateHolder.RefreshTime"/>.
-    /// For 
-    /// </summary>
-    private static TrackerStateHolder GetMostStaleTracker( TrackerStateHolder h1, TrackerStateHolder h2 )
+    private static int GetWaitingTime( ForeignStat foreignStat )
     {
-      ScheduledTime
-
-      DateTime t1, t2;
-      if ( h1.Snapshot == null && h2.Snapshot == null )
-      {
-        t1 = h1.AddedTime;
-        t2 = h2.AddedTime;
-      }
-      else
-      {
-        if ( h1.Snapshot == null ) // means "and h2.Snapshot != null"
-          return h1;
-
-        if ( h2.Snapshot == null ) // means "and h1.Snapshot != null"
-          return h2;
-
-        t1 = h1.RefreshTime;
-        t2 = h2.RefreshTime;
-      }
-
-
-      return t1 < t2 ? h1 : h2;
+      throw new NotImplementedException( );
     }
 
     private volatile bool isStoppingWorkerThread;
@@ -418,23 +390,31 @@ namespace FlyTrace.Service
 
       try
       {
-        trackerStateHolder.CurrentRequest = locationRequest;
+        try
+        {
+          trackerStateHolder.CurrentRequest = locationRequest;
+        }
+        finally
+        {
+          RwLock.ExitWriteLock( );
+        }
+
+        // Despite TrackerStateHolder having CurrentRequest field, locationRequest still need to 
+        // be passed as a implicit parameter because there is no guarantee that at the moment when 
+        // OnEndReadLocation is called there will be no other request started. E.g. this request 
+        // can be stuck, aborted by timeout, and then suddenly pop in again in OnEndReadLocation. 
+        // It's unlikely but still possible. So pass locationRequest to avoid any chance that 
+        // EndReadLocation is called on wrong locationRequest.
+        Tuple<TrackerStateHolder, LocationRequest> paramTuple =
+          new Tuple<TrackerStateHolder, LocationRequest>( trackerStateHolder, locationRequest );
+
+        locationRequest.BeginReadLocation( OnEndReadLocation, paramTuple );
       }
-      finally
+      catch
       {
-        RwLock.ExitWriteLock( );
+        trackerStateHolder.CurrentRequest = null; // no good => no CurrentRequest, no setting ScheduledTime to null.
+        throw;
       }
-
-      // Despite TrackerStateHolder having CurrentRequest field, locationRequest still need to 
-      // be passed as a implicit parameter because there is no guarantee that at the moment when 
-      // OnEndReadLocation is called there will be no other request started. E.g. this request 
-      // can be stuck, aborted, and then suddenly pop in again in OnEndReadLocation. It's unlikely
-      // but still possible. So pass locationRequest to avoid any chance that EndReadLocation is
-      // called on wrong locationRequest.
-      Tuple<TrackerStateHolder, LocationRequest> paramTuple =
-        new Tuple<TrackerStateHolder, LocationRequest>( trackerStateHolder, locationRequest );
-
-      locationRequest.BeginReadLocation( OnEndReadLocation, paramTuple );
 
       Thread.MemoryBarrier( ); // set ScheduledTime only _after_ successful BeginReadLocation.
 
