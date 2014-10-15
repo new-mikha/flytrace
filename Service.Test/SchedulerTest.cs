@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Diagnostics;
 using FlyTrace.LocationLib;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -50,7 +51,6 @@ namespace Service.Test
     //
     #endregion
 
-
     private Random rand;
 
     /// <summary>
@@ -59,59 +59,66 @@ namespace Service.Test
     [TestMethod]
     public void GetMoreStaleTrackerTest( )
     {
-      for ( int iSequence = 0; iSequence < 1000; iSequence++ )
+      for ( int iSequence = 0; iSequence < 200; iSequence++ )
       {
-        GenerateAndTestStaleSequence( iSequence );
+        this.rand = new Random( iSequence );
+
+        GenerateAndTestStaleSequence( iSequence, 0 );
+        GenerateAndTestStaleSequence( iSequence, 15 );
+        GenerateAndTestStaleSequence( iSequence, -15 );
+
         if ( iSequence % 50 == 0 )
-          Console.WriteLine( "Sequence {0} done", iSequence );
+          Debug.WriteLine( "Sequence {0} done", iSequence );
       }
     }
 
-    private DateTime GetRandomDateTime( )
+    private void GenerateAndTestStaleSequence( int iSequence, int minutesRandomInterval )
     {
-      return DateTime.Now;
-    }
+      Func<DateTime> origGetTime = TrackerStateHolder.GetNow;
 
-    private void GenerateAndTestStaleSequence( int iSequence )
-    {
-      this.rand = new Random( iSequence );
-
-      TrackerStateHolder.GetNow = GetRandomDateTime;
-
-      List<TrackerStateHolder> list = new List<TrackerStateHolder>( );
-
-      for ( int i = 0; i < 100; i++ )
+      try
       {
-        TrackerStateHolder holder = new TrackerStateHolder( new ForeignId( "test", i.ToString( ) ) );
+        Func<DateTime> getTime =
+          ( ) => origGetTime( ).AddMilliseconds( minutesRandomInterval * this.rand.Next( 60 * 1000 ) );
 
-        if ( rand.NextDouble( ) < 0.2 )
-          holder.ScheduledTime = GetRandomDateTime( );
+        List<TrackerStateHolder> list = new List<TrackerStateHolder>( );
 
-        if ( rand.NextDouble( ) < 0.8 )
-          holder.RefreshTime = GetRandomDateTime( );
-        list.Add( holder );
-      }
-
-      list.Sort( CompareHolders );
-
-      TrackerStateHolder a = list[0];
-      TrackerStateHolder b = list[1];
-      TrackerStateHolder c = list[2];
-
-      for ( int i = 0; i < list.Count; i++ )
-      {
-        for ( int j = 0; j < list.Count; j++ )
+        for ( int i = 0; i < 100; i++ )
         {
-          string tst = string.Format( "{0}, {1}, {2}", iSequence, i, j );
+          TrackerStateHolder holder = new TrackerStateHolder( new ForeignId( "test", i.ToString( ) ) );
 
-          if ( i == j )
-            Assert.AreEqual( 0, CompareHolders( list[i], list[j] ), tst );
-          else if ( i < j )
-            Assert.IsTrue( CompareHolders( list[i], list[j] ) < 0, tst );
-          else
-            Assert.IsTrue( CompareHolders( list[i], list[j] ) > 0, tst );
+          if ( rand.NextDouble( ) < 0.2 )
+            holder.ScheduledTime = getTime( );
+
+          if ( rand.NextDouble( ) < 0.8 )
+            holder.RefreshTime = getTime( );
+          list.Add( holder );
         }
+
+        list.Sort( CompareHolders );
+
+        for ( int i = 0; i < list.Count; i++ )
+        {
+          for ( int j = 0; j < list.Count; j++ )
+          {
+            string tst = string.Format( "{0}, {1}, {2}, {3}", iSequence, i, j, minutesRandomInterval );
+
+            if ( i == j )
+              Assert.AreEqual( 0, CompareHolders( list[i], list[j] ), tst );
+            else if ( i < j )
+              Assert.IsTrue( CompareHolders( list[i], list[j] ) < 0, tst );
+            else
+              Assert.IsTrue( CompareHolders( list[i], list[j] ) > 0, tst );
+          }
+        }
+
       }
+      finally
+      {
+        TrackerStateHolder.GetNow = origGetTime;
+
+      }
+
     }
 
     private static int CompareHolders( TrackerStateHolder x, TrackerStateHolder y )

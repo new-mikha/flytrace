@@ -9,7 +9,8 @@ namespace FlyTrace.Service
   {
     public static TrackerStateHolder GetMoreStaleTracker( TrackerStateHolder h1, TrackerStateHolder h2 )
     {
-      bool unused;
+      // for the main application it doesn't matter which tracker to take if times are equal.
+      bool unused; 
       return GetMoreStaleTracker( h1, h2, out unused );
     }
 
@@ -27,12 +28,24 @@ namespace FlyTrace.Service
     ///   earlier <see cref="TrackerStateHolder.RefreshTime"/>.
     /// * From two holders with ScheduledTime, more stale is one with earlier ScheduledTime.
     /// </summary>
+    /// <remarks>
+    /// Parameter <paramref name="areEqual"/> is needed for sorting only. When both trackers are 
+    /// equal then it's not allowed to return any as "most stale" - because if any of the equal 
+    /// is returned as "lesser", then it becomes important which of the pair goes as the 1st parameter 
+    /// and which goes as the 2nd. In other words, transitivity and conversing rules will be broken, 
+    /// which are absolutely critical for sorting which needed in the unit tests. Notice that it's 
+    /// not important for the main app where just any of the trackers with equal times can be picked 
+    /// up. But for the unit tests equality needs to be recognised as well.
+    /// </remarks>
     public static TrackerStateHolder GetMoreStaleTracker(
       TrackerStateHolder x,
       TrackerStateHolder y,
       out bool areEqual
-      )
+    )
     {
+      // The logic in this method is quite fragile, so always run the unit test after making just 
+      // any change here.
+
       DateTime t1, t2;
 
       if ( x.ScheduledTime != null && y.ScheduledTime != null )
