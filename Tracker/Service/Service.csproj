@@ -135,7 +135,7 @@
     </Compile>
     <Compile Include="Test\TestSource.cs" />
     <Compile Include="TrackerDataManager.cs" />
-    <Compile Include="TrackerDataManager2.cs" />
+    <Compile Include="ForeignRequestsManager.cs" />
     <Compile Include="TrackerStateHolder.cs" />
     <Compile Include="TrackerService.asmx.cs">
       <DependentUpon>TrackerService.asmx</DependentUpon>

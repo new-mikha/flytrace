@@ -21,7 +21,6 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Linq;
 using System.Threading;
 using System.Web;
 
@@ -35,7 +34,7 @@ using log4net.Repository;
 
 namespace FlyTrace.Service
 {
-  public class TrackerDataManager2
+  public class ForeignRequestsManager
   {
     /* There is a number of parameters controlling how calls to the foreign servers are scheduled.
      * 
@@ -91,7 +90,7 @@ namespace FlyTrace.Service
      *   call for the same tracker (always counted from the prev.call start)
      */
 
-    static TrackerDataManager2( )
+    static ForeignRequestsManager( )
     {
       // TODO: remove
       Log.InfoFormat(
@@ -104,12 +103,12 @@ namespace FlyTrace.Service
     // So making it just a singleton. Note that initializing of this field shouldn't be 
     // protected by 'lock', 'volatile' or whatever, because it's guaranteed by CLR to be 
     // atomic set. No thread can use it until it's set & initialized.
-    public static readonly TrackerDataManager2 Singleton = new TrackerDataManager2( );
+    public static readonly ForeignRequestsManager Singleton = new ForeignRequestsManager( );
 
     private readonly Thread refreshThread;
 
     /// <summary>Constructor is private to make the instance accessible only via the <see cref="Singleton"/> field.</summary>
-    private TrackerDataManager2( )
+    private ForeignRequestsManager( )
     {
       try
       {
@@ -128,6 +127,17 @@ namespace FlyTrace.Service
 
       InfoLog.Info( "Started." );
     }
+
+    public ReaderWriterLockSlimEx HolderRwLock
+    {
+      get { return this.scheduler.HolderRwLock; }
+    }
+
+    public IDictionary<ForeignId, TrackerStateHolder> Trackers
+    {
+      get { return this.scheduler.Trackers; }
+    }
+
 
     public void Stop( )
     {
@@ -227,10 +237,7 @@ namespace FlyTrace.Service
       }
     }
 
-    private readonly Dictionary<ForeignId, TrackerStateHolder> trackers =
-      new Dictionary<ForeignId, TrackerStateHolder>( );
-
-    internal Dictionary<ForeignId, TrackerStateHolder> Trackers { get { return this.trackers; } }
+    private readonly Scheduler scheduler = new Scheduler( );
 
     private readonly AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 
@@ -248,13 +255,14 @@ namespace FlyTrace.Service
         {
           PokeLog4NetBufferingAppendersSafe( );
 
-          IEnumerable<TrackerStateHolder> trackersToRequest = WaitForMomentOfNextRequest( );
+          IEnumerable<TrackerStateHolder> trackersToRequest =
+            this.scheduler.WaitForMomentOfNextRequestAndRemoveOldTrackers( this.refreshThreadEvent );
 
           if ( this.isStoppingWorkerThread )
             break;
 
           foreach ( TrackerStateHolder trackerStateHolder in trackersToRequest )
-            BeginRequest( trackerStateHolder );
+            StartForeignRequest( trackerStateHolder );
         }
         catch ( Exception exc )
         {
@@ -276,113 +284,16 @@ namespace FlyTrace.Service
       Log.Info( "Finishing worker thread..." );
     }
 
-    private const int MaxSleepTimeMs = 3000;
-
-    private struct ForeignStat
-    {
-      public int InCallCount;
-
-      public TrackerStateHolder MostStaleTracker;
-    }
-
-    private IEnumerable<TrackerStateHolder> WaitForMomentOfNextRequest( )
-    {
-      // key is foreign type (Spot, DeLorme etc), value is the tracker that needs an update most urgently:
-      Dictionary<string, ForeignStat> trackerStat =
-        new Dictionary<string, ForeignStat>( StringComparer.InvariantCultureIgnoreCase );
-
-      RwLock.AttemptEnterReadLock( );
-      try
-      {
-        foreach ( TrackerStateHolder holder in trackers.Values )
-        {
-          ForeignStat foreignStat;
-          trackerStat.TryGetValue( holder.ForeignId.Type, out foreignStat );
-          if ( holder.CurrentRequest != null )
-          {
-            foreignStat.InCallCount++;
-            continue;
-          }
-
-          if ( foreignStat.MostStaleTracker == null )
-            foreignStat.MostStaleTracker = holder;
-          else
-            foreignStat.MostStaleTracker = Scheduler.GetMoreStaleTracker( holder, foreignStat.MostStaleTracker );
-
-          trackerStat[holder.ForeignId.Type] = foreignStat;
-        }
-      }
-      finally
-      {
-        RwLock.ExitReadLock( );
-      }
-
-      // Now find out which trackers from trackerStat have min time to wait. Could be more than one if
-      // they all have same minimum time (there is also some tolerance for "same")
-      int minWaitingTime;
-      var trackersWithMinWatingTime = GetTrackersWithMinWatingTime( trackerStat, out minWaitingTime );
-
-      if ( this.refreshThreadEvent.WaitOne( minWaitingTime ) )
-      { // event signaled which means something has changed - so the logic above need to rerun
-        return Enumerable.Empty<TrackerStateHolder>( );
-      }
-
-      // delete old trackers
-      // cancel timed out
-
-      foreach ( TrackerStateHolder holder in trackersWithMinWatingTime )
-        holder.ScheduledTime = DateTime.UtcNow;
-
-      return trackersWithMinWatingTime;
-    }
-
-    private static List<TrackerStateHolder> GetTrackersWithMinWatingTime
-    (
-      Dictionary<string, ForeignStat> trackerStat,
-      out int minWaitingTime
-    )
-    {
-      List<TrackerStateHolder> trackersWithMinWatingTime = new List<TrackerStateHolder>( );
-
-      minWaitingTime = MaxSleepTimeMs;
-
-      const int waitingTimeDiffTolerance = 50; // this difference doesn't matter.
-
-      foreach ( ForeignStat foreignStat in trackerStat.Values )
-      {
-        int waitingTime = GetWaitingTime( foreignStat );
-
-        if ( waitingTime < ( minWaitingTime - waitingTimeDiffTolerance ) )
-        {
-          minWaitingTime = waitingTime;
-          trackersWithMinWatingTime.Clear( );
-          trackersWithMinWatingTime.Add( foreignStat.MostStaleTracker );
-        }
-        else if ( Math.Abs( waitingTime - minWaitingTime ) < waitingTimeDiffTolerance )
-        {
-          trackersWithMinWatingTime.Add( foreignStat.MostStaleTracker );
-        }
-      }
-      return trackersWithMinWatingTime;
-    }
-
-    private static int GetWaitingTime( ForeignStat foreignStat )
-    {
-      throw new NotImplementedException( );
-    }
-
     private volatile bool isStoppingWorkerThread;
 
-    public readonly ReaderWriterLockSlimEx RwLock = new ReaderWriterLockSlimEx( 1000 );
-
-    private void BeginRequest( TrackerStateHolder trackerStateHolder )
+    private void StartForeignRequest( TrackerStateHolder trackerStateHolder )
     {
       LocationRequest locationRequest =
         ForeignAccessCentral
           .LocationRequestFactories[trackerStateHolder.ForeignId.Type]
           .CreateRequest( trackerStateHolder.ForeignId.Id );
 
-      if ( !RwLock.TryEnterWriteLock( ) )
+      if ( !this.scheduler.HolderRwLock.TryEnterWriteLock( ) )
       {
         Log.ErrorFormat( "Can't enter write mode in BeginRequest for {0}", trackerStateHolder.ForeignId );
         return;
@@ -396,7 +307,7 @@ namespace FlyTrace.Service
         }
         finally
         {
-          RwLock.ExitWriteLock( );
+          this.scheduler.HolderRwLock.ExitWriteLock( );
         }
 
         // Despite TrackerStateHolder having CurrentRequest field, locationRequest still need to 
@@ -446,7 +357,7 @@ namespace FlyTrace.Service
         // Need to end it even if trackerStateHolder.CurrentRequest != locationRequest (see below)
         TrackerState trackerState = locationRequest.EndReadLocation( ar );
 
-        RwLock.AttemptEnterUpgradeableReadLock( );
+        this.scheduler.HolderRwLock.AttemptEnterUpgradeableReadLock( );
         // when we're here, other thread can be in read mode & no other can be in write or upgr. modes
 
         try
@@ -467,7 +378,7 @@ namespace FlyTrace.Service
           RevisedTrackerState mergedResult =
             RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState, newRevisionToUse );
 
-          RwLock.AttemptEnterWriteLock( );
+          this.scheduler.HolderRwLock.AttemptEnterWriteLock( );
 
           try
           { // Rolling through the write mode as quick as possible:
@@ -489,12 +400,16 @@ namespace FlyTrace.Service
           }
           finally
           {
-            RwLock.ExitWriteLock( );
+            this.scheduler.HolderRwLock.ExitWriteLock( );
           }
         }
         finally
         {
-          RwLock.ExitUpgradeableReadLock( );
+          this.scheduler.HolderRwLock.ExitUpgradeableReadLock( );
+
+          // Notify scheduler that something's happened. Even if it's exception, or return 
+          // without setting CurrentRequest, etc - anyway waking up the scheduler doesn't hurt:
+          this.refreshThreadEvent.Set( );
         }
       }
       catch ( Exception exc )
@@ -509,66 +424,17 @@ namespace FlyTrace.Service
       }
     }
 
-    internal void ClearCache( )
+    internal void ClearTrackers( )
     {
-      RwLock.AttemptEnterWriteLock( );
-      try
-      {
-        this.trackers.Clear( );
-      }
-      finally
-      {
-        RwLock.ExitWriteLock( );
-      }
+      this.scheduler.ClearTrackers( );
+      this.refreshThreadEvent.Set( );
     }
 
     internal void AddMissingTrackers( List<TrackerName> trackerIds )
     {
-      // TODO: test with Thread.Sleep(x000) in the beginning
-      try
+      if ( this.scheduler.AddMissingTrackers( trackerIds ) )
       {
-        if ( Log.IsDebugEnabled )
-          Log.DebugFormat( "Adding {0} new tracker(s)...", trackerIds.Count );
-
-        bool newTrackersAdded = false;
-
-        RwLock.AttemptEnterWriteLock( );
-        try
-        {
-          foreach ( TrackerName trackerId in trackerIds )
-          {
-            if ( this.trackers.ContainsKey( trackerId.ForeignId ) )
-            {
-              if ( Log.IsDebugEnabled )
-                Log.DebugFormat( "Already added: '{0}' / {1}", trackerId.Name, trackerId.ForeignId );
-            }
-            else
-            {
-              if ( Log.IsDebugEnabled )
-                Log.DebugFormat( "Adding '{0}' / {1}...", trackerId.Name, trackerId.ForeignId );
-
-              // no data yet, so leave its Snapshot field null for the moment:
-              TrackerStateHolder trackerStateHolder = new TrackerStateHolder( trackerId.ForeignId );
-
-              this.trackers.Add( trackerId.ForeignId, trackerStateHolder );
-              newTrackersAdded = true;
-            }
-          }
-        }
-        finally
-        {
-          RwLock.ExitWriteLock( );
-        }
-
-        if ( Log.IsDebugEnabled )
-          Log.Debug( "New tracker(s) added" );
-
-        if ( newTrackersAdded )
-          this.refreshThreadEvent.Set( );
-      }
-      catch ( Exception exc )
-      {
-        Log.Error( "Error when adding trackers", exc );
+        this.refreshThreadEvent.Set( );
       }
     }
 

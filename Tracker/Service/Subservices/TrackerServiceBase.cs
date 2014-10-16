@@ -37,9 +37,9 @@ namespace FlyTrace.Service.Subservices
 
     private readonly GroupFacade groupFacade = new GroupFacade( );
 
-    protected static TrackerDataManager2 DataManager
+    protected static ForeignRequestsManager DataManager
     {
-      get { return TrackerDataManager2.Singleton; }
+      get { return ForeignRequestsManager.Singleton; }
     }
 
     protected AsyncResult<T> BeginGetGroupTrackerIds( AsyncCallback outerCallback, object outerState )
@@ -112,31 +112,29 @@ namespace FlyTrace.Service.Subservices
       if ( Log.IsDebugEnabled )
         Log.DebugFormat( "Acquiring read lock for call id {0}, group {1}...", CallId, Group );
 
-      DataManager.RwLock.AttemptEnterReadLock( );
+      #region Why under read lock
+      // under read lock to make sure that following situation is avoided in incremental update:
+      // 
+      // Read | Write
+      //      |
+      // A1   | 
+      // B2   | 
+      // C3   | 
+      //      | C4
+      //      | D5
+      // D5   |
+      // 
+      // Here Read is this thread; Write is thread where Snapshot is set; A,B,C,etc are trackers; and 1,2,3,etc 
+      // are revisions. If this happens, maximum revision of snapshots collectons would be 5, so newer C4 
+      // position snapshot (missed in this call where C3 is returned) will be missed on next incremental 
+      // updates call from the same client.
+      // 
+      // In other words, reading of several Snapshot has to be atomic here.
+      #endregion
+
+      DataManager.HolderRwLock.AttemptEnterReadLock( );
       try
-      {
-        #region Why under read lock
-
-        // under read lock to make sure that following situation is avoided in incremental update:
-        // 
-        // Read | Write
-        //      |
-        // A1   | 
-        // B2   | 
-        // C3   | 
-        //      | C4
-        //      | D5
-        // D5   |
-        // 
-        // Here Read is this thread; Write is thread where Snapshot is set; A,B,C,etc are trackers; and 1,2,3,etc 
-        // are revisions. If this happens, maximum revision of snapshots collectons would be 5, so newer C4 
-        // position snapshot (missed in this call where C3 is returned) will be missed on next incremental 
-        // updates call from the same client.
-        // 
-        // In other words, reading of several Snapshot has to be atomic here.
-
-        #endregion
-
+      { // keep code inside as quick as possible. Avoid I/O and events.
         if ( Log.IsDebugEnabled )
           Log.DebugFormat( "Inside read lock for call id {0}, group {1}...", CallId, Group );
 
@@ -146,7 +144,7 @@ namespace FlyTrace.Service.Subservices
           TrackerName trackerId = trackerNames[i];
           TrackerStateHolder trackerStateHolder;
 
-          // so i'th elements might be null if the tracker in not in dataManager yet:
+          // an element might be null if the tracker is not in dataManager yet:
           if ( DataManager.Trackers.TryGetValue( trackerId.ForeignId, out trackerStateHolder ) )
           {
             notNullCount++;
@@ -162,7 +160,7 @@ namespace FlyTrace.Service.Subservices
       }
       finally
       {
-        DataManager.RwLock.ExitReadLock( );
+        DataManager.HolderRwLock.ExitReadLock( );
         if ( Log.IsDebugEnabled )
           Log.DebugFormat( "Left lock in GetTrackerIdResponse for call id {0}", CallId );
       }
