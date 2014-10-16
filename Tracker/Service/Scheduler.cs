@@ -9,7 +9,7 @@ using log4net;
 
 namespace FlyTrace.Service
 {
-  internal class Scheduler
+  public class Scheduler
   {
     public readonly IDictionary<ForeignId, TrackerStateHolder> Trackers =
       new Dictionary<ForeignId, TrackerStateHolder>( );
@@ -32,7 +32,7 @@ namespace FlyTrace.Service
       IDictionary<string, ForeignStat> trackerStat = GetForeignStats( out isTimedOutOrBoringDetected );
 
       if ( isTimedOutOrBoringDetected )
-        CancelTimeoutsAndRemoveBoringTrackers( );
+        CancelTimedOuts( );
 
       // Now find out which trackers from trackerStat have min time to wait. Could be more than one if
       // they all have same minimum time (there is also some tolerance for a time being "the same")
@@ -40,7 +40,8 @@ namespace FlyTrace.Service
       var trackersWithMinWatingTime = GetTrackersWithMinWatingTime( trackerStat, out minWaitingTime );
 
       if ( waitHandle.WaitOne( minWaitingTime ) )
-      { // event signaled which means something has changed - so the logic above needs to rerun
+      {
+        // event signaled which means something has changed - so the logic above needs to rerun
         return Enumerable.Empty<TrackerStateHolder>( );
       }
 
@@ -110,41 +111,134 @@ namespace FlyTrace.Service
       return trackerStat;
     }
 
-    private void CancelTimeoutsAndRemoveBoringTrackers( )
+    private void CancelTimedOuts( )
     {
-      HolderRwLock.AttemptEnterWriteLock( );
       try
       {
-        foreach ( TrackerStateHolder holder in Trackers.Values )
+        List<LocationRequest> timedOut = new List<LocationRequest>( 20 );
+        HolderRwLock.AttemptEnterWriteLock( );
+        try
         {
-          ForeignStat foreignStat;
-          if ( holder.CurrentRequest != null &&
-              IsTimedOut( holder.CurrentRequest ) )
+          foreach ( TrackerStateHolder holder in Trackers.Values )
           {
-            holder.CurrentRequest.SafelyAbortRequest( );
+            if ( holder.CurrentRequest == null ||
+                !IsTimedOut( holder.CurrentRequest ) )
+              continue;
+
+            LocationRequest locReq = holder.CurrentRequest;
+            holder.CurrentRequest = null;
+
+            LocationRequest.TimedOutRequestsLog.ErrorFormat(
+              "Location request hasn't finished in time for lrid {0}, tracker id {1}",
+              locReq.Lrid,
+              locReq.Id );
+
+            timedOut.Add( holder.CurrentRequest );
           }
-          {
-            foreignStat.InCallCount++;
-
-            if ( IsTimedOut( holder.CurrentRequest ) ||
-                 IsBoring( holder ) )
-              isTimedOutOrBoringDetected = true;
-
-            continue;
-          }
-
-          if ( foreignStat.MostStaleTracker == null )
-            foreignStat.MostStaleTracker = holder;
-          else
-            foreignStat.MostStaleTracker = GetMoreStaleTracker( holder, foreignStat.MostStaleTracker );
-
-          trackerStat[holder.ForeignId.Type] = foreignStat;
+        }
+        finally
+        {
+          HolderRwLock.ExitWriteLock( );
         }
 
+        if (timedOut.Count > 0)
+        {
+          foreach (LocationRequest locationRequest in timedOut)
+            ThreadPool.QueueUserWorkItem(AbortRequest, locationRequest);
+
+          ThreadPool.QueueUserWorkItem(CheckForTimedOutAborts);
+        }
+      }
+      catch ( Exception exc )
+      {
+        Log.Error( exc );
+      }
+    }
+
+    private readonly Dictionary<long, AbortStat> queuedAborts = new Dictionary<long, AbortStat>( );
+
+    private void AbortRequest( object state )
+    {
+      Global.ConfigureThreadCulture( );
+
+      long? lrid = null;
+      try
+      {
+        LocationRequest locReq = ( LocationRequest ) state;
+        lrid = locReq.Lrid;
+        LocationRequest.TimedOutRequestsLog.InfoFormat( "Starting AbortRequest for lrid {0}...", lrid );
+
+        // SafelyAbortRequest can hang up, that happened before. Looks like nothing can be done with that, 
+        // but it should be detected at least. For that, use QueuedAborts and check it periodically.
+        AbortStat abortStat;
+        lock ( this.queuedAborts )
+        {
+          abortStat = new AbortStat( );
+          this.queuedAborts.Add( lrid.Value, abortStat );
+        }
+
+        locReq.SafelyAbortRequest( abortStat );
+        LocationRequest.TimedOutRequestsLog.InfoFormat( "AbortRequest finished for lrid {0}", lrid );
+      }
+      catch ( Exception exc )
+      {
+        LocationRequest.TimedOutRequestsLog.ErrorFormat( "AbortRequest error for lrid {0}: {1}", lrid, exc );
       }
       finally
       {
-        HolderRwLock.ExitWriteLock( );
+        if ( lrid.HasValue )
+        {
+          lock ( this.queuedAborts )
+          {
+            this.queuedAborts.Remove( lrid.Value );
+          }
+        }
+      }
+    }
+
+    private static readonly ILog TimedOutAbortsLog = LogManager.GetLogger( "TimedOutAborts" );
+
+    private void CheckForTimedOutAborts( object unused )
+    {
+      try
+      {
+        DateTime threshold = DateTime.UtcNow.AddMinutes( -5 );
+
+        KeyValuePair<long, AbortStat>[] timedOutAborts;
+        lock ( this.queuedAborts )
+        {
+          timedOutAborts =
+            this.queuedAborts
+            .Where
+            (
+              kvp =>
+                kvp.Value.Start < threshold
+            )
+            .ToArray( );
+        }
+
+        if ( timedOutAborts.Length > 0 )
+        {
+          foreach ( KeyValuePair<long, AbortStat> kvp in timedOutAborts )
+          {
+            TimeSpan timespan = DateTime.UtcNow - kvp.Value.Start;
+            TimedOutAbortsLog.ErrorFormat(
+              "Abort for lrid {0} timed out at stage {1} for {2}", kvp.Key, kvp.Value.Stage, timespan );
+          }
+
+          lock ( this.queuedAborts )
+          {
+            foreach ( long lrid in timedOutAborts.Select( kvp => kvp.Key ) )
+            {
+              if ( this.queuedAborts.ContainsKey( lrid ) )
+                this.queuedAborts.Remove( lrid );
+            }
+          }
+        }
+      }
+      catch ( Exception exc )
+      {
+        TimedOutAbortsLog.Error( "Error in CheckForTimedOutAborts", exc );
       }
     }
 
@@ -153,8 +247,8 @@ namespace FlyTrace.Service
       int msTimeout =
         Math.Max(
           AsyncResultNoResult.DefaultEndWaitTimeout,
-          60 * 1000  // def timeout or 60 seconds if it's not set
-        );
+          60 * 1000 // def timeout or 60 seconds if it's not set
+          );
 
       return locationRequest.StartTs < DateTime.UtcNow.AddSeconds( -msTimeout );
     }
@@ -171,10 +265,10 @@ namespace FlyTrace.Service
     }
 
     private static List<TrackerStateHolder> GetTrackersWithMinWatingTime
-    (
+      (
       IDictionary<string, ForeignStat> trackerStat,
       out int minWaitingTime
-    )
+      )
     {
       List<TrackerStateHolder> trackersWithMinWatingTime = new List<TrackerStateHolder>( );
 
@@ -240,7 +334,7 @@ namespace FlyTrace.Service
       TrackerStateHolder x,
       TrackerStateHolder y,
       out bool areEqual
-    )
+      )
     {
       // The logic in this method is quite fragile, so always run the unit test after making just 
       // any change here.

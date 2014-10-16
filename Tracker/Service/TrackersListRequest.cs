@@ -250,7 +250,7 @@ namespace FlyTrace.Service
         }
 
         locReq.SafelyAbortRequest( abortStat );
-        LocationRequest.TimedOutRequestsLog.InfoFormat( "SafelyAbortRequest finished for lrid {0}", lrid );
+        LocationRequest.TimedOutRequestsLog.InfoFormat( "AsyncAbortRequest finished for lrid {0}", lrid );
       }
       catch ( Exception exc )
       {
