@@ -34,62 +34,8 @@ using log4net.Repository;
 
 namespace FlyTrace.Service
 {
-  public partial class ForeignRequestsManager
+  public class ForeignRequestsManager
   {
-    /* There is a number of parameters controlling how calls to the foreign servers are scheduled.
-     * 
-     * One of those parameters is a maximum number of simultaneous polling calls to the foreign servers. 
-     * This number can be 1 or more. When it's 1, only 1 call at a time is possible (which would be VERY 
-     * slow for a reasanoble amount of trackers to watch, but such config is still possible)
-     * 
-     * Below "calls pack" is a set of simultaneously running (overlapping) calls. Here is an example of 
-     * overlapping calls starting at separate moments in time:
-     * 
-     * Number of     0|callllll
-     * calls in the  1|...call
-     * current call  2|   ..calllllll
-     * pack at the   2|     ..callll
-     * moment of the 2|       ..calll
-     * call start    3|         ..callllllll
-     *               1|           ....call
-     *                 ---------------------
-     *                 012345678901234567890
-     *                       time, sec
-     * 
-     * Assuming there is a queue of required but not started yet calls, here are the parameters to schedule 
-     * those calls:
-     * 
-     * - MaxCallsInPack: int value >=1, defines maximum number of calls in current pack. When a call in 
-     *    the pack is finished, another call can be started at the time defined by parameters described 
-     *    above. In the example above this parameter could be 4 (see that 4 calls at the 11th and 12th 
-     *    seconds).
-     *    
-     * - TimeFromPrevStart: int value in milliseconds, >=0, defines how often calls can be started. A next
-     *   call from the queue can be started only after this time has passed after the START of the previous
-     *   one. In the example above this parameter could be 2000.  Note that the queue of required calls could 
-     *   be empty when the number of calls in the pack goes below limit, that's why in the example above some 
-     *   calls are started with interval of 3 or 4 seconds after prev.start. And of course a call pack could 
-     *   even be empty if there is no trackers to update.
-     *   
-     * - CallsGap: int value in milliseconds, >=0, in use only when there is just one call per time is 
-     *    possible, i.e. when MaxCallsInPack (below) is 1. If value of CallsGap > 0, next call from the 
-     *    queue can be started only after this time has passed after the END of the previous one. In the 
-     *    example above this parameter is ignored because MaxCallsInPack>1.
-     *    
-     * Below is an example where CallsGap is in use, with MaxCallsInPack=1, TimeFromPrevStart=7000 
-     * and CallsGap=2000:
-     *      calllll..calll...callllllll..calll...call....call....call....
-     *      01234567.0123456701234567....012345670123456701234567
-     * Probably it doesn't make much sense to use both TimeFromPrevStart>0 and CallsGap>0, but to keep 
-     * the algorithm simple they both are allowed to be non-zero.
-     * 
-     * Another parameter that controls which trackers need polling calls at all, i.e. which calls form a
-     * queue that need to be scheduled in according to the rules above:
-     * - RefreshInterval: time in seconds, >0, specifies when a tracker requires a call
-     *   to the foreign server to refresh the tracker's data. It's time span that needs to pass after previous
-     *   call for the same tracker (always counted from the prev.call start)
-     */
-
     static ForeignRequestsManager( )
     {
       // TODO: remove
