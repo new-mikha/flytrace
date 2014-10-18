@@ -1,4 +1,24 @@
-﻿using System;
+﻿/******************************************************************************
+ * Flytrace, online viewer for GPS trackers.
+ * Copyright (C) 2011-2014 Mikhail Karmazin
+ * 
+ * This file is part of Flytrace.
+ * 
+ * Flytrace is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * Flytrace is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -17,22 +37,33 @@ namespace FlyTrace.Service
     public readonly ReaderWriterLockSlimEx HolderRwLock = new ReaderWriterLockSlimEx( 1000 );
 
     /// <summary>
-    /// 1. Waits until when it's time to request the returned trackers.
-    /// 2. Returned result can be empty.
-    /// 3. Modifies trackers that was passed as ctor parameter.
-    /// 4. Can enter either or both read/write modes for RW-lock passed as ctor parameter.
-    /// 5. Stops waiting and returns with empty result if WaitHandle passed as ctor parameter is signaled.
+    /// Finds out the next time when trackers need to be requested and waits till that time. Also does some 
+    /// cleanup on the content of <see cref="Trackers"/>. For details, see Remarks section.
     /// </summary>
-    /// <returns></returns>
-    public IEnumerable<TrackerStateHolder> WaitForMomentOfNextRequestAndRemoveOldTrackers( WaitHandle waitHandle )
+    /// <remarks>
+    /// - Waits until it's time to request the returned trackers.
+    /// - Returned result can be empty.
+    /// - Modifies Trackers.
+    /// - Can enter either or both read and write modes for <see cref="HolderRwLock"/>
+    /// - Stops waiting and returns with empty result if WaitHandle passed as parameter is signaled.
+    /// - Cleans up trackers that are not on demand and cancels timed out requests.
+    /// </remarks>
+    public IEnumerable<TrackerStateHolder> ScheduleCleanupWait( WaitHandle waitHandle )
     {
       bool isTimedOutOrBoringDetected;
 
       // key is foreign type (Spot, DeLorme etc), value is the tracker that needs an update most urgently:
-      IDictionary<string, ForeignStat> trackerStat = GetForeignStats( out isTimedOutOrBoringDetected );
+      IDictionary<string, ForeignStat> trackerStat =
+        GetForeignStats( out isTimedOutOrBoringDetected );
 
       if ( isTimedOutOrBoringDetected )
-        CancelTimedOuts( );
+        CancelTimedOutsAndRemoveBoringTrackers( );
+
+      if ( prevTimeAbortsChecked.AddMinutes( 1 ) < DateTime.UtcNow )
+      {
+        prevTimeAbortsChecked = DateTime.UtcNow;
+        ThreadPool.QueueUserWorkItem( CheckForTimedOutAborts );
+      }
 
       // Now find out which trackers from trackerStat have min time to wait. Could be more than one if
       // they all have same minimum time (there is also some tolerance for a time being "the same")
@@ -50,6 +81,8 @@ namespace FlyTrace.Service
 
       return trackersWithMinWatingTime;
     }
+
+    private DateTime prevTimeAbortsChecked; // on construction set to default DateTime which is quite long time ago.
 
     private static readonly ILog Log = LogManager.GetLogger( "TDM.Sched" );
 
@@ -111,42 +144,48 @@ namespace FlyTrace.Service
       return trackerStat;
     }
 
-    private void CancelTimedOuts( )
+    private void CancelTimedOutsAndRemoveBoringTrackers( )
     {
       try
       {
+        List<ForeignId> boringIds = new List<ForeignId>( 20 );
         List<LocationRequest> timedOut = new List<LocationRequest>( 20 );
+
         HolderRwLock.AttemptEnterWriteLock( );
         try
         {
           foreach ( TrackerStateHolder holder in Trackers.Values )
           {
-            if ( holder.CurrentRequest == null ||
-                !IsTimedOut( holder.CurrentRequest ) )
-              continue;
+            if ( holder.CurrentRequest != null &&
+                 IsTimedOut( holder.CurrentRequest ) )
+            {
+              LocationRequest locReq = holder.CurrentRequest;
+              holder.CurrentRequest = null;
+              timedOut.Add( locReq );
+            }
 
-            LocationRequest locReq = holder.CurrentRequest;
-            holder.CurrentRequest = null;
-
-            LocationRequest.TimedOutRequestsLog.ErrorFormat(
-              "Location request hasn't finished in time for lrid {0}, tracker id {1}",
-              locReq.Lrid,
-              locReq.Id );
-
-            timedOut.Add( holder.CurrentRequest );
+            if ( IsBoring( holder ) ) // don't remove elements from Trackers right here 'cause we enumerating it now
+              boringIds.Add( holder.ForeignId );
           }
+
+          foreach ( ForeignId boringId in boringIds )
+            Trackers.Remove( boringId );
         }
         finally
         {
           HolderRwLock.ExitWriteLock( );
         }
 
-        if (timedOut.Count > 0)
-        {
-          foreach (LocationRequest locationRequest in timedOut)
-            ThreadPool.QueueUserWorkItem(AbortRequest, locationRequest);
 
-          ThreadPool.QueueUserWorkItem(CheckForTimedOutAborts);
+        // Can do it out of lock because Trackers don't reference those LocationRequests anymore
+        foreach ( LocationRequest locReq in timedOut )
+        {
+          LocationRequest.TimedOutRequestsLog.ErrorFormat(
+            "Location request hasn't finished in time for lrid {0}, tracker id {1}",
+            locReq.Lrid,
+            locReq.Id );
+
+          ThreadPool.QueueUserWorkItem( AbortRequest, locReq );
         }
       }
       catch ( Exception exc )
@@ -169,7 +208,7 @@ namespace FlyTrace.Service
         LocationRequest.TimedOutRequestsLog.InfoFormat( "Starting AbortRequest for lrid {0}...", lrid );
 
         // SafelyAbortRequest can hang up, that happened before. Looks like nothing can be done with that, 
-        // but it should be detected at least. For that, use QueuedAborts and check it periodically.
+        // but at least it should be detected. For that, use QueuedAborts and check it periodically.
         AbortStat abortStat;
         lock ( this.queuedAborts )
         {
@@ -198,6 +237,10 @@ namespace FlyTrace.Service
 
     private static readonly ILog TimedOutAbortsLog = LogManager.GetLogger( "TimedOutAborts" );
 
+    /// <summary>
+    /// See the comments in <see cref="AbortRequest"/>
+    /// </summary>
+    /// <param name="unused"></param>
     private void CheckForTimedOutAborts( object unused )
     {
       try

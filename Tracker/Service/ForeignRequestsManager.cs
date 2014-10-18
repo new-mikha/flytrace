@@ -256,7 +256,7 @@ namespace FlyTrace.Service
           PokeLog4NetBufferingAppendersSafe( );
 
           IEnumerable<TrackerStateHolder> trackersToRequest =
-            this.scheduler.WaitForMomentOfNextRequestAndRemoveOldTrackers( this.refreshThreadEvent );
+            this.scheduler.ScheduleCleanupWait( this.refreshThreadEvent );
 
           if ( this.isStoppingWorkerThread )
             break;
