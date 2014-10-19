@@ -6,45 +6,12 @@ using log4net;
 
 namespace FlyTrace.Service.Tools
 {
-  /// <summary>
-  /// For some unknown reasons Microsoft.Win32.SystemEvents.TimeChanged event 
-  /// doesn't work in this service, even with a message pump started as described 
-  /// here: http://msdn.microsoft.com/en-us/library/microsoft.win32.systemevents.aspx
-  /// So catching the message at the lower level, looks like it works as expected.
-  /// </summary>
-  internal class SystemEventsHiddenForm : Form
+  public partial class SystemEventsHiddenForm : Form
   {
-    #region Form basic plumbing
-
     public SystemEventsHiddenForm( )
     {
       InitializeComponent( );
     }
-
-    private readonly System.ComponentModel.IContainer components = null;
-
-    protected override void Dispose( bool disposing )
-    {
-      if ( disposing && ( components != null ) )
-      {
-        components.Dispose( );
-      }
-      base.Dispose( disposing );
-    }
-
-    private void InitializeComponent( )
-    {
-      this.SuspendLayout();
-      // 
-      // SystemEventsHiddenForm
-      // 
-      this.ClientSize = new System.Drawing.Size(264, 245);
-      this.Name = "SystemEventsHiddenForm";
-      this.ResumeLayout(false);
-
-    }
-
-    #endregion
 
     private static readonly ILog Log = LogManager.GetLogger( "TimeChange" );
 
@@ -78,14 +45,14 @@ namespace FlyTrace.Service.Tools
       base.WndProc( ref m );
     }
 
-    private void HiddenForm_Load( object sender, EventArgs e )
+    private void SystemEventsHiddenForm_Load( object sender, EventArgs e )
     {
-      Log.Info( "HiddenForm_Load" );
+      Log.Info( "SystemEventsHiddenForm_Load" );
     }
 
-    private void HiddenForm_FormClosing( object sender, FormClosingEventArgs e )
+    private void SystemEventsHiddenForm_FormClosing( object sender, FormClosingEventArgs e )
     {
-      Log.Info( "HiddenForm_FormClosing" );
+      Log.Info( "SystemEventsHiddenForm_Load" );
     }
   }
 }
