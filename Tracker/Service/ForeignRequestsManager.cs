@@ -151,7 +151,7 @@ namespace FlyTrace.Service
             this.revisionPersister.ThreadUnsafeRevision
           );
 
-          string connString = Data.GetConnectionString( );
+          string connString = Tools.ConnectionStringModifier.AsyncConnString;
 
           SqlConnection sqlConn = new SqlConnection( connString );
           sqlConn.Open( );

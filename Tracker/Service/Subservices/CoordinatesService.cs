@@ -492,7 +492,7 @@ namespace FlyTrace.Service.Subservices
           " WHERE [Id] = @GroupId";
       }
 
-      string connString = Data.GetConnectionString( );
+      string connString = Tools.ConnectionStringModifier.AsyncConnString;
 
       SqlConnection sqlConn = new SqlConnection( connString );
       sqlConn.Open( );

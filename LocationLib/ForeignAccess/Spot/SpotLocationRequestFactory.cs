@@ -22,7 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
+using FlyTrace.LocationLib.Properties;
 using log4net;
 
 namespace FlyTrace.LocationLib.ForeignAccess.Spot
@@ -259,22 +259,22 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     public override int MaxCallsInPack
     {
-      get { return 10; }
+      get { return Settings.Default.SPOT_MaxCallsInPack; }
     }
 
     public override TimeSpan MinTimeFromPrevStart
     {
-      get { return TimeSpan.FromMilliseconds( 2000 ); }
+      get { return TimeSpan.FromMilliseconds( Settings.Default.SPOT_MinTimeFromPrevStart_Ms ); }
     }
 
     public override TimeSpan MinCallsGap
     {
-      get { return TimeSpan.Zero; }
+      get { return TimeSpan.FromMilliseconds( Settings.Default.SPOT_MinCallsGap_Ms ); }
     }
 
     public override TimeSpan SameFeedHitInterval
     {
-      get { return TimeSpan.FromMinutes( 2.5 ); }
+      get { return TimeSpan.FromSeconds( Settings.Default.SPOT_SameFeedHitInterval_Seconds ); }
     }
   }
 }

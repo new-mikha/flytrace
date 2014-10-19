@@ -112,8 +112,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
-    private readonly string spotId;
-
     private readonly string testXml;
 
     public SpotLocationRequest

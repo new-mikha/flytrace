@@ -156,7 +156,7 @@ namespace FlyTrace.Service
             RevisionGenerator.Revision
           );
 
-          string connString = Data.GetConnectionString( );
+          string connString = Tools.ConnectionStringModifier.AsyncConnString;
 
           SqlConnection sqlConn = new SqlConnection( connString );
           sqlConn.Open( );
@@ -418,6 +418,9 @@ namespace FlyTrace.Service
           callData.GroupFacade.EndGetGroupTrackerIds( ar );
 
         callData.TrackerIds = groupConfig.TrackerNames;
+        callData.ActualGroupVersion = groupConfig.VersionInDb;
+        callData.ShowUserMessages = groupConfig.ShowUserMessages;
+        callData.StartTs = groupConfig.StartTs;
 
         if ( Log.IsDebugEnabled )
         {
@@ -860,7 +863,7 @@ namespace FlyTrace.Service
           " WHERE [Id] = @GroupId";
       }
 
-      string connString = Data.GetConnectionString( );
+      string connString = Tools.ConnectionStringModifier.AsyncConnString;
 
       SqlConnection sqlConn = new SqlConnection( connString );
       sqlConn.Open( );
@@ -1402,12 +1405,12 @@ namespace FlyTrace.Service
 
       try
       {
-        int unusedGroupVersion;
-        bool unusedShowUserMessages;
-
         GroupConfig groupConfig = callData.GroupFacade.EndGetGroupTrackerIds( ar );
 
         callData.TrackerIds = new List<TrackerName>( );
+        callData.ActualGroupVersion = groupConfig.VersionInDb;
+        callData.ShowUserMessages = groupConfig.ShowUserMessages;
+        callData.StartTs = groupConfig.StartTs;
 
         // We need only those TrackerIds whose names present in TrackRequests array. So intersect both lists.
         // Avoid "foreach" and LINQ in frequent operation because both use too much "new" operatons

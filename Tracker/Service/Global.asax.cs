@@ -110,7 +110,7 @@ namespace FlyTrace.Service
         Timeout.Infinite );
     }
 
-    private SystemEvents.HiddenForm hiddenForm;
+    private Tools.SystemEventsHiddenForm hiddenForm;
 
     private void RunMessagePump( )
     {
@@ -121,7 +121,7 @@ namespace FlyTrace.Service
         // Idea taken from http://msdn.microsoft.com/en-us/library/microsoft.win32.systemevents.aspx
         // But the message is catched at a lower level, see form comments for some details
 
-        this.hiddenForm = new SystemEvents.HiddenForm( );
+        this.hiddenForm = new Tools.SystemEventsHiddenForm( );
         this.hiddenForm.TimeChanged += hiddenForm_TimeChanged;
 
         System.Windows.Forms.Application.Run( this.hiddenForm );

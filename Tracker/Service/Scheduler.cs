@@ -30,10 +30,12 @@ using log4net;
 namespace FlyTrace.Service
 {
   /// <summary>
-  /// Used in composition with <see cref="ForeignRequestsManager"/> which delegates and use the public 
-  /// stuff of this class. All could be in one class, but scheduling and actual calls are fairly different 
-  /// pieces so divided that into those two classes. See Remarks section for the scheduler logic description.
+  /// Used in composition with <see cref="ForeignRequestsManager"/>, where this class delegates its 
+  /// public stuff to. All could be done in one class, but scheduling and actual calls are fairly 
+  /// different pieces so divided that into those two classes. See Remarks section for the scheduler 
+  /// logic description.
   /// </summary>
+  /// 
   /// <remarks>
   /// There is a number of parameters controlling how calls to the foreign servers are scheduled.
   /// 
@@ -480,10 +482,10 @@ namespace FlyTrace.Service
       TimeSpan result = minAllowedTime - DateTime.UtcNow;
 
       if ( result < TimeSpan.Zero )
-        result = TimeSpan.Zero;
+        result = TimeSpan.Zero; // can request right now.
 
       if ( result > MaxSleepTimeSpan )
-        result = MaxSleepTimeSpan;
+        result = MaxSleepTimeSpan;  // too long to wait, shorten it a bit, and scheduler will rerun after waiting.
 
       return result;
     }

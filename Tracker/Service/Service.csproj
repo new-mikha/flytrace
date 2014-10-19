@@ -104,7 +104,7 @@
     </Compile>
     <Compile Include="ReaderWriterLockSlimEx.cs" />
     <Compile Include="RevisionPersister.cs" />
-    <Compile Include="Data.cs" />
+    <Compile Include="Tools\ConnectionStringModifier.cs" />
     <Compile Include="DemoTrackers.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
@@ -123,7 +123,7 @@
     <Compile Include="Subservices\TrackerServiceBase.cs" />
     <Compile Include="SimpleObjects.cs" />
     <Compile Include="Subservices\TracksService.cs" />
-    <Compile Include="SystemEvents\HiddenForm.cs">
+    <Compile Include="Tools\SystemEventsHiddenForm.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Test\TestControl.aspx.cs">
@@ -174,8 +174,9 @@
     <Folder Include="obj\" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="SystemEvents\HiddenForm.resx">
-      <DependentUpon>HiddenForm.cs</DependentUpon>
+    <EmbeddedResource Include="Tools\SystemEventsHiddenForm.resx">
+      <DependentUpon>SystemEventsHiddenForm.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

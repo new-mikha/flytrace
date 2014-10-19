@@ -4,13 +4,19 @@ using System.Windows.Forms;
 
 using log4net;
 
-namespace FlyTrace.Service.SystemEvents
+namespace FlyTrace.Service.Tools
 {
-  internal class HiddenForm : Form
+  /// <summary>
+  /// For some unknown reasons Microsoft.Win32.SystemEvents.TimeChanged event 
+  /// doesn't work in this service, even with a message pump started as described 
+  /// here: http://msdn.microsoft.com/en-us/library/microsoft.win32.systemevents.aspx
+  /// So catching the message at the lower level, looks like it works as expected.
+  /// </summary>
+  internal class SystemEventsHiddenForm : Form
   {
     #region Form basic plumbing
 
-    public HiddenForm( )
+    public SystemEventsHiddenForm( )
     {
       InitializeComponent( );
     }
@@ -28,20 +34,13 @@ namespace FlyTrace.Service.SystemEvents
 
     private void InitializeComponent( )
     {
-      this.SuspendLayout( );
+      this.SuspendLayout();
       // 
-      // HiddenForm
+      // SystemEventsHiddenForm
       // 
-      this.AutoScaleDimensions = new System.Drawing.SizeF( 6F, 13F );
-      this.AutoScaleMode = AutoScaleMode.Font;
-      this.ClientSize = new System.Drawing.Size( 300, 243 );
-      this.FormBorderStyle = FormBorderStyle.None;
-      this.Name = "HiddenForm";
-      this.Text = "HiddenForm";
-      this.WindowState = FormWindowState.Minimized;
-      this.FormClosing += this.HiddenForm_FormClosing;
-      this.Load += this.HiddenForm_Load;
-      this.ResumeLayout( false );
+      this.ClientSize = new System.Drawing.Size(264, 245);
+      this.Name = "SystemEventsHiddenForm";
+      this.ResumeLayout(false);
 
     }
 
@@ -56,10 +55,6 @@ namespace FlyTrace.Service.SystemEvents
 
     protected override void WndProc( ref Message m )
     {
-      // For some unknown reasons Microsoft.Win32.SystemEvents.TimeChanged event 
-      // doesn't work in this service, even with a message pump started as described 
-      // here: http://msdn.microsoft.com/en-us/library/microsoft.win32.systemevents.aspx
-      // So catching the message at the lower level, fortunately it works as expected:
       if ( m.Msg == WM_TIMECHANGE )
       {
         // TimeChanged can be changed between read and access, 

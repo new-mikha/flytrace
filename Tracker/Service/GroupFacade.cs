@@ -110,7 +110,7 @@ namespace FlyTrace.Service
         );
       }
 
-      string connString = Data.GetConnectionString( );
+      string connString = Tools.ConnectionStringModifier.AsyncConnString;
 
       // use parameter (rather than add groupId value to the string) to 
       // allow SQL Server cache execution plan for the query:
@@ -266,7 +266,7 @@ namespace FlyTrace.Service
         );
       }
 
-      string connString = Data.GetConnectionString( );
+      string connString = Tools.ConnectionStringModifier.AsyncConnString;
 
       // 1. Use parameter (rather than add groupId value to the string) to allow SQL Server cache 
       //    execution plan for the query.
