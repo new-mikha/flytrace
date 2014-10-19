@@ -256,5 +256,25 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       return sb.ToString( );
     }
+
+    public override int MaxCallsInPack
+    {
+      get { return 10; }
+    }
+
+    public override TimeSpan MinTimeFromPrevStart
+    {
+      get { return TimeSpan.FromMilliseconds( 2000 ); }
+    }
+
+    public override TimeSpan MinCallsGap
+    {
+      get { return TimeSpan.Zero; }
+    }
+
+    public override TimeSpan SameFeedHitInterval
+    {
+      get { return TimeSpan.FromMinutes( 2.5 ); }
+    }
   }
 }

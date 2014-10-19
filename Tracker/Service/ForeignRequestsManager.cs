@@ -250,6 +250,7 @@ namespace FlyTrace.Service
         try
         {
           trackerStateHolder.CurrentRequest = locationRequest;
+          trackerStateHolder.RequestStartTime = DateTime.UtcNow;
         }
         finally
         {

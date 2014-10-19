@@ -60,6 +60,12 @@ namespace FlyTrace.Service
     /// </summary>
     public LocationLib.ForeignAccess.LocationRequest CurrentRequest;
 
+    /// <summary>Keeps time of the start of the latest LocationRequest used to request data for this
+    /// tracker, even for just refresh. Also might be not-null while Snapshot is null yet.
+    /// Notice that <see cref="RefreshTime"/> keeps time of the _end_ of the same request, while this
+    /// one keeps the _start_ time.</summary>
+    public DateTime? RequestStartTime;
+
     /// <summary>Time when the tracker was requested for the 1st time</summary>
     public readonly DateTime AddedTime = GetNow( );
 

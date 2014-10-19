@@ -84,9 +84,34 @@ namespace FlyTrace.Service
   /// 
   /// Another parameter that controls which trackers need polling calls at all, i.e. which calls from the
   /// queue are needed to be scheduled in according to the rules above:
-  /// - RefreshInterval: time in seconds, >0, specifies when a tracker requires a call
+  /// - SameFeedHitInterval: time in seconds, >0, specifies when a tracker requires a call
   ///   to the foreign server to refresh the tracker's data. It's time span that needs to pass after previous
   ///   call for the same tracker (always counted from the prev.call start)
+  /// 
+  /// Taking the above, the scheduler logic is, separately for each foreign system:
+  /// 1. Find the "most stale" tracker, i.e. either the one that was updated the longest time ago, 
+  ///    or the one for which the foreign server wasn't requested at all yet take that one.
+  ///    See comment for <see cref="GetMoreStaleTracker"/> for details.
+  /// 2. Determine how much time to wait by checking the call pack data (calls start times etc) 
+  ///    against the parameters described above, and wait that time. It could be zero time.
+  ///    See <see cref="GetWaitingTimeSpan"/> for details.
+  /// 
+  /// As said above, SameFeedHitInterval and MinTimeFromPrevStart count from call start times while 
+  /// "most stale" found by comparing end times of calls. If one call is slow and another is fast, this can 
+  /// lead to the following situation:
+  ///                                           Future
+  ///                                           ↓
+  /// Tracker1:   ...................call.......*****      
+  /// Tracker2:   ..caaaaaaaaaaaaaaaaaaaaaall...****↑
+  ///                              ↑           ↑    ↑ 
+  ///                              ↑           Now  (End of SameFeedHitInterval for Tracker1)
+  ///                              (End of SameFeedHitInterval for Tracker2)
+  /// 
+  /// Tracker1 is "most stale", but at Now point SameFeedHitInterval doesn't allow to call Tracker1.
+  /// While technically it's allowed by SameFeedHitInterval to call Tracker2 at Now time. 
+  /// This complication is just ignored: SameFeedHitInterval is checked only after the most stale 
+  /// tracker is found. And when looking up the "most stale" one, start times of calls are just not 
+  /// considered. 
   /// </remarks>
   public class Scheduler
   {
@@ -126,10 +151,11 @@ namespace FlyTrace.Service
 
       // Now find out which trackers from trackerStat have min time to wait. Could be more than one if
       // they all have same minimum time (there is also some tolerance for a time being "the same")
-      int minWaitingTime;
-      var trackersWithMinWatingTime = GetTrackersWithMinWatingTime( trackerStat, out minWaitingTime );
+      TimeSpan minWaitingTimeSpan;
+      List<TrackerStateHolder> trackersWithMinWatingTime =
+        GetTrackersWithMinWatingTime( trackerStat, out minWaitingTimeSpan );
 
-      if ( waitHandle.WaitOne( minWaitingTime ) )
+      if ( waitHandle.WaitOne( minWaitingTimeSpan ) )
       {
         // event signaled which means something has changed - so the logic above needs to rerun
         return Enumerable.Empty<TrackerStateHolder>( );
@@ -146,7 +172,7 @@ namespace FlyTrace.Service
     private static readonly ILog Log = LogManager.GetLogger( "TDM.Sched" );
 
     /// <summary>Max time for the thread to sleep before rechecking the situation</summary>
-    private const int MaxSleepTimeMs = 3000;
+    private static readonly TimeSpan MaxSleepTimeSpan = TimeSpan.FromMilliseconds( 3000 );
 
     /// <summary>In minutes. A tracker that has not been accessed for more than the number of minutes 
     /// specified by this constant is considered as "old" (see other properties and methods) and is subject 
@@ -157,6 +183,8 @@ namespace FlyTrace.Service
     {
       public int InCallCount;
       public TrackerStateHolder MostStaleTracker;
+      public DateTime PrevStartTime;
+      public DateTime PrevEndTime;
     }
 
     private IDictionary<string, ForeignStat> GetForeignStats( out bool isTimedOutOrBoringDetected )
@@ -176,18 +204,24 @@ namespace FlyTrace.Service
           trackerStat.TryGetValue( holder.ForeignId.Type, out foreignStat );
           if ( holder.CurrentRequest != null )
           {
-            foreignStat.InCallCount++;
-
             if ( IsTimedOut( holder.CurrentRequest ) )
               isTimedOutOrBoringDetected = true;
-
-            continue;
+            else
+              foreignStat.InCallCount++;
+          }
+          else
+          {
+            if ( foreignStat.MostStaleTracker == null )
+              foreignStat.MostStaleTracker = holder;
+            else
+              foreignStat.MostStaleTracker = GetMoreStaleTracker( holder, foreignStat.MostStaleTracker );
           }
 
-          if ( foreignStat.MostStaleTracker == null )
-            foreignStat.MostStaleTracker = holder;
-          else
-            foreignStat.MostStaleTracker = GetMoreStaleTracker( holder, foreignStat.MostStaleTracker );
+          foreignStat.PrevStartTime =
+            MaxDateTime( holder.RequestStartTime, foreignStat.PrevStartTime );
+
+          foreignStat.PrevEndTime =
+            MaxDateTime( holder.RefreshTime, foreignStat.PrevEndTime );
 
           trackerStat[holder.ForeignId.Type] = foreignStat;
 
@@ -201,6 +235,15 @@ namespace FlyTrace.Service
       }
 
       return trackerStat;
+    }
+
+    private static DateTime MaxDateTime( DateTime? nullableTimeX, DateTime timeY )
+    {
+      return
+        ( nullableTimeX.HasValue &&
+         nullableTimeX.Value > timeY )
+          ? nullableTimeX.Value
+          : timeY;
     }
 
     private void CancelTimedOutsAndRemoveBoringTrackers( )
@@ -368,27 +411,34 @@ namespace FlyTrace.Service
 
     private static List<TrackerStateHolder> GetTrackersWithMinWatingTime
     (
+      // ReSharper disable once ParameterTypeCanBeEnumerable.Local
       IDictionary<string, ForeignStat> trackerStat,
-      out int minWaitingTime
+      out TimeSpan minWaitingTimeSpan
     )
     {
       List<TrackerStateHolder> trackersWithMinWatingTime = new List<TrackerStateHolder>( );
 
-      minWaitingTime = MaxSleepTimeMs;
+      minWaitingTimeSpan = MaxSleepTimeSpan;
 
-      const int waitingTimeDiffTolerance = 50; // this difference doesn't matter.
+      TimeSpan waitingTimeDiffTolerance = TimeSpan.FromMilliseconds( 50 ); // this difference doesn't matter.
 
-      foreach ( ForeignStat foreignStat in trackerStat.Values )
+      foreach ( KeyValuePair<string, ForeignStat> foreignStatKvp in trackerStat )
       {
-        int waitingTime = GetWaitingTime( foreignStat );
+        string foreignType = foreignStatKvp.Key;
+        ForeignStat foreignStat = foreignStatKvp.Value;
 
-        if ( waitingTime < ( minWaitingTime - waitingTimeDiffTolerance ) )
+        if ( foreignStat.MostStaleTracker == null )
+          continue; // possible when e.g. all just started all trackers are being called now.
+
+        TimeSpan waitingTimeSpan = GetWaitingTimeSpan( foreignType, foreignStat );
+
+        if ( waitingTimeSpan < ( minWaitingTimeSpan - waitingTimeDiffTolerance ) )
         {
-          minWaitingTime = waitingTime;
+          minWaitingTimeSpan = waitingTimeSpan;
           trackersWithMinWatingTime.Clear( );
           trackersWithMinWatingTime.Add( foreignStat.MostStaleTracker );
         }
-        else if ( Math.Abs( waitingTime - minWaitingTime ) < waitingTimeDiffTolerance )
+        else if ( ( waitingTimeSpan - minWaitingTimeSpan ).Duration( ) < waitingTimeDiffTolerance )
         {
           trackersWithMinWatingTime.Add( foreignStat.MostStaleTracker );
         }
@@ -396,8 +446,46 @@ namespace FlyTrace.Service
       return trackersWithMinWatingTime;
     }
 
-    private static int GetWaitingTime( ForeignStat foreignStat )
+    private static TimeSpan GetWaitingTimeSpan( string foreignType, ForeignStat foreignStat )
     {
+      LocationRequestFactory factory = ForeignAccessCentral.LocationRequestFactories[foreignType];
+
+      if ( foreignStat.InCallCount >= factory.MaxCallsInPack )
+      { // Once any call from the pack is finished, it is signaled to the wait object. So either it wouldn't 
+        // be allowed to start a next call until end of MaxSleepTimeMs, or the scheduler logic will re-run
+        // as soon as there is a free slot for a request in the call pack.
+        return MaxSleepTimeSpan;
+      }
+
+      // Now there is a slot in the call pack, but let's see what other parameters allow:
+
+      DateTime minAllowedTime = foreignStat.PrevStartTime + factory.MinTimeFromPrevStart;
+
+      if ( factory.MaxCallsInPack == 1 )
+      { // MinCallsGap just doesn't work when more than 1 could be in the call pack - see class description
+        DateTime minAllowedTimeByCallsGap = foreignStat.PrevEndTime + factory.MinCallsGap;
+        if ( minAllowedTimeByCallsGap > minAllowedTime )
+          minAllowedTime = minAllowedTimeByCallsGap;
+      }
+
+      if ( foreignStat.MostStaleTracker.RequestStartTime.HasValue )
+      { // See notice in the class description about SameFeedHitInterval
+        DateTime nextAllowedTrackerHit =
+          foreignStat.MostStaleTracker.RequestStartTime.Value + factory.SameFeedHitInterval;
+
+        if ( nextAllowedTrackerHit > minAllowedTime )
+          minAllowedTime = nextAllowedTrackerHit;
+      }
+
+      TimeSpan result = minAllowedTime - DateTime.UtcNow;
+
+      if ( result < TimeSpan.Zero )
+        result = TimeSpan.Zero;
+
+      if ( result > MaxSleepTimeSpan )
+        result = MaxSleepTimeSpan;
+
+      return result;
     }
 
     private static TrackerStateHolder GetMoreStaleTracker( TrackerStateHolder h1, TrackerStateHolder h2 )

@@ -33,6 +33,12 @@ namespace FlyTrace.LocationLib.ForeignAccess
 
     public abstract string GetStat( out bool isOk );
 
-    //public abstract uint RefreshInterval { get; }
+    public abstract int MaxCallsInPack { get; }
+
+    public abstract TimeSpan MinTimeFromPrevStart { get; }
+
+    public abstract TimeSpan MinCallsGap { get; }
+
+    public abstract TimeSpan SameFeedHitInterval { get; }
   }
 }
