@@ -250,7 +250,7 @@ namespace FlyTrace.Service
         try
         {
           trackerStateHolder.CurrentRequest = locationRequest;
-          trackerStateHolder.RequestStartTime = DateTime.UtcNow;
+          trackerStateHolder.RequestStartTime = TimeService.Now;
         }
         finally
         {
@@ -343,7 +343,7 @@ namespace FlyTrace.Service
                 this.revisionPersister.ThreadUnsafeRevision = newRevisionToUse.Value;
             }
 
-            trackerStateHolder.RefreshTime = DateTime.UtcNow;
+            trackerStateHolder.RefreshTime = TimeService.Now;
           }
           finally
           {
@@ -385,7 +385,7 @@ namespace FlyTrace.Service
       }
     }
 
-    private DateTime prevBufferingAppendersPokingTs = DateTime.UtcNow;
+    private DateTime prevBufferingAppendersPokingTs = TimeService.Now;
 
     /// <summary>
     /// See <see cref="PokeLog4NetBufferingAppendersSafe"/> method. Defines time between flushes.
@@ -405,9 +405,9 @@ namespace FlyTrace.Service
 
       try
       {
-        if ( ( DateTime.UtcNow - prevBufferingAppendersPokingTs ).TotalMinutes > BufferingAppendersFlushPeriod )
+        if ( ( TimeService.Now - prevBufferingAppendersPokingTs ).TotalMinutes > BufferingAppendersFlushPeriod )
         {
-          prevBufferingAppendersPokingTs = DateTime.UtcNow;
+          prevBufferingAppendersPokingTs = TimeService.Now;
 
           // queue it into the thread pool to avoid potential delays in log4net in processing that stuff:
           ThreadPool.QueueUserWorkItem( Log4NetBufferingAppendersFlushWorker );

@@ -24,7 +24,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
 {
   public class AbortStat
   {
-    public readonly DateTime Start = DateTime.UtcNow;
+    public readonly DateTime Start = TimeService.Now;
 
     public int Stage;
   }

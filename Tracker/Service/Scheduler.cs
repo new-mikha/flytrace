@@ -145,9 +145,9 @@ namespace FlyTrace.Service
       if ( isTimedOutOrBoringDetected )
         CancelTimedOutsAndRemoveBoringTrackers( );
 
-      if ( prevTimeAbortsChecked.AddMinutes( 1 ) < DateTime.UtcNow )
+      if ( prevTimeAbortsChecked.AddMinutes( 1 ) < TimeService.Now )
       {
-        prevTimeAbortsChecked = DateTime.UtcNow;
+        prevTimeAbortsChecked = TimeService.Now;
         ThreadPool.QueueUserWorkItem( CheckForTimedOutAborts );
       }
 
@@ -164,7 +164,7 @@ namespace FlyTrace.Service
       }
 
       foreach ( TrackerStateHolder holder in trackersWithMinWatingTime )
-        holder.ScheduledTime = DateTime.UtcNow;
+        holder.ScheduledTime = TimeService.Now;
 
       return trackersWithMinWatingTime;
     }
@@ -174,7 +174,7 @@ namespace FlyTrace.Service
     private static readonly ILog Log = LogManager.GetLogger( "TDM.Sched" );
 
     /// <summary>Max time for the thread to sleep before rechecking the situation</summary>
-    private static readonly TimeSpan MaxSleepTimeSpan = TimeSpan.FromMilliseconds( 3000 );
+    public static readonly TimeSpan MaxSleepTimeSpan = TimeSpan.FromMilliseconds( 3000 );
 
     /// <summary>In minutes. A tracker that has not been accessed for more than the number of minutes 
     /// specified by this constant is considered as "old" (see other properties and methods) and is subject 
@@ -349,7 +349,7 @@ namespace FlyTrace.Service
     {
       try
       {
-        DateTime threshold = DateTime.UtcNow.AddMinutes( -5 );
+        DateTime threshold = TimeService.Now.AddMinutes( -5 );
 
         KeyValuePair<long, AbortStat>[] timedOutAborts;
         lock ( this.queuedAborts )
@@ -368,7 +368,7 @@ namespace FlyTrace.Service
         {
           foreach ( KeyValuePair<long, AbortStat> kvp in timedOutAborts )
           {
-            TimeSpan timespan = DateTime.UtcNow - kvp.Value.Start;
+            TimeSpan timespan = TimeService.Now - kvp.Value.Start;
             TimedOutAbortsLog.ErrorFormat(
               "Abort for lrid {0} timed out at stage {1} for {2}", kvp.Key, kvp.Value.Stage, timespan );
           }
@@ -397,13 +397,13 @@ namespace FlyTrace.Service
           60 * 1000 // def timeout or 60 seconds if it's not set
           );
 
-      return locationRequest.StartTs < DateTime.UtcNow.AddSeconds( -msTimeout );
+      return locationRequest.StartTs < TimeService.Now.AddSeconds( -msTimeout );
     }
 
     private bool IsBoring( TrackerStateHolder holder )
     {
       long boringThreshold =
-        DateTime.UtcNow.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
+        TimeService.Now.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
 
       long accessTimestamp =
         Interlocked.Read( ref holder.ThreadDesynchronizedAccessTimestamp );
@@ -479,7 +479,7 @@ namespace FlyTrace.Service
           minAllowedTime = nextAllowedTrackerHit;
       }
 
-      TimeSpan result = minAllowedTime - DateTime.UtcNow;
+      TimeSpan result = minAllowedTime - TimeService.Now;
 
       if ( result < TimeSpan.Zero )
         result = TimeSpan.Zero; // can request right now.

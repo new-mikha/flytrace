@@ -235,7 +235,7 @@ namespace FlyTrace.Service
         CallId = Interlocked.Increment( ref idSource );
       }
 
-      public readonly DateTime CallStartTime = DateTime.UtcNow;
+      public readonly DateTime CallStartTime = TimeService.Now;
       public readonly int Group;
       public readonly string SourceSeed;
       public readonly GroupFacade GroupFacade = new GroupFacade( );
@@ -424,7 +424,7 @@ namespace FlyTrace.Service
 
         if ( Log.IsDebugEnabled )
         {
-          TimeSpan timespan = DateTime.UtcNow - callData.CallStartTime;
+          TimeSpan timespan = TimeService.Now - callData.CallStartTime;
           Log.DebugFormat(
             "Got {0} trackers ids for call id {1}, group {2} with version {3} in {4} ms, getting their data now...",
             callData.TrackerIds.Count,
@@ -690,7 +690,7 @@ namespace FlyTrace.Service
             }
 
             // Interlocked used to make sure the operation is atomic:
-            Interlocked.Exchange( ref trackerStateHolder.ThreadDesynchronizedAccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
+            Interlocked.Exchange( ref trackerStateHolder.ThreadDesynchronizedAccessTimestamp, TimeService.Now.ToFileTime( ) );
           }
 
           #region Log
@@ -804,7 +804,7 @@ namespace FlyTrace.Service
 
         if ( Log.IsDebugEnabled )
         {
-          TimeSpan timespan = DateTime.UtcNow - callData.CallStartTime;
+          TimeSpan timespan = TimeService.Now - callData.CallStartTime;
           Log.DebugFormat(
             "Finishing EndGetCoordinates, call id {0}, got {1} trackers, took {2} ms.",
             callId,
@@ -842,7 +842,7 @@ namespace FlyTrace.Service
     {
       Interlocked.Increment( ref AdminAlerts.CoordAccessCount );
 
-      DateTime updateStart = DateTime.UtcNow;
+      DateTime updateStart = TimeService.Now;
 
       string sql;
       if ( dtNewestForeignTime == null )
@@ -899,7 +899,7 @@ namespace FlyTrace.Service
 
       if ( Log.IsDebugEnabled )
       {
-        TimeSpan updateTime = DateTime.UtcNow - updateStart;
+        TimeSpan updateTime = TimeService.Now - updateStart;
         Log.DebugFormat( "Stat fields updated in {0} ms", ( int ) updateTime.TotalMilliseconds );
       }
     }
@@ -1005,7 +1005,7 @@ namespace FlyTrace.Service
       if ( time == default( DateTime ) )
         return 0;
 
-      TimeSpan locationAge = DateTime.UtcNow - time;
+      TimeSpan locationAge = TimeService.Now - time;
       return Math.Max( 0, ( int ) locationAge.TotalSeconds ); // to fix potential error in this server time settings
     }
 
@@ -1040,7 +1040,7 @@ namespace FlyTrace.Service
         foreach ( CallData asyncState in this.waitingToRetrieveList )
         {
           if ( asyncState.IsReady ||
-               asyncState.CallStartTime.AddSeconds( MaxSecondsToDelayReturn ) < DateTime.UtcNow )
+               asyncState.CallStartTime.AddSeconds( MaxSecondsToDelayReturn ) < TimeService.Now )
           {
             finishingList.Add( asyncState );
           }
@@ -1061,7 +1061,7 @@ namespace FlyTrace.Service
       }
     }
 
-    private DateTime prevBufferingAppendersPokingTs = DateTime.UtcNow;
+    private DateTime prevBufferingAppendersPokingTs = TimeService.Now;
 
     /// <summary>
     /// See <see cref="PokeLog4NetBufferingAppenders"/> method. Defines time between flushes.
@@ -1078,9 +1078,9 @@ namespace FlyTrace.Service
       // This method solves the problem flushing each BufferingAppenderSkeleton in case it's not Lossy, 
       // after every 30 minutes.
 
-      if ( ( DateTime.UtcNow - prevBufferingAppendersPokingTs ).TotalMinutes > BufferingAppendersFlushPeriod )
+      if ( ( TimeService.Now - prevBufferingAppendersPokingTs ).TotalMinutes > BufferingAppendersFlushPeriod )
       {
-        prevBufferingAppendersPokingTs = DateTime.UtcNow;
+        prevBufferingAppendersPokingTs = TimeService.Now;
 
         // queue it into the thread pool to avoid potential delays in log4net in processing that stuff:
         ThreadPool.QueueUserWorkItem( Log4NetBufferingAppendersFlushWorker );
@@ -1128,7 +1128,7 @@ namespace FlyTrace.Service
     {
       Global.ConfigureThreadCulture( );
 
-      DateTime nextAllowedRequestTime = DateTime.UtcNow;
+      DateTime nextAllowedRequestTime = TimeService.Now;
 
       // It's OK to use "new" everywhere in this method and in methods it 
       // calls, because it'srare (usually once on 3 sec) operation.
@@ -1140,7 +1140,7 @@ namespace FlyTrace.Service
         {
           Dictionary<ForeignId, TrackerStateHolder> trackersToUpdate = GetTrackersToUpdate( );
 
-          int maxMsToWait = ( int ) Math.Ceiling( ( nextAllowedRequestTime - DateTime.UtcNow ).TotalMilliseconds );
+          int maxMsToWait = ( int ) Math.Ceiling( ( nextAllowedRequestTime - TimeService.Now ).TotalMilliseconds );
           if ( maxMsToWait <= 0 )
           { // Request is already allowed, so wait until an event happens:
             maxMsToWait = Timeout.Infinite;
@@ -1165,12 +1165,12 @@ namespace FlyTrace.Service
 
           if ( trackersToUpdate.Count > 0 )
           {
-            if ( DateTime.UtcNow < nextAllowedRequestTime )
+            if ( TimeService.Now < nextAllowedRequestTime )
             {
               Log.InfoFormat(
                 "{0} tracker(s) to update, but need to wait {1} sec, so skipping the cycle this time",
                 trackersToUpdate.Count,
-                ( nextAllowedRequestTime - DateTime.UtcNow ).TotalSeconds
+                ( nextAllowedRequestTime - TimeService.Now ).TotalSeconds
               );
             }
             else
@@ -1189,12 +1189,12 @@ namespace FlyTrace.Service
               Log.InfoFormat(
                 "nextAllowedRequestTime increased to {0} (narTime - Now is {1:N0} sec)",
                 nextAllowedRequestTime,
-                ( nextAllowedRequestTime - DateTime.UtcNow ).TotalSeconds
+                ( nextAllowedRequestTime - TimeService.Now ).TotalSeconds
               );
 
-              if ( nextAllowedRequestTime < DateTime.UtcNow.AddMinutes( -20 ) )
+              if ( nextAllowedRequestTime < TimeService.Now.AddMinutes( -20 ) )
               { // Don't let nextAllowedRequestTime go too far to the past
-                nextAllowedRequestTime = DateTime.UtcNow;
+                nextAllowedRequestTime = TimeService.Now;
                 Log.Info( "Reset nextAllowedRequestTime to Now" );
               }
 
@@ -1232,7 +1232,7 @@ namespace FlyTrace.Service
           lock ( this.trackers )
           { // Now remove trackers that haven't been accessed for a long time.
             List<ForeignId> oldTrackersIds = new List<ForeignId>( );
-            long threshold2Remove = DateTime.UtcNow.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
+            long threshold2Remove = TimeService.Now.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
             foreach ( KeyValuePair<ForeignId, TrackerStateHolder> pair in this.trackers )
             {
               if ( Interlocked.Read( ref pair.Value.ThreadDesynchronizedAccessTimestamp ) < threshold2Remove )
@@ -1300,7 +1300,7 @@ namespace FlyTrace.Service
 
         if ( result.Count < refreshChunk )
         {
-          DateTime threshold = DateTime.UtcNow.AddSeconds( -RefreshThresholdSec );
+          DateTime threshold = TimeService.Now.AddSeconds( -RefreshThresholdSec );
 
           // Snapshot is not volatile but it's the thread that sets this value:
           IOrderedEnumerable<KeyValuePair<ForeignId, TrackerStateHolder>> expiredTrackers =
@@ -1539,7 +1539,7 @@ namespace FlyTrace.Service
           }
 
           // Interlocked used to make sure the operation is atomic:
-          Interlocked.Exchange( ref trackerStateHolder.ThreadDesynchronizedAccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
+          Interlocked.Exchange( ref trackerStateHolder.ThreadDesynchronizedAccessTimestamp, TimeService.Now.ToFileTime( ) );
         }
 
         Log.DebugFormat( "Finishing EndGetTracks, call id {0}, got {1} tracks", callId, result.Count );
@@ -1573,7 +1573,7 @@ namespace FlyTrace.Service
 
     public int CoordAccessCount;
 
-    public readonly DateTime StartTime = DateTime.UtcNow;
+    public readonly DateTime StartTime = TimeService.Now;
 
     public List<KeyValuePair<string, string>> GetMessages( )
     {

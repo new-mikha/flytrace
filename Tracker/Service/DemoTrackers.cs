@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using FlyTrace.LocationLib;
 
 namespace FlyTrace.Service
 {
@@ -42,7 +43,7 @@ namespace FlyTrace.Service
         tracker0.Lat = -31.03764;
         tracker0.Lon = 150.43362;
         tracker0.IsOfficial = false;
-        tracker0.Ts = DateTime.UtcNow.AddMinutes( -5 );
+        tracker0.Ts = TimeService.Now.AddMinutes( -5 );
         tracker0.Age = TrackerDataManager.CalcAge( tracker0.Ts );
         tracker0.PrevLat = -30.94232;
         tracker0.PrevLon = 150.53076;
@@ -59,7 +60,7 @@ namespace FlyTrace.Service
         tracker1.Lat = -31.03764 - 0.1;
         tracker1.Lon = 150.43362 - 0.1;
         tracker1.IsOfficial = false;
-        tracker1.Ts = DateTime.UtcNow.AddMinutes( -5 );
+        tracker1.Ts = TimeService.Now.AddMinutes( -5 );
         tracker1.Age = TrackerDataManager.CalcAge( tracker1.Ts );
         tracker1.PrevLat = -30.94232 - 0.25;
         tracker1.PrevLon = 150.53076 - 0.08;

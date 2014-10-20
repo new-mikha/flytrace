@@ -36,7 +36,7 @@ namespace FlyTrace.Service
     /// <param name="waitTimeout">Timeout in milliseconds to wait for *WithFiniteWaiting methods</param>
     public ReaderWriterLockSlimEx( int waitTimeout )
     {
-      if ( this.waitTimeout <= 0 )
+      if ( waitTimeout <= 0 )
         throw new ArgumentException( "Value should be positive", "waitTimeout" );
 
       this.waitTimeout = waitTimeout;

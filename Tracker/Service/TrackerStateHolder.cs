@@ -20,6 +20,8 @@
 
 using System;
 
+using FlyTrace.LocationLib;
+
 namespace FlyTrace.Service
 {
   /// <summary>
@@ -40,12 +42,12 @@ namespace FlyTrace.Service
   /// </remarks>
   public class TrackerStateHolder
   {
-    public TrackerStateHolder( LocationLib.ForeignId foreignId )
+    public TrackerStateHolder( ForeignId foreignId )
     {
       ForeignId = foreignId;
     }
 
-    public readonly LocationLib.ForeignId ForeignId;
+    public readonly ForeignId ForeignId;
 
     /// <summary>The value of this field (i.e. a reference to <see cref="RevisedTrackerState"/> class) could be changed at 
     /// any time by different threads. So to access members of the referenced instance, either put it under the same lock 
@@ -60,14 +62,16 @@ namespace FlyTrace.Service
     /// </summary>
     public LocationLib.ForeignAccess.LocationRequest CurrentRequest;
 
+    /// <summary>Time when the tracker was requested for the 1st time</summary>
+    public readonly DateTime AddedTime = TimeService.Now;
+
+    public DateTime? ScheduledTime;
+
     /// <summary>Keeps time of the start of the latest LocationRequest used to request data for this
     /// tracker, even for just refresh. Also might be not-null while Snapshot is null yet.
     /// Notice that <see cref="RefreshTime"/> keeps time of the _end_ of the same request, while this
     /// one keeps the _start_ time.</summary>
     public DateTime? RequestStartTime;
-
-    /// <summary>Time when the tracker was requested for the 1st time</summary>
-    public readonly DateTime AddedTime = GetNow( );
 
     /// <summary>UTC time of the latest refresh from the foreign server.
     /// NOT volatile. Accessed from multiple threads. Null if CurrentRequest is null.
@@ -76,11 +80,7 @@ namespace FlyTrace.Service
 
     /// <summary>UTC time of the latest access. Used for diag only. 
     /// Writing to that can be done OUT OF LOCK, see its usage.</summary>
-    public long ThreadDesynchronizedAccessTimestamp = GetNow( ).ToFileTime( );
-
-    public DateTime? ScheduledTime;
-
-    public static Func<DateTime> GetNow = ( ) => DateTime.UtcNow;
+    public long ThreadDesynchronizedAccessTimestamp = TimeService.Now.ToFileTime( );
 
     public override string ToString( )
     {

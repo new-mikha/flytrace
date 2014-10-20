@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using FlyTrace.LocationLib;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-
+using FlyTrace.LocationLib.ForeignAccess;
 using FlyTrace.Service;
+using NUnit.Framework;
+using System.Reflection;
 
 namespace Service.Test
 {
@@ -12,86 +14,66 @@ namespace Service.Test
   ///This is a test class for SchedulerTest and is intended
   ///to contain all SchedulerTest Unit Tests
   ///</summary>
-  [TestClass]
+  [TestFixture]
   public class SchedulerTest
   {
-    /// <summary>
-    ///Gets or sets the test context which provides
-    ///information about and functionality for the current test run.
-    ///</summary>
-    public TestContext TestContext { get; set; }
+    [TearDown]
+    public void TearDown( )
+    {
+      TimeService.DebugReplacement = null;
+    }
 
-    #region Additional test attributes
-    // 
-    //You can use the following additional attributes as you write your tests:
-    //
-    //Use ClassInitialize to run code before running the first test in the class
-    //[ClassInitialize()]
-    //public static void MyClassInitialize(TestContext testContext)
-    //{
-    //}
-    //
-    //Use ClassCleanup to run code after all tests in a class have run
-    //[ClassCleanup()]
-    //public static void MyClassCleanup()
-    //{
-    //}
-    //
-    //Use TestInitialize to run code before running each test
-    //[TestInitialize()]
-    //public void MyTestInitialize()
-    //{
-    //}
-    //
-    //Use TestCleanup to run code after each test has run
-    //[TestCleanup()]
-    //public void MyTestCleanup()
-    //{
-    //}
-    //
-    #endregion
+    private DateTime RandTime( Random rand, int minutesRandomInterval )
+    {
+      return DateTime.UtcNow.AddMilliseconds( minutesRandomInterval * rand.Next( 60 * 1000 ) );
+    }
 
-    private Random rand;
+    private static TrackerStateHolder GetHolder( string id, DateTime addedTime = default(DateTime) )
+    {
+      var originalReplacement = TimeService.DebugReplacement;
+      try
+      {
+        if ( addedTime != default( DateTime ) )
+          TimeService.DebugReplacement = ( ) => addedTime;
+
+        return new TrackerStateHolder( new ForeignId( "test", id ) );
+      }
+      finally
+      {
+        TimeService.DebugReplacement = originalReplacement;
+      }
+    }
 
     /// <summary>
     ///A test for GetMoreStaleTracker
     ///</summary>
-    [TestMethod]
-    public void GetMoreStaleTrackerTest( )
+    [Test]
+    [Combinatorial]
+    public void GetMoreStaleTrackerTest(
+      // ReSharper disable once ParameterHidesMember
+      [Values( 0, -15, 15 )]int minutesRandomInterval
+    )
     {
       for ( int iSequence = 0; iSequence < 200; iSequence++ )
       {
-        this.rand = new Random( iSequence );
+        var rand = new Random( iSequence );
 
-        GenerateAndTestStaleSequence( iSequence, 0 );
-        GenerateAndTestStaleSequence( iSequence, 15 );
-        GenerateAndTestStaleSequence( iSequence, -15 );
+        Func<DateTime> randTimeFunc =
+          ( ) => RandTime( rand, minutesRandomInterval );
 
-        if ( iSequence % 50 == 0 )
-          Debug.WriteLine( "Sequence {0} done", iSequence );
-      }
-    }
-
-    private void GenerateAndTestStaleSequence( int iSequence, int minutesRandomInterval )
-    {
-      Func<DateTime> origGetTime = TrackerStateHolder.GetNow;
-
-      try
-      {
-        Func<DateTime> getTime =
-          ( ) => origGetTime( ).AddMilliseconds( minutesRandomInterval * this.rand.Next( 60 * 1000 ) );
+        TimeService.DebugReplacement = randTimeFunc;
 
         List<TrackerStateHolder> list = new List<TrackerStateHolder>( );
 
         for ( int i = 0; i < 100; i++ )
         {
-          TrackerStateHolder holder = new TrackerStateHolder( new ForeignId( "test", i.ToString( ) ) );
+          TrackerStateHolder holder = GetHolder( i.ToString( ) );
 
           if ( rand.NextDouble( ) < 0.2 )
-            holder.ScheduledTime = getTime( );
+            holder.ScheduledTime = randTimeFunc( );
 
           if ( rand.NextDouble( ) < 0.8 )
-            holder.RefreshTime = getTime( );
+            holder.RefreshTime = randTimeFunc( );
           list.Add( holder );
         }
 
@@ -112,13 +94,9 @@ namespace Service.Test
           }
         }
 
+        if ( iSequence % 50 == 0 )
+          Debug.WriteLine( "Sequence {0} done", iSequence );
       }
-      finally
-      {
-        TrackerStateHolder.GetNow = origGetTime;
-
-      }
-
     }
 
     private static int CompareHolders( TrackerStateHolder x, TrackerStateHolder y )
@@ -133,6 +111,84 @@ namespace Service.Test
         return -1;
 
       return 1;
+    }
+
+    private readonly DateTime now = DateTime.UtcNow;
+
+    private DateTime Now( double addSeconds = 0 )
+    {
+      return now.AddSeconds( addSeconds );
+    }
+
+    [Test]
+    [Combinatorial]
+    public void BasicSchedulerTest(
+      [Values( 0, 1, 3, 5, 6, 7, 8, 9, 150 )] int sameFeedHitIntervalSeconds
+      )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = 2,
+          MinTimeFromPrevStartMs = 2000,
+          MinCallsGapMs = 0,
+          SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
+        };
+
+      Scheduler scheduler = new Scheduler( );
+
+      /*
+       * time: 09876543210
+       *    A: @.....cl...
+       *    B: ...@O......
+       *
+       * Legend:
+       * 'c' call start
+       * 'l' succ call end
+       * 'O' call started and succ.finished on the same second
+       */
+
+      {
+        TrackerStateHolder holder = GetHolder( "A", Now( -10 ) );
+        holder.RequestStartTime = Now( -4 );
+        holder.RefreshTime = Now( -3 );
+
+        scheduler.Trackers.Add( holder.ForeignId, holder );
+      }
+
+      {
+        TrackerStateHolder holder = GetHolder( "B", Now( -7 ) );
+        holder.RequestStartTime = Now( -6 );
+        holder.RefreshTime = Now( -6 );
+
+        scheduler.Trackers.Add( holder.ForeignId, holder );
+      }
+
+      TimeService.DebugReplacement = ( ) => this.now;
+
+      int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
+
+      int expectedSecondsWait =
+        Math.Min(
+          maxSchedulerSleep,
+          Math.Max( 0, sameFeedHitIntervalSeconds - 6 )
+        );
+
+      var mockWaitHandle = new MockWaitHandle( expectedSecondsWait * 1000, false );
+
+      IEnumerable<TrackerStateHolder> trackersToRequest = scheduler.ScheduleCleanupWait( mockWaitHandle );
+
+      Assert.IsTrue( mockWaitHandle.IsWaitSucceeded );
+
+      if ( expectedSecondsWait <= maxSchedulerSleep )
+      {
+        Assert.AreEqual( 1, trackersToRequest.Count( ) );
+        Assert.AreEqual( "B", trackersToRequest.First( ).ForeignId.Id );
+      }
+      else
+      {
+        Assert.AreEqual( 0, trackersToRequest.Count( ) );
+      }
     }
   }
 }

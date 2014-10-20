@@ -23,12 +23,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
+using FlyTrace.LocationLib;
+
 namespace FlyTrace.Service.Subservices
 {
   public abstract class TrackerServiceBase<T> : CommonBase
   {
     protected readonly int Group;
-    protected readonly DateTime CallStartTime = DateTime.UtcNow;
+    protected readonly DateTime CallStartTime = TimeService.Now;
 
     protected TrackerServiceBase( int group )
     {
@@ -100,7 +102,7 @@ namespace FlyTrace.Service.Subservices
     {
       if ( Log.IsDebugEnabled )
       {
-        TimeSpan timespan = DateTime.UtcNow - CallStartTime;
+        TimeSpan timespan = TimeService.Now - CallStartTime;
         Log.DebugFormat(
           "Got {0} trackers ids for call id {1}, group {2} with version {3} in {4} ms, getting their data now...",
           trackerNames.Count, CallId, Group, groupConfig.VersionInDb, ( int ) timespan.TotalMilliseconds );
@@ -170,7 +172,7 @@ namespace FlyTrace.Service.Subservices
         // that's a bit of a semantics break for rwLock used for MT operations with holders because it's out 
         // of lock, but AccessTimestamp is used for diag purposes only by a admins. For purists reason, it should
         // be under write lock, but it would slow down the things so cutting the corner here:
-        Interlocked.Exchange( ref holder.ThreadDesynchronizedAccessTimestamp, DateTime.UtcNow.ToFileTime( ) );
+        Interlocked.Exchange( ref holder.ThreadDesynchronizedAccessTimestamp, TimeService.Now.ToFileTime( ) );
       }
 
       if ( holders.Any( h => h == null ) )
@@ -187,7 +189,7 @@ namespace FlyTrace.Service.Subservices
       if ( time == default( DateTime ) )
         return 0;
 
-      TimeSpan locationAge = DateTime.UtcNow - time;
+      TimeSpan locationAge = TimeService.Now - time;
       return Math.Max( 0, ( int ) locationAge.TotalSeconds ); // to fix potential error in this server time settings
     }
 

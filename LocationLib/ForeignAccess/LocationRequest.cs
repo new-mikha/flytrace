@@ -31,7 +31,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
   {
     public static ILog TimedOutRequestsLog = LogManager.GetLogger( "TimedOutRequests" );
 
-    public readonly DateTime StartTs = DateTime.UtcNow;
+    public readonly DateTime StartTs = TimeService.Now;
 
     public readonly string Id;
 

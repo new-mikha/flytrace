@@ -58,7 +58,7 @@ namespace FlyTrace.LocationLib
 
     public static string GetAgeStr( DateTime dateTime, bool withSec, out double totalDays )
     {
-      DateTime utcNow = DateTime.UtcNow;
+      DateTime utcNow = TimeService.Now;
 
       DateTime endTime;
       DateTime startTime;

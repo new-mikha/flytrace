@@ -54,6 +54,12 @@ namespace FlyTrace.Service.Subservices
       IncrementCallCount( );
       try
       {
+        if ( TimeService.DebugReplacement != null )
+        { // this should never ever happen, and here only because it's so easy to replace the time 
+          // service while it's critical for the app. 
+          throw new ApplicationException( "Can't run with replaced TimeService" );
+        }
+
         /* TODO
          * A bottleneck: too many object are created during the call. Object pools should be used instead of "new".
          * But not right now :)
@@ -89,66 +95,66 @@ namespace FlyTrace.Service.Subservices
       }
     }
 
-    protected override GroupData GetResult(GroupConfig groupConfig)
+    protected override GroupData GetResult( GroupConfig groupConfig )
     {
-        List<TrackerName> trackerNames = groupConfig.TrackerNames;
+      List<TrackerName> trackerNames = groupConfig.TrackerNames;
 
-        RevisedTrackerState[] snapshots = 
-          GetSnapshots( trackerNames, groupConfig );
+      RevisedTrackerState[] snapshots =
+        GetSnapshots( trackerNames, groupConfig );
 
-        bool isDebugFullGroup = IsDebugFullGroup( );
+      bool isDebugFullGroup = IsDebugFullGroup( );
 
-        bool isFullGroup = IsFullGroup( snapshots );
+      bool isFullGroup = IsFullGroup( snapshots );
 
-        int? thresholdRevision;
-        int nextThresholdRevision;
-        int incrLogicIncludeCount;
-        List<CoordResponseItem> resultTrackers =
-          GetResultTrackers(
-            snapshots,
-            trackerNames,
-            groupConfig,
-            isFullGroup,
-            isDebugFullGroup,
-            out thresholdRevision,
-            out nextThresholdRevision,
-            out incrLogicIncludeCount
+      int? thresholdRevision;
+      int nextThresholdRevision;
+      int incrLogicIncludeCount;
+      List<CoordResponseItem> resultTrackers =
+        GetResultTrackers(
+          snapshots,
+          trackerNames,
+          groupConfig,
+          isFullGroup,
+          isDebugFullGroup,
+          out thresholdRevision,
+          out nextThresholdRevision,
+          out incrLogicIncludeCount
+        );
+
+      GroupData result =
+        BuildGroupData(
+          resultTrackers,
+          isDebugFullGroup,
+          isFullGroup,
+          groupConfig,
+          nextThresholdRevision,
+          thresholdRevision,
+          incrLogicIncludeCount,
+          trackerNames.Count
+        );
+
+      if ( IncrLog.IsInfoEnabled )
+      {
+        IncrLog.InfoFormat(
+          "Call id {0}, {1} tracker(s) in total, and returning {2} in this call ({3} by incr.logic). Res.seed is \"{4}\"",
+          CallId,
+          snapshots.Length,
+          resultTrackers.Count,
+          incrLogicIncludeCount,
+          result.Res
           );
+      }
 
-        GroupData result =
-          BuildGroupData(
-            resultTrackers,
-            isDebugFullGroup,
-            isFullGroup,
-            groupConfig,
-            nextThresholdRevision,
-            thresholdRevision,
-            incrLogicIncludeCount,
-            trackerNames.Count
+      if ( Log.IsDebugEnabled )
+      {
+        TimeSpan timespan = TimeService.Now - CallStartTime;
+        Log.DebugFormat(
+          "Finishing EndGetCoordinates, call id {0}, got {1} trackers, took {2} ms.",
+          CallId,
+          resultTrackers.Count,
+          ( int ) timespan.TotalMilliseconds
           );
-
-        if ( IncrLog.IsInfoEnabled )
-        {
-          IncrLog.InfoFormat(
-            "Call id {0}, {1} tracker(s) in total, and returning {2} in this call ({3} by incr.logic). Res.seed is \"{4}\"",
-            CallId,
-            snapshots.Length,
-            resultTrackers.Count,
-            incrLogicIncludeCount,
-            result.Res
-            );
-        }
-
-        if ( Log.IsDebugEnabled )
-        {
-          TimeSpan timespan = DateTime.UtcNow - CallStartTime;
-          Log.DebugFormat(
-            "Finishing EndGetCoordinates, call id {0}, got {1} trackers, took {2} ms.",
-            CallId,
-            resultTrackers.Count,
-            ( int ) timespan.TotalMilliseconds
-            );
-        }
+      }
 
       return result;
     }
@@ -471,7 +477,7 @@ namespace FlyTrace.Service.Subservices
     {
       Interlocked.Increment( ref DataManager.AdminAlerts.CoordAccessCount );
 
-      DateTime updateStart = DateTime.UtcNow;
+      DateTime updateStart = TimeService.Now;
 
       string sql;
       if ( dtNewestForeignTime == null )
@@ -528,7 +534,7 @@ namespace FlyTrace.Service.Subservices
 
       if ( Log.IsDebugEnabled )
       {
-        TimeSpan updateTime = DateTime.UtcNow - updateStart;
+        TimeSpan updateTime = TimeService.Now - updateStart;
         Log.DebugFormat( "Stat fields updated in {0} ms", ( int ) updateTime.TotalMilliseconds );
       }
     }

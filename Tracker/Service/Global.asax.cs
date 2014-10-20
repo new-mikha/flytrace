@@ -23,7 +23,7 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Web;
-
+using FlyTrace.LocationLib;
 using log4net;
 
 namespace FlyTrace.Service
@@ -49,7 +49,7 @@ namespace FlyTrace.Service
 
     private Mutex serviceMutex;
 
-    private readonly DateTime startTime = DateTime.UtcNow;
+    private readonly DateTime startTime = TimeService.Now;
 
     protected void Application_Start( object sender, EventArgs e )
     {
