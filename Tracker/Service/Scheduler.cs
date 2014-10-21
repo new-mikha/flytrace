@@ -445,6 +445,7 @@ namespace FlyTrace.Service
           trackersWithMinWatingTime.Add( foreignStat.MostStaleTracker );
         }
       }
+
       return trackersWithMinWatingTime;
     }
 
@@ -456,7 +457,7 @@ namespace FlyTrace.Service
       { // Once any call from the pack is finished, it is signaled to the wait object. So either it wouldn't 
         // be allowed to start a next call until end of MaxSleepTimeMs, or the scheduler logic will re-run
         // as soon as there is a free slot for a request in the call pack.
-        return MaxSleepTimeSpan;
+        return TimeSpan.MaxValue;
       }
 
       // Now there is a slot in the call pack, but let's see what other parameters allow:
@@ -484,8 +485,7 @@ namespace FlyTrace.Service
       if ( result < TimeSpan.Zero )
         result = TimeSpan.Zero; // can request right now.
 
-      if ( result > MaxSleepTimeSpan )
-        result = MaxSleepTimeSpan;  // too long to wait, shorten it a bit, and scheduler will rerun after waiting.
+      // if result is too long, the caller will sort it out.
 
       return result;
     }

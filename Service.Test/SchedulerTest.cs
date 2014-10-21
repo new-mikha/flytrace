@@ -123,7 +123,7 @@ namespace Service.Test
     [Test]
     [Combinatorial]
     public void BasicSchedulerTest(
-      [Values( 0, 1, 3, 5, 6, 7, 8, 9, 150 )] int sameFeedHitIntervalSeconds
+      [Values( 0, 1, 3, 5, 6, 7, 8, 9, 10, 150 )] int sameFeedHitIntervalSeconds
       )
     {
       ForeignAccessCentral.LocationRequestFactories["test"] =
@@ -168,11 +168,9 @@ namespace Service.Test
 
       int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
 
-      int expectedSecondsWait =
-        Math.Min(
-          maxSchedulerSleep,
-          Math.Max( 0, sameFeedHitIntervalSeconds - 6 )
-        );
+      int realTimeToWait = Math.Max( 0, sameFeedHitIntervalSeconds - 6 );
+
+      int expectedSecondsWait = Math.Min( maxSchedulerSleep, realTimeToWait );
 
       var mockWaitHandle = new MockWaitHandle( expectedSecondsWait * 1000, false );
 
@@ -180,7 +178,7 @@ namespace Service.Test
 
       Assert.IsTrue( mockWaitHandle.IsWaitSucceeded );
 
-      if ( expectedSecondsWait <= maxSchedulerSleep )
+      if ( realTimeToWait <= maxSchedulerSleep )
       {
         Assert.AreEqual( 1, trackersToRequest.Count( ) );
         Assert.AreEqual( "B", trackersToRequest.First( ).ForeignId.Id );
