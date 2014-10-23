@@ -2,11 +2,13 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+
 using FlyTrace.LocationLib;
 using FlyTrace.LocationLib.ForeignAccess;
+using FlyTrace.LocationLib.ForeignAccess.Spot;
 using FlyTrace.Service;
+
 using NUnit.Framework;
-using System.Reflection;
 
 namespace Service.Test
 {
@@ -30,18 +32,28 @@ namespace Service.Test
 
     private static TrackerStateHolder GetHolder( string id, DateTime addedTime = default(DateTime) )
     {
+      return GetHolder( GetForeignId( id ), addedTime );
+    }
+
+    private static TrackerStateHolder GetHolder( ForeignId id, DateTime addedTime = default(DateTime) )
+    {
       var originalReplacement = TimeService.DebugReplacement;
       try
       {
         if ( addedTime != default( DateTime ) )
           TimeService.DebugReplacement = ( ) => addedTime;
 
-        return new TrackerStateHolder( new ForeignId( "test", id ) );
+        return new TrackerStateHolder( id );
       }
       finally
       {
         TimeService.DebugReplacement = originalReplacement;
       }
+    }
+
+    private static ForeignId GetForeignId( string id )
+    {
+      return new ForeignId( "test", id );
     }
 
     /// <summary>
@@ -117,7 +129,7 @@ namespace Service.Test
 
     private DateTime Now( double addSeconds = 0 )
     {
-      return now.AddSeconds( addSeconds );
+      return this.now.AddSeconds( addSeconds );
     }
 
     [Test]
@@ -164,8 +176,6 @@ namespace Service.Test
         scheduler.Trackers.Add( holder.ForeignId, holder );
       }
 
-      TimeService.DebugReplacement = ( ) => this.now;
-
       int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
 
       int realTimeToWait = Math.Max( 0, sameFeedHitIntervalSeconds - 6 );
@@ -173,6 +183,8 @@ namespace Service.Test
       int expectedSecondsWait = Math.Min( maxSchedulerSleep, realTimeToWait );
 
       var mockWaitHandle = new MockWaitHandle( expectedSecondsWait * 1000, false );
+
+      TimeService.DebugReplacement = ( ) => this.now;
 
       IEnumerable<TrackerStateHolder> trackersToRequest = scheduler.ScheduleCleanupWait( mockWaitHandle );
 
@@ -186,6 +198,246 @@ namespace Service.Test
       else
       {
         Assert.AreEqual( 0, trackersToRequest.Count( ) );
+      }
+    }
+
+    /// <summary>Same as BasicSchedulerTest, but uses <see cref="ParseAndTest"/> method.</summary>
+    [Test]
+    [Combinatorial]
+    public void BasicSchedulerTestWithAutoTimeLine(
+      [Values( 0, 1, 3, 5, 6, 7, 8, 9, 10, 150 )] int sameFeedHitIntervalSeconds
+    )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = 2,
+          MinTimeFromPrevStartMs = 2000,
+          MinCallsGapMs = 0,
+          SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
+        };
+
+      int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
+      int realTimeToWait = Math.Max( 0, sameFeedHitIntervalSeconds - 6 );
+
+      ParseAndTest(
+        maxSchedulerSleep,
+        realTimeToWait,
+        "  time: 09876543210"
+        , "   A: @.....[]..."
+        , "  *B: ...@[......"
+        , "   B: ....]......"
+      );
+    }
+
+    /// <summary>Same as BasicSchedulerTest, but uses <see cref="ParseAndTest"/> method.</summary>
+    [Test]
+    [Combinatorial]
+    public void Foo(
+      [Values( 0, 1, 3, 5, 6, 7, 8, 9, 10, 150 )] int sameFeedHitIntervalSeconds
+    )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = 2,
+          MinTimeFromPrevStartMs = 2000,
+          MinCallsGapMs = 0,
+          SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
+        };
+
+      int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
+      int realTimeToWait = Math.Max( 0, sameFeedHitIntervalSeconds - 4 );
+
+      ParseAndTest(
+        maxSchedulerSleep,
+        realTimeToWait,
+        "  time: 09876543210"
+        , "*  A: @.....[]..."
+        , "   B: ...@......."
+        , "   B: .....[....."
+      );
+    }
+
+
+
+    /// <summary>
+    /// <para>@ add</para>
+    /// <para>[ start</para>
+    /// <para>] end</para>
+    /// <para># add + start</para>
+    /// <para>$ add + start + end</para>
+    /// <para>% start + end</para>
+    /// </summary>
+    private void ParseAndTest(
+      int maxSchedulerSleep,
+      int realTimeToWait,
+      params string[] lines )
+    {
+      TimeService.DebugReplacement = ( ) => this.now;
+
+      Scheduler scheduler = new Scheduler( );
+
+      int? iTimeLineLength = null;
+
+      // for a parameter i, returns time corresponding to the point in the timeline
+      // e.g. '@' in "...@." corresponds to (this.now - 1 sec).
+      Func<int, DateTime> getTimeFunc =
+        i =>
+          // ReSharper disable once AccessToModifiedClosure
+          // ReSharper disable once PossibleInvalidOperationException
+          Now( i - iTimeLineLength.Value + 1 );
+
+      string winningName = null;
+
+      foreach ( string line in lines.Select( l => l.Trim( ) ) )
+      {
+        if ( line.ToLower( ).StartsWith( "time:" ) )
+          continue; // line started from "time:" is kind of a comment, ignoring that
+
+        int colIndex = line.IndexOf( ':' );
+        if ( colIndex <= 0 )
+          throw new Exception( "Cannot find name for: " + line );
+
+        string name =
+          line
+          .Remove( colIndex )
+          .Replace( '*', ' ' )
+          .Trim( );
+
+        string timeLine = line.Substring( colIndex + 1 ).ToLower( );
+
+        ForeignId id = GetForeignId( name );
+
+        TrackerStateHolder holder;
+
+        // might be tracker was added by the prev.line:
+        scheduler.Trackers.TryGetValue( id, out holder );
+
+        if ( iTimeLineLength == null )
+          iTimeLineLength = timeLine.Length;
+        else if ( iTimeLineLength != timeLine.Length )
+          throw new Exception( "Timelines have different lengths" );
+
+        for ( int i = 0; i < timeLine.Length; i++ )
+        {
+          char c = timeLine[i];
+          // @ add
+          // [ call start
+          // ] call end
+          // s scheduled start
+
+          if ( c == '@' )
+          {
+            if ( holder != null )
+              throw new Exception(
+                "Only one '@' per tracker can be found, and it should be first for the tracker: " + id.Id );
+
+            holder = GetHolder( id, getTimeFunc( i ) );
+            scheduler.Trackers.Add( id, holder );
+          }
+
+          if ( c == '[' ) // holder should be created by now by '@' encountered earlier, otherwise it's NullRefException
+            holder.RequestStartTime = getTimeFunc( i );
+
+          if ( c == ']' )
+          {
+            holder.RefreshTime = getTimeFunc( i );
+            holder.Snapshot = CreateMockupSnapshot( holder.RefreshTime.Value );
+          }
+
+          if ( c == 's' )
+            holder.ScheduledTime = getTimeFunc( i );
+        }
+
+        if ( line.Contains( "*" ) )
+        {
+          if ( winningName != null )
+            throw new Exception( "'*' sign (for a winning tracker) specified more than once" );
+
+          winningName = name;
+        }
+
+        if ( holder.CurrentRequest == null &&
+             holder.RequestStartTime.HasValue &&
+             (
+                holder.RefreshTime == null ||
+                holder.RequestStartTime.Value > holder.RefreshTime.Value
+             )
+           )
+        {
+          // just any request to make the field not-null:
+          holder.CurrentRequest = new FakeLocationRequest( id.Id );
+        }
+        else
+        { // need else because it could be set earlier by one of the prev. lines.
+          holder.CurrentRequest = null;
+        }
+
+        Assert.AreEqual( null, holder.CheckTimesConsistency( ) );
+      }
+
+      int expectedSecondsWait = Math.Min( maxSchedulerSleep, realTimeToWait );
+      var mockWaitHandle = new MockWaitHandle( expectedSecondsWait * 1000, false );
+
+      IEnumerable<TrackerStateHolder> trackersToRequest = scheduler.ScheduleCleanupWait( mockWaitHandle );
+
+      Assert.IsTrue( mockWaitHandle.IsWaitSucceeded );
+
+      if ( realTimeToWait <= maxSchedulerSleep )
+      {
+        Assert.AreEqual( 1, trackersToRequest.Count( ) );
+        Assert.AreEqual( winningName, trackersToRequest.First( ).ForeignId.Id );
+      }
+      else
+      {
+        Assert.AreEqual( 0, trackersToRequest.Count( ) );
+      }
+    }
+
+    private int revisionToUse = 0;
+
+    private class FakeLocationRequest : LocationRequest
+    {
+      public FakeLocationRequest( string id )
+        : base( id )
+      {
+      }
+
+      public override string ForeignType
+      {
+        get { throw new NotImplementedException( ); }
+      }
+
+      public override IAsyncResult BeginReadLocation( AsyncCallback callback, object state )
+      {
+        throw new NotImplementedException( );
+      }
+
+      protected override TrackerState EndReadLocationProtected( IAsyncResult ar )
+      {
+        throw new NotImplementedException( );
+      }
+
+      public override void SafelyAbortRequest( AbortStat abortStat )
+      {
+        throw new NotImplementedException( );
+      }
+    }
+
+    private RevisedTrackerState CreateMockupSnapshot( DateTime timeToUseAsNow )
+    {
+      var originalReplacement = TimeService.DebugReplacement;
+      try
+      {
+        TimeService.DebugReplacement = ( ) => timeToUseAsNow;
+
+        TrackerState trackerState = new TrackerState( "foo", "foo" );
+        return RevisedTrackerState.Merge( null, trackerState );
+      }
+      finally
+      {
+        TimeService.DebugReplacement = originalReplacement;
       }
     }
   }

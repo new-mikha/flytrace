@@ -21,6 +21,7 @@
 using System;
 
 using FlyTrace.LocationLib;
+using log4net;
 
 namespace FlyTrace.Service
 {
@@ -77,6 +78,91 @@ namespace FlyTrace.Service
     /// NOT volatile. Accessed from multiple threads. Null if CurrentRequest is null.
     /// </summary>
     public DateTime? RefreshTime;
+
+    private static readonly ILog Log = LogManager.GetLogger( typeof( TrackerStateHolder ) );
+
+    /// <summary>
+    /// Checks that values of fields in the holder are consistent with each other. 
+    /// Logs error without throwing (see details in the comment inside the method)
+    /// </summary>
+    /// <returns>Returns error message for debug purposes or null if all is good.</returns>
+    public string CheckTimesConsistency( )
+    {
+      try
+      {
+        // return just one message, but log all encountered - see if's sequence
+        string message = null;
+
+        // 1. Inconsistency should just never happen.
+        // 2. If yet it happens and an error is thrown, then there is a chance that same tracker
+        //    will be attempted to schedule over and over again, disturbing other trackers in the 
+        //    queue.
+        // So in the highly unlikely event of inconsistency, just log error, which should go into
+        // SMTP appender, and hope that it will recover.
+        if ( RequestStartTime.HasValue &&
+             RequestStartTime.Value < AddedTime )
+        {
+          message = "Start before add for " + ForeignId;
+          Log.ErrorFormat( message );
+        }
+
+        if ( RefreshTime.HasValue )
+        {
+          if ( RefreshTime.Value < AddedTime )
+          {
+            message = "End before add for " + ForeignId;
+            Log.ErrorFormat( message );
+          }
+
+          if ( Snapshot == null )
+          {
+            message = "Refresh time without snapshot for " + ForeignId;
+            Log.ErrorFormat( message );
+          }
+        }
+
+        if ( ScheduledTime.HasValue )
+        {
+          if ( ScheduledTime.Value < AddedTime )
+          {
+            message = "Scheduled before add " + ForeignId;
+            Log.Error( message );
+          }
+
+          if ( RequestStartTime.HasValue )
+          {
+            message = "Scheduled and RequestStartTime both have value for " + ForeignId;
+            Log.Error( message );
+          }
+        }
+
+        if ( RefreshTime.HasValue &&
+            !RequestStartTime.HasValue )
+        {
+          message = "End without start for " + ForeignId;
+          Log.Error( message );
+        }
+
+        if ( CurrentRequest == null &&
+             RequestStartTime.HasValue &&
+             (
+                RefreshTime == null ||
+                RequestStartTime.Value > RefreshTime.Value
+             )
+          )
+        {
+          message = "Request start without actual request for " + ForeignId;
+          Log.Error( message );
+        }
+
+        return message;
+      }
+      catch ( Exception exc )
+      {
+        Log.Error( "CheckTimesConsistency", exc );
+        return exc.Message;
+      }
+    }
 
     /// <summary>UTC time of the latest access. Used for diag only. 
     /// Writing to that can be done OUT OF LOCK, see its usage.</summary>

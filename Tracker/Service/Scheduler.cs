@@ -202,6 +202,8 @@ namespace FlyTrace.Service
       {
         foreach ( TrackerStateHolder holder in Trackers.Values )
         {
+          holder.CheckTimesConsistency( );
+
           ForeignStat foreignStat;
           trackerStat.TryGetValue( holder.ForeignId.Type, out foreignStat );
           if ( holder.CurrentRequest != null )
