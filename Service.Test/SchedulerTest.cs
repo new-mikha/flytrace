@@ -2,7 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-
+using System.Text;
 using FlyTrace.LocationLib;
 using FlyTrace.LocationLib.ForeignAccess;
 using FlyTrace.LocationLib.ForeignAccess.Spot;
@@ -23,6 +23,7 @@ namespace Service.Test
     public void TearDown( )
     {
       TimeService.DebugReplacement = null;
+      this.timeoutSpanInSeconds = -1;
     }
 
     private DateTime RandTime( Random rand, int minutesRandomInterval )
@@ -151,12 +152,12 @@ namespace Service.Test
 
       /*
        * time: 09876543210
-       *    A: @.....cl...
+       *    A: @.....[]...
        *    B: ...@O......
        *
        * Legend:
-       * 'c' call start
-       * 'l' succ call end
+       * '[' call start
+       * ']' succ call end
        * 'O' call started and succ.finished on the same second
        */
 
@@ -217,11 +218,9 @@ namespace Service.Test
           SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
         };
 
-      int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
       int realTimeToWait = Math.Max( 0, sameFeedHitIntervalSeconds - 6 );
 
       ParseAndTest(
-        maxSchedulerSleep,
         realTimeToWait,
         "  time: 09876543210"
         , "   A: @.....[]..."
@@ -230,10 +229,9 @@ namespace Service.Test
       );
     }
 
-    /// <summary>Same as BasicSchedulerTest, but uses <see cref="ParseAndTest"/> method.</summary>
     [Test]
     [Combinatorial]
-    public void Foo(
+    public void StartedCallTest(
       [Values( 0, 1, 3, 5, 6, 7, 8, 9, 10, 150 )] int sameFeedHitIntervalSeconds
     )
     {
@@ -246,11 +244,9 @@ namespace Service.Test
           SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
         };
 
-      int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
       int realTimeToWait = Math.Max( 0, sameFeedHitIntervalSeconds - 4 );
 
       ParseAndTest(
-        maxSchedulerSleep,
         realTimeToWait,
         "  time: 09876543210"
         , "*  A: @.....[]..."
@@ -259,6 +255,277 @@ namespace Service.Test
       );
     }
 
+    [Test]
+    [Combinatorial]
+    public void ArbitraryPrevStartInterval(
+      [Values( 1000, 2000, 3000, 4000 )] int minTimeFromPrevStartMs,
+      [Values( 0, 1, 3, 5, 6, 7, 8, 9, 10, 150 )] int sameFeedHitIntervalSeconds
+    )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = 5,
+          MinTimeFromPrevStartMs = minTimeFromPrevStartMs,
+          MinCallsGapMs = 0,
+          SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
+        };
+
+      int realTimeToWait =
+        Math.Max(
+          minTimeFromPrevStartMs / 1000 - 3,
+          Math.Max( 0, sameFeedHitIntervalSeconds - 4 )
+        );
+
+      ParseAndTest(
+        realTimeToWait,
+        "  time: 76543210"
+        , "   A: .@S....."
+        , "   B: @..[.].."
+        , "  *C: ..@[]..."
+        , "   D: @...[].."
+      );
+    }
+
+    [Test]
+    [Combinatorial]
+    public void Zeros(
+      [Values( 1, 2, 3, 4, 5, 10, 20 )] int maxCallsInPackCount
+      )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = maxCallsInPackCount,
+          MinTimeFromPrevStartMs = 0,
+          MinCallsGapMs = 0,
+          SameFeedHitIntervalSeconds = 0
+        };
+
+      int realTimeToWait =
+        maxCallsInPackCount > 3
+        ? 0
+        : 1 + ( int ) Scheduler.MaxSleepTimeSpan.TotalSeconds;
+
+      this.timeoutSpanInSeconds = 1;
+
+      ParseAndTest(
+        realTimeToWait,
+        "  time: 210",
+        "     A: @[.",
+        "     B: @[.",
+        "     C: @.[",
+        "    *D: @.."
+      );
+    }
+
+    private int timeoutSpanInSeconds = -1;
+
+    [Test]
+    [Combinatorial]
+    public void OneCallInPack(
+      [Values( 0, 1, 2, 3 )] int minTimeFromPrevStart,
+      [Values( 0, 1, 2 )] int minCallsGap,
+      [Values( 0, 1, 3, 5, 6, 7, 8, 9, 10, 150 )] int sameFeedHitInterval,
+      [Values(
+        "     A: @....[.]",
+        "     A: @....S..",
+        "     A: @....[.."
+        )] string prevTimeline
+    )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = 1,
+          MinTimeFromPrevStartMs = minTimeFromPrevStart * 1000,
+          MinCallsGapMs = minCallsGap * 1000,
+          SameFeedHitIntervalSeconds = sameFeedHitInterval
+        };
+
+      int realTimeToWait;
+      if ( !prevTimeline.Contains( "]" ) )
+        realTimeToWait = 0;
+      else
+      {
+        realTimeToWait = Math.Max( 0,
+          Math.Max(
+            minTimeFromPrevStart - 2,
+            minCallsGap
+            ) );
+      }
+
+      realTimeToWait = Math.Max( realTimeToWait, sameFeedHitInterval - 6 );
+
+      this.timeoutSpanInSeconds = 1;
+
+      ParseAndTest(
+        realTimeToWait,
+        prevTimeline,
+        "  time: 76543210",
+        "    *B: @[.]...."
+      );
+    }
+
+
+    [Test]
+    [Combinatorial]
+    public void FullPack(
+      [Values( 1000, 2000, 3000, 4000 )] int minTimeFromPrevStartMs,
+      [Values( 0, 1, 3, 5, 6, 7, 8, 9, 10, 150 )] int sameFeedHitIntervalSeconds
+    )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = 4,
+          MinTimeFromPrevStartMs = minTimeFromPrevStartMs,
+          MinCallsGapMs = 0,
+          SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
+        };
+
+      int realTimeToWait = 1 + ( int ) Scheduler.MaxSleepTimeSpan.TotalSeconds;
+
+      ParseAndTest(
+        realTimeToWait,
+        "  time: 76543210"
+        , "   A: .@...[.."
+        , "   B: @..][..."
+        , "   C: ..@][..."
+        , "   D: @...[..."
+        , "   E: @.[]...."
+      );
+    }
+
+    [Test]
+    [Combinatorial]
+    public void BadFactory(
+      [Values( -1, 0, 1, 10, 20, 21, 2000 )] int maxCallsInPackCount,
+      [Values( -1000, 0, 2000, 60000, 60001, int.MaxValue )] int minTimeFromPrevStartMs,
+      [Values( -1000, 0, 2000, 60000, 60001, int.MaxValue )] int minCallsGapMs,
+      [Values( -1, 0, 1, 1800, 1801, int.MaxValue )] int sameFeedHitIntervalSeconds
+    )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = maxCallsInPackCount,
+          MinTimeFromPrevStartMs = minTimeFromPrevStartMs,
+          MinCallsGapMs = minCallsGapMs,
+          SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
+        };
+
+      bool isGoodFactory;
+      if ( maxCallsInPackCount < 1 || maxCallsInPackCount > 20 )
+        isGoodFactory = false;
+      else
+        isGoodFactory =
+          minTimeFromPrevStartMs >= 0 && minTimeFromPrevStartMs <= 60000 &&
+          minCallsGapMs >= 0 && minCallsGapMs <= 60000 &&
+          sameFeedHitIntervalSeconds >= 0 && sameFeedHitIntervalSeconds <= 1800;
+
+      try
+      {
+        //int realTimeToWait = 1 + ( int ) Scheduler.MaxSleepTimeSpan.TotalSeconds;
+
+        ParseAndTest(
+          0,
+          "  time: 0"
+          , "  *A: @"
+        );
+
+        Assert.IsTrue( isGoodFactory, "Should be bad, but didn't throw an exception" );
+
+      }
+      catch ( ApplicationException exc )
+      {
+        if ( isGoodFactory )
+          throw;
+
+        if ( !exc.Message.StartsWith( "test factory config error:" ) )
+          throw;
+      }
+    }
+
+
+    [Test]
+    [Combinatorial]
+    public void NothingToRequestTest(
+      [Values( 1, 2, 5, 10 )] int maxCallsInPackCount,
+      [Values( 0, 500, 10000 )] int minTimeFromPrevStartMs,
+      [Values( 0, 2000, 10000 )] int minCallsGapMs,
+      [Values( 0, 3, 150 )] int sameFeedHitIntervalSeconds,
+      [Values( 0, 1, 2, 5, 10 )] int callCount
+    )
+    {
+      ForeignAccessCentral.LocationRequestFactories["test"] =
+        new MockForeignFactory( )
+        {
+          MaxCallsInPackCount = maxCallsInPackCount,
+          MinTimeFromPrevStartMs = minTimeFromPrevStartMs,
+          MinCallsGapMs = minCallsGapMs,
+          SameFeedHitIntervalSeconds = sameFeedHitIntervalSeconds
+        };
+
+      const int timelineLen = 10;
+      List<string> lines = new List<string>( );
+
+      var rand = new Random( 0 );
+
+      for ( int iTracker = 0; iTracker < callCount; iTracker++ )
+      {
+        StringBuilder sb = new StringBuilder( timelineLen + 10 );
+        sb.Append( new string( ' ', timelineLen ) );
+
+        int iMin = 0;
+        int iMax = timelineLen - 1;
+
+        int i;
+
+        i = rand.Next( iMin, iMax );
+        sb[i] = '@';
+        iMin = i + 1;
+        iMax = timelineLen;
+
+        if ( rand.NextDouble( ) > 0.2 )
+        {
+          i = rand.Next( iMin, iMax );
+          sb[i] = '[';
+          iMax = i;
+
+          if ( iMin < iMax )
+          {
+            i = rand.Next( iMin, iMax );
+            sb[i] = ']';
+          }
+        }
+        else
+        {
+          i = rand.Next( iMin, iMax );
+          sb[i] = 'S';
+          iMax = i - 1;
+
+          if (
+            rand.NextDouble( ) < 0.5 &&
+            iMin < iMax )
+          {
+            i = rand.Next( iMin, iMax );
+            sb[i] = '[';
+            sb[i + 1] = ']';
+          }
+        }
+
+        sb.Insert( 0, string.Format( "Tracker #{0}:", iTracker ) );
+
+        lines.Add( sb.ToString( ) );
+      }
+
+      int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
+      ParseAndTest(
+        maxSchedulerSleep + 1,
+        lines.ToArray( )
+      );
+    }
 
 
     /// <summary>
@@ -270,13 +537,17 @@ namespace Service.Test
     /// <para>% start + end</para>
     /// </summary>
     private void ParseAndTest(
-      int maxSchedulerSleep,
       int realTimeToWait,
       params string[] lines )
     {
+      int maxSchedulerSleep = ( int ) ( Scheduler.MaxSleepTimeSpan.TotalSeconds );
+
       TimeService.DebugReplacement = ( ) => this.now;
 
       Scheduler scheduler = new Scheduler( );
+
+      if ( this.timeoutSpanInSeconds > 0 )
+        scheduler.TimeoutSpanInSeconds = this.timeoutSpanInSeconds;
 
       int? iTimeLineLength = null;
 
@@ -290,9 +561,9 @@ namespace Service.Test
 
       string winningName = null;
 
-      foreach ( string line in lines.Select( l => l.Trim( ) ) )
+      foreach ( string line in lines )
       {
-        if ( line.ToLower( ).StartsWith( "time:" ) )
+        if ( line.Trim( ).ToLower( ).StartsWith( "time:" ) )
           continue; // line started from "time:" is kind of a comment, ignoring that
 
         int colIndex = line.IndexOf( ':' );
@@ -367,7 +638,18 @@ namespace Service.Test
            )
         {
           // just any request to make the field not-null:
-          holder.CurrentRequest = new FakeLocationRequest( id.Id );
+
+          var originalReplacement = TimeService.DebugReplacement;
+          try
+          {
+            TimeService.DebugReplacement = ( ) => holder.RequestStartTime.Value;
+
+            holder.CurrentRequest = new FakeLocationRequest( id.Id );
+          }
+          finally
+          {
+            TimeService.DebugReplacement = originalReplacement;
+          }
         }
         else
         { // need else because it could be set earlier by one of the prev. lines.

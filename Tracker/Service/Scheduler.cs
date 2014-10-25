@@ -125,6 +125,7 @@ namespace FlyTrace.Service
     /// <summary>
     /// Finds out the next time when trackers need to be requested and waits till that time. Also does some 
     /// cleanup on the content of <see cref="Trackers"/>. For details, see Remarks section.
+    /// Thread safety: supposed to be run from a single thread.
     /// </summary>
     /// <remarks>
     /// - Waits until it's time to request the returned trackers.
@@ -204,11 +205,14 @@ namespace FlyTrace.Service
         {
           holder.CheckTimesConsistency( );
 
+          bool isTimedOut = false;
+
           ForeignStat foreignStat;
           trackerStat.TryGetValue( holder.ForeignId.Type, out foreignStat );
           if ( holder.CurrentRequest != null )
           {
-            if ( IsTimedOut( holder.CurrentRequest ) )
+            isTimedOut = IsTimedOut( holder.CurrentRequest );
+            if ( isTimedOut )
               isTimedOutOrBoringDetected = true;
             else
               foreignStat.InCallCount++;
@@ -221,8 +225,9 @@ namespace FlyTrace.Service
               foreignStat.MostStaleTracker = GetMoreStaleTracker( holder, foreignStat.MostStaleTracker );
           }
 
-          foreignStat.PrevStartTime =
-            MaxDateTime( holder.RequestStartTime, foreignStat.PrevStartTime );
+          if ( !isTimedOut )
+            foreignStat.PrevStartTime =
+              MaxDateTime( holder.RequestStartTime, foreignStat.PrevStartTime );
 
           foreignStat.PrevEndTime =
             MaxDateTime( holder.RefreshTime, foreignStat.PrevEndTime );
@@ -391,15 +396,17 @@ namespace FlyTrace.Service
       }
     }
 
+    public int TimeoutSpanInSeconds = 60;
+
     private bool IsTimedOut( LocationRequest locationRequest )
     {
       int msTimeout =
         Math.Max(
           AsyncResultNoResult.DefaultEndWaitTimeout,
-          60 * 1000 // def timeout or 60 seconds if it's not set
+          TimeoutSpanInSeconds * 1000 // def timeout or 60 seconds if it's not set
           );
 
-      return locationRequest.StartTs < TimeService.Now.AddSeconds( -msTimeout );
+      return locationRequest.StartTs < TimeService.Now.AddMilliseconds( -msTimeout );
     }
 
     private bool IsBoring( TrackerStateHolder holder )
@@ -413,7 +420,7 @@ namespace FlyTrace.Service
       return accessTimestamp < boringThreshold;
     }
 
-    private static List<TrackerStateHolder> GetTrackersWithMinWatingTime
+    private List<TrackerStateHolder> GetTrackersWithMinWatingTime
     (
       // ReSharper disable once ParameterTypeCanBeEnumerable.Local
       IDictionary<string, ForeignStat> trackerStat,
@@ -451,11 +458,92 @@ namespace FlyTrace.Service
       return trackersWithMinWatingTime;
     }
 
-    private static TimeSpan GetWaitingTimeSpan( string foreignType, ForeignStat foreignStat )
+    private struct FactoryParameters
     {
-      LocationRequestFactory factory = ForeignAccessCentral.LocationRequestFactories[foreignType];
+      public int MaxCallsInPack;
 
-      if ( foreignStat.InCallCount >= factory.MaxCallsInPack )
+      public TimeSpan MinTimeFromPrevStart;
+
+      public TimeSpan MinCallsGap;
+
+      public TimeSpan SameFeedHitInterval;
+    }
+
+    private readonly Dictionary<string, FactoryParameters> factoryParametersCache =
+      new Dictionary<string, FactoryParameters>( ForeignAccessCentral.LocationRequestFactories.Comparer );
+
+    /// <summary>
+    /// Factory parameters are cached to make sure the same value used over all time.
+    /// (if it's changed in config, the service restarted anyway). This method caches 
+    /// those parameters on the first call for a factory, and returns them.
+    /// It also makes checks that parameters are in correct ranges, and throws exception
+    /// otherwise.
+    /// </summary>
+    private FactoryParameters GetFactoryParameters( string foreignType )
+    {
+      FactoryParameters parameters;
+
+      // parent public method supposed to run from a single thread.
+      if ( !factoryParametersCache.TryGetValue( foreignType, out parameters ) )
+      {
+        {
+          LocationRequestFactory factory = ForeignAccessCentral.LocationRequestFactories[foreignType];
+
+          parameters.MaxCallsInPack = factory.MaxCallsInPack;
+          parameters.MinTimeFromPrevStart = factory.MinTimeFromPrevStart;
+          parameters.MinCallsGap = factory.MinCallsGap;
+          parameters.SameFeedHitInterval = factory.SameFeedHitInterval;
+        }
+
+        const int maxMaxCallsInPack = 20;
+        if ( parameters.MaxCallsInPack < 1 || parameters.MaxCallsInPack > maxMaxCallsInPack )
+          throw new ApplicationException(
+            string.Format(
+              "{0} factory config error: MaxCallsInPack is {1}, it's out of [1, {2}]",
+              foreignType,
+              parameters.MaxCallsInPack,
+              maxMaxCallsInPack
+            ) );
+
+        CheckParameterTimeSpan( foreignType, parameters.MinTimeFromPrevStart, "MinTimeFromPrevStart", 60 );
+        CheckParameterTimeSpan( foreignType, parameters.MinCallsGap, "MinCallsGap", 60 );
+        CheckParameterTimeSpan( foreignType, parameters.SameFeedHitInterval, "SameFeedHitInterval", 1800 );
+
+        // At this point, even if all intervals are zeros, MaxCallsInPack effectively blocks how often 
+        // requests happen. So it never goes wild with infinite amounts of calls even if all intervals 
+        // equal to zero.
+
+        factoryParametersCache.Add( foreignType, parameters );
+      }
+
+      return parameters;
+    }
+
+    private static void CheckParameterTimeSpan( string foreignType, TimeSpan span, string name, int maxSeconds )
+    {
+      if ( span < TimeSpan.Zero )
+        throw new ApplicationException(
+          string.Format(
+            "{0} factory config error: {1} is negative ({2})", foreignType, name, span )
+          );
+
+      if ( span > TimeSpan.FromSeconds( maxSeconds ) )
+        throw new ApplicationException(
+          string.Format(
+            "{0} factory config error: {1} is {2} ({3} seconds), but max.allowed value is {4} seconds",
+            foreignType,
+            name,
+            span,
+            ( int ) span.TotalSeconds,
+            maxSeconds
+          ) );
+    }
+
+    private TimeSpan GetWaitingTimeSpan( string foreignType, ForeignStat foreignStat )
+    {
+      FactoryParameters factoryParameters = GetFactoryParameters( foreignType );
+
+      if ( foreignStat.InCallCount >= factoryParameters.MaxCallsInPack )
       { // Once any call from the pack is finished, it is signaled to the wait object. So either it wouldn't 
         // be allowed to start a next call until end of MaxSleepTimeMs, or the scheduler logic will re-run
         // as soon as there is a free slot for a request in the call pack.
@@ -464,11 +552,11 @@ namespace FlyTrace.Service
 
       // Now there is a slot in the call pack, but let's see what other parameters allow:
 
-      DateTime minAllowedTime = foreignStat.PrevStartTime + factory.MinTimeFromPrevStart;
+      DateTime minAllowedTime = foreignStat.PrevStartTime + factoryParameters.MinTimeFromPrevStart;
 
-      if ( factory.MaxCallsInPack == 1 )
+      if ( factoryParameters.MaxCallsInPack == 1 )
       { // MinCallsGap just doesn't work when more than 1 could be in the call pack - see class description
-        DateTime minAllowedTimeByCallsGap = foreignStat.PrevEndTime + factory.MinCallsGap;
+        DateTime minAllowedTimeByCallsGap = foreignStat.PrevEndTime + factoryParameters.MinCallsGap;
         if ( minAllowedTimeByCallsGap > minAllowedTime )
           minAllowedTime = minAllowedTimeByCallsGap;
       }
@@ -476,7 +564,7 @@ namespace FlyTrace.Service
       if ( foreignStat.MostStaleTracker.RequestStartTime.HasValue )
       { // See notice in the class description about SameFeedHitInterval
         DateTime nextAllowedTrackerHit =
-          foreignStat.MostStaleTracker.RequestStartTime.Value + factory.SameFeedHitInterval;
+          foreignStat.MostStaleTracker.RequestStartTime.Value + factoryParameters.SameFeedHitInterval;
 
         if ( nextAllowedTrackerHit > minAllowedTime )
           minAllowedTime = nextAllowedTrackerHit;

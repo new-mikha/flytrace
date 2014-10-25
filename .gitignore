@@ -14,3 +14,4 @@ Tracker/add/
 Site update scripts/Update.zip
 Tracker/Service/App_Data/test/*.xml
 !Tracker/Service/App_Data/test/_*.xml
+Tracker.sln.DotSettings.user
