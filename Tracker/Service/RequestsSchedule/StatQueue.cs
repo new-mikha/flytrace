@@ -74,35 +74,35 @@ namespace FlyTrace.Service.RequestsSchedule
         queue.Dequeue( );
       }
 
-      // But total values cover the whole class lifetime:
+      // But overall values cover the whole class lifetime:
       {
-        T prevTotalMax;
-        if ( !this.categoriesTotalMax.TryGetValue( category, out prevTotalMax ) ||
-            comparer.Compare( prevTotalMax, @event ) < 0 )
+        T prevOverallMax;
+        if ( !this.categoriesOverallMax.TryGetValue( category, out prevOverallMax ) ||
+            comparer.Compare( prevOverallMax, @event ) < 0 )
         {
-          this.categoriesTotalMax[category] = @event;
+          this.categoriesOverallMax[category] = @event;
         }
       }
 
       {
-        T prevTotalMin;
-        if ( !this.categoriesTotalMin.TryGetValue( category, out prevTotalMin ) ||
-            comparer.Compare( prevTotalMin, @event ) > 0 )
+        T prevOverallMin;
+        if ( !this.categoriesOverallMin.TryGetValue( category, out prevOverallMin ) ||
+            comparer.Compare( prevOverallMin, @event ) > 0 )
         {
-          this.categoriesTotalMin[category] = @event;
+          this.categoriesOverallMin[category] = @event;
         }
       }
 
       {
         int count;
-        this.categoriesTotalCounts.TryGetValue( category, out count );
-        this.categoriesTotalCounts[category] = count + 1;
+        this.categoriesOverallCounts.TryGetValue( category, out count );
+        this.categoriesOverallCounts[category] = count + 1;
       }
 
       if ( this.aggregator != null )
       {
         T agg;
-        if ( !this.categoriesTotalAgg.TryGetValue( category, out agg ) )
+        if ( !this.categoriesOverallAgg.TryGetValue( category, out agg ) )
         {
           agg = @event;
         }
@@ -111,7 +111,7 @@ namespace FlyTrace.Service.RequestsSchedule
           agg = this.aggregator( agg, @event );
         }
 
-        this.categoriesTotalAgg[category] = agg;
+        this.categoriesOverallAgg[category] = agg;
       }
     }
 
@@ -124,12 +124,12 @@ namespace FlyTrace.Service.RequestsSchedule
     {
       if ( reportSpan > MaxSpanToKeepInQueue )
       {
-        int totalCount;
-        this.categoriesTotalCounts.TryGetValue( category, out totalCount );
+        int overallCount;
+        this.categoriesOverallCounts.TryGetValue( category, out overallCount );
 
-        // use total timespan because there is no data for longer than MaxSpanToKeepInQueue,
-        // apart from the total data:
-        return totalCount / ( TimeService.Now - this.startTime ).TotalMinutes;
+        // use overall timespan because there is no data for longer than MaxSpanToKeepInQueue,
+        // apart from the overall data:
+        return overallCount / ( TimeService.Now - this.startTime ).TotalMinutes;
       }
 
       Queue<Tuple<DateTime, T>> queue;
@@ -156,10 +156,10 @@ namespace FlyTrace.Service.RequestsSchedule
     {
       if ( reportSpan > MaxSpanToKeepInQueue )
       {
-        T totalMax;
-        this.categoriesTotalMax.TryGetValue( category, out totalMax );
+        T overallMax;
+        this.categoriesOverallMax.TryGetValue( category, out overallMax );
 
-        return totalMax;
+        return overallMax;
       }
 
       Queue<Tuple<DateTime, T>> queue;
@@ -193,10 +193,10 @@ namespace FlyTrace.Service.RequestsSchedule
     {
       if ( reportSpan > MaxSpanToKeepInQueue )
       {
-        T totalMin;
-        this.categoriesTotalMin.TryGetValue( category, out totalMin );
+        T overallMin;
+        this.categoriesOverallMin.TryGetValue( category, out overallMin );
 
-        return totalMin;
+        return overallMin;
       }
 
       Queue<Tuple<DateTime, T>> queue;
@@ -225,10 +225,10 @@ namespace FlyTrace.Service.RequestsSchedule
     {
       if ( reportSpan > MaxSpanToKeepInQueue )
       {
-        int totalCount;
-        this.categoriesTotalCounts.TryGetValue( category, out totalCount );
+        int overallCount;
+        this.categoriesOverallCounts.TryGetValue( category, out overallCount );
 
-        return totalCount;
+        return overallCount;
       }
 
       Queue<Tuple<DateTime, T>> queue;
@@ -252,7 +252,7 @@ namespace FlyTrace.Service.RequestsSchedule
       if ( reportSpan > MaxSpanToKeepInQueue )
       {
         T agg;
-        this.categoriesTotalAgg.TryGetValue( category, out agg );
+        this.categoriesOverallAgg.TryGetValue( category, out agg );
 
         return agg;
       }
@@ -285,16 +285,16 @@ namespace FlyTrace.Service.RequestsSchedule
     private readonly Dictionary<string, Queue<Tuple<DateTime, T>>> categoriesQueues =
       new Dictionary<string, Queue<Tuple<DateTime, T>>>( );
 
-    private readonly Dictionary<string, T> categoriesTotalMax =
+    private readonly Dictionary<string, T> categoriesOverallMax =
       new Dictionary<string, T>( );
 
-    private readonly Dictionary<string, T> categoriesTotalMin =
+    private readonly Dictionary<string, T> categoriesOverallMin =
       new Dictionary<string, T>( );
 
-    private readonly Dictionary<string, int> categoriesTotalCounts =
+    private readonly Dictionary<string, int> categoriesOverallCounts =
       new Dictionary<string, int>( );
 
-    private readonly Dictionary<string, T> categoriesTotalAgg =
+    private readonly Dictionary<string, T> categoriesOverallAgg =
       new Dictionary<string, T>( );
 
     private readonly DateTime startTime = TimeService.Now;
