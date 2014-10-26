@@ -23,7 +23,7 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Threading;
 using System.Web;
-
+using FlyTrace.Service.RequestsSchedule;
 using log4net;
 using log4net.Appender;
 
@@ -36,15 +36,6 @@ namespace FlyTrace.Service
 {
   public class ForeignRequestsManager
   {
-    static ForeignRequestsManager( )
-    {
-      // TODO: remove
-      Log.InfoFormat(
-        "AvgAllowedMsBetweenCalls at the moment of this instance start: {0}",
-        Settings.Default.AvgAllowedMsBetweenCalls
-      );
-    }
-
     // It could be just a static class, but I don't want to bother with 'static' everywhere.
     // So making it just a singleton. Note that initializing of this field shouldn't be 
     // protected by 'lock', 'volatile' or whatever, because it's guaranteed by CLR to be 
@@ -58,6 +49,9 @@ namespace FlyTrace.Service
     {
       try
       {
+        this.scheduler = new Scheduler( );
+        this.statistics = this.scheduler.Statistics;
+
         InitRevisionPersister( );
 
         this.refreshThread = new Thread( RefreshThreadWorker ) { Name = "LocWorker", IsBackground = true };
@@ -183,7 +177,9 @@ namespace FlyTrace.Service
       }
     }
 
-    private readonly Scheduler scheduler = new Scheduler( );
+    private readonly Scheduler scheduler;
+
+    private readonly Statistics statistics;
 
     private readonly AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 
@@ -266,7 +262,10 @@ namespace FlyTrace.Service
         Tuple<TrackerStateHolder, LocationRequest> paramTuple =
           new Tuple<TrackerStateHolder, LocationRequest>( trackerStateHolder, locationRequest );
 
+        DateTime requestStart = TimeService.Now;
+
         locationRequest.BeginReadLocation( OnEndReadLocation, paramTuple );
+        this.statistics.AddRequestStartEvent( trackerStateHolder.ForeignId, requestStart );
       }
       catch
       {
@@ -303,6 +302,8 @@ namespace FlyTrace.Service
 
         // Need to end it even if trackerStateHolder.CurrentRequest != locationRequest (see below)
         TrackerState trackerState = locationRequest.EndReadLocation( ar );
+
+        this.statistics.AddRequestEndEvent( foreignId );
 
         this.scheduler.HolderRwLock.AttemptEnterUpgradeableReadLock( );
         // when we're here, other thread can be in read mode & no other can be in write or upgr. modes

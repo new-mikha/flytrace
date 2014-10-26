@@ -103,7 +103,10 @@
       <DependentUpon>serviceLogConfig.aspx</DependentUpon>
     </Compile>
     <Compile Include="ReaderWriterLockSlimEx.cs" />
+    <Compile Include="RequestsSchedule\StatTimer.cs" />
+    <Compile Include="RequestsSchedule\StatQueue.cs" />
     <Compile Include="RevisionPersister.cs" />
+    <Compile Include="RequestsSchedule\Statistics.cs" />
     <Compile Include="Tools\ConnectionStringModifier.cs" />
     <Compile Include="DemoTrackers.cs" />
     <Compile Include="Global.asax.cs">
@@ -117,7 +120,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
-    <Compile Include="Scheduler.cs" />
+    <Compile Include="RequestsSchedule\Scheduler.cs" />
     <Compile Include="Subservices\CommonBase.cs" />
     <Compile Include="Subservices\CoordinatesService.cs" />
     <Compile Include="Subservices\TrackerServiceBase.cs" />

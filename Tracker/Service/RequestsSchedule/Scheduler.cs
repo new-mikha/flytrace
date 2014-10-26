@@ -22,12 +22,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-
 using FlyTrace.LocationLib;
 using FlyTrace.LocationLib.ForeignAccess;
 using log4net;
 
-namespace FlyTrace.Service
+namespace FlyTrace.Service.RequestsSchedule
 {
   /// <summary>
   /// Used in composition with <see cref="ForeignRequestsManager"/>, where this class delegates its 
@@ -287,7 +286,6 @@ namespace FlyTrace.Service
           HolderRwLock.ExitWriteLock( );
         }
 
-
         // Can do it out of lock because Trackers don't reference those LocationRequests anymore
         foreach ( LocationRequest locReq in timedOut )
         {
@@ -318,6 +316,8 @@ namespace FlyTrace.Service
         lrid = locReq.Lrid;
         LocationRequest.TimedOutRequestsLog.InfoFormat( "Starting AbortRequest for lrid {0}...", lrid );
 
+        Statistics.AddTimedOutEvent( locReq.ForeignId.Type );
+
         // SafelyAbortRequest can hang up, that happened before. Looks like nothing can be done with that, 
         // but at least it should be detected. For that, use QueuedAborts and check it periodically.
         AbortStat abortStat;
@@ -329,6 +329,7 @@ namespace FlyTrace.Service
 
         locReq.SafelyAbortRequest( abortStat );
         LocationRequest.TimedOutRequestsLog.InfoFormat( "AbortRequest finished for lrid {0}", lrid );
+
       }
       catch ( Exception exc )
       {
@@ -420,6 +421,8 @@ namespace FlyTrace.Service
       return accessTimestamp < boringThreshold;
     }
 
+    public Statistics Statistics = new Statistics( );
+
     private List<TrackerStateHolder> GetTrackersWithMinWatingTime
     (
       // ReSharper disable once ParameterTypeCanBeEnumerable.Local
@@ -437,6 +440,8 @@ namespace FlyTrace.Service
       {
         string foreignType = foreignStatKvp.Key;
         ForeignStat foreignStat = foreignStatKvp.Value;
+
+        Statistics.AddCallPackEvent( foreignType, foreignStat.InCallCount );
 
         if ( foreignStat.MostStaleTracker == null )
           continue; // possible when e.g. all just started all trackers are being called now.
