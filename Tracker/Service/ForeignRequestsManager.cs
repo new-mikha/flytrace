@@ -23,14 +23,14 @@ using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Threading;
 using System.Web;
-using FlyTrace.Service.RequestsSchedule;
+
 using log4net;
 using log4net.Appender;
+using log4net.Repository;
 
 using FlyTrace.LocationLib;
 using FlyTrace.LocationLib.ForeignAccess;
 using FlyTrace.Service.Properties;
-using log4net.Repository;
 
 namespace FlyTrace.Service
 {
@@ -49,7 +49,7 @@ namespace FlyTrace.Service
     {
       try
       {
-        this.scheduler = new Scheduler( );
+        this.scheduler = new RequestsSchedule.Scheduler( );
         this.statistics = this.scheduler.Statistics;
 
         InitRevisionPersister( );
@@ -177,9 +177,9 @@ namespace FlyTrace.Service
       }
     }
 
-    private readonly Scheduler scheduler;
+    private readonly RequestsSchedule.Scheduler scheduler;
 
-    private readonly Statistics statistics;
+    private readonly RequestsSchedule.Statistics statistics;
 
     private readonly AutoResetEvent refreshThreadEvent = new AutoResetEvent( false );
 

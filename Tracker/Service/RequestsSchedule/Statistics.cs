@@ -175,6 +175,11 @@ namespace FlyTrace.Service.RequestsSchedule
       }
     }
 
+    /// <summary>
+    /// Returns dataset where each table corresponds to a foreign type (and has the same name 
+    /// as the foreign type). First column is counter name, other for diff aggregation 
+    /// intervals (1 min, 10 mins, 1 hr, overall). See class Remarks section for details.
+    /// </summary>
     internal DataSet GetReport( )
     {
       DataSet result = new DataSet( "Statistics" );
@@ -182,9 +187,7 @@ namespace FlyTrace.Service.RequestsSchedule
       lock ( this.sync )
       {
         foreach ( string foreignType in ForeignAccessCentral.LocationRequestFactories.Keys )
-        {
           result.Tables.Add( CreateReportTable( foreignType ) );
-        }
       }
 
       return result;
