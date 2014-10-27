@@ -19,12 +19,10 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Web;
-using System.Threading;
 using System.Diagnostics;
+using System.Threading;
 
-namespace FlyTrace
+namespace FlyTrace.LocationLib
 {
   [DebuggerDisplay( "AsyncChainedState #{Id}" )]
   public class AsyncChainedState<TResult>

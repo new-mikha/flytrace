@@ -52,14 +52,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private readonly long callId;
 
-    private readonly int iAttempt;
-
-    public SpotFeedRequest( FeedKind feedKind, string trackerForeignId, long callId, int iAttempt )
+    public SpotFeedRequest( FeedKind feedKind, string trackerForeignId, long callId )
     {
       this.FeedKind = feedKind;
       this.trackerForeignId = trackerForeignId;
       this.callId = callId;
-      this.iAttempt = iAttempt;
     }
 
     private readonly string testXml;
@@ -69,17 +66,14 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       this.FeedKind = feedKind;
       this.trackerForeignId = trackerForeignId;
       this.callId = callId;
-      this.iAttempt = 0;
       this.testXml = testXml;
     }
-
-    private readonly object sync = new object( );
 
     private WebRequest webRequest;
 
     private readonly MemoryStream bufferStream = new MemoryStream( ChunkSize );
 
-    private int bufferedDataLength = 0;
+    private int bufferedDataLength;
 
     private static readonly ILog Log = LogManager.GetLogger( "TDM.FeedReq" );
 
@@ -92,7 +86,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         byte[] bytes = Encoding.UTF8.GetBytes( this.testXml );
         this.bufferStream.Write( bytes, 0, bytes.Length );
 
-        TrackerState parseResult = AnalyzeCurrentBuffer( asyncChainedState );
+        TrackerState parseResult = AnalyzeCurrentBuffer( );
         asyncChainedState.SetAsCompleted( parseResult );
         return asyncChainedState.FinalAsyncResult;
       }
@@ -164,26 +158,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       return asyncChainedState.FinalAsyncResult;
     }
 
-    private void CloseRequestSetAsCompleted( AsyncChainedState<TrackerState> asyncChainedState, Exception exc )
-    {
-      SafelyCloseRequest( );
-
-      if ( asyncChainedState.FinalAsyncResult.IsCompleted )
-      {
-        Log.WarnFormat(
-          "Discarding result for {0}, {1}, lrid {2} because the result is already completed. The discarding result is error: {3}",
-          this.trackerForeignId,
-          this.FeedKind,
-          this.callId,
-          exc.ToString( )
-        );
-      }
-      else
-      {
-        asyncChainedState.SetAsCompleted( exc );
-      }
-    }
-
     private void SetAsCompletedAndCloseRequest( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
     {
       if ( asyncChainedState == null )
@@ -202,7 +176,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         {
           if ( asyncChainedState.FinalAsyncResult.IsCompleted )
           {
-            Log.WarnFormat( "Discarding result for {0}, {1}, lrid {2} because the result is already completed. The discarding result is:",
+            Log.WarnFormat( "Discarding result for {0}, {1}, lrid {2} because the result is already completed. The discarding result is: {3}",
               this.trackerForeignId,
               this.FeedKind,
               this.callId,
@@ -266,7 +240,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         this.responseStream = this.webResponse.GetResponseStream( );
 
         if ( Log.IsDebugEnabled )
-          Log.Debug( string.Format( "Got Stream for {0}, {1}, lrid {1}...", this.trackerForeignId, this.FeedKind, this.callId ) );
+          Log.Debug( string.Format( "Got Stream for {0}, {1}, lrid {2}...", this.trackerForeignId, this.FeedKind, this.callId ) );
 
         ReadNextResponseChunk( asyncChainedState );
       }
@@ -281,8 +255,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     public void SafelyCloseRequest( AbortStat abortStat = null, ILog specialLog = null )
     {
-      ILog logToUse =
-        specialLog != null ? specialLog : Log;
+      ILog logToUse = specialLog ?? Log;
 
       // don't want to use locks anywhere in this class to minimize a risk of deadlock
 
@@ -437,7 +410,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           else
           {
             this.bufferStream.SetLength( bufferedDataLength );
-            TrackerState parseResult = AnalyzeCurrentBuffer( asyncChainedState );
+            TrackerState parseResult = AnalyzeCurrentBuffer( );
 
             if ( Log.IsDebugEnabled )
               Log.DebugFormat( "Result for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, this.FeedKind, this.callId, parseResult );
@@ -478,29 +451,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
-    private static readonly TrackPointDataTimeEqualityComparer timeEqualityComparer =
+    private static readonly TrackPointDataTimeEqualityComparer TimeEqualityComparer =
       new TrackPointDataTimeEqualityComparer( );
 
-    //private static Random rand = new Random( );
-
-    //private static object randSync = new object( );
-
-    //private void RandomError( )
-    //{
-    //  if ( FeedKind == Spot.FeedKind.Feed_2_0 )
-    //  {
-    //    lock ( randSync )
-    //    {
-    //      if ( rand.NextDouble( ) < 0.3 )
-    //      {
-    //        throw new ApplicationException( "Random error" );
-    //      }
-    //    }
-    //  }
-
-    //}
-
-    private TrackerState AnalyzeCurrentBuffer( AsyncChainedState<TrackerState> asyncChainedState )
+    private TrackerState AnalyzeCurrentBuffer( )
     {
       // RandomError( );
 
@@ -517,21 +471,18 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       try
       {
         this.bufferStream.Seek( 0, SeekOrigin.Begin );
-        XmlReaderSettings xmlReaderSettings = new XmlReaderSettings( );
         XmlReader xmlReader = XmlReader.Create( this.bufferStream );
 
         while ( true )
         { // Look for messages until they run out or until it founds that XML doc is not well formed and throws 
           // an exception.
-          Data.TrackPointData message = ParseNextMessage( asyncChainedState, xmlReader, ref isBadTrackerId, ref messageTagFound );
+          Data.TrackPointData message = ParseNextMessage( xmlReader, ref isBadTrackerId, ref messageTagFound );
 
           if ( isBadTrackerId )
             break;
 
           if ( message == null )
             break;
-
-          DateTime nowUtc = TimeService.Now;
 
           bool shouldBreak;
 
@@ -590,7 +541,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         var fullTrack =
           messages
-          .Distinct( timeEqualityComparer )
+          .Distinct( TimeEqualityComparer )
           .OrderByDescending( msg => msg.ForeignTime );
 
         result = new TrackerState( fullTrack, FeedKind.ToString( ) );
@@ -600,7 +551,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     }
 
     private Data.TrackPointData ParseNextMessage(
-      AsyncChainedState<TrackerState> asyncChainedState,
       XmlReader xmlReader,
       ref bool isBadTrackerId,
       ref bool messageTagFound
@@ -662,7 +612,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         if ( xmlReader.Name == "error" && xmlReader.NodeType == XmlNodeType.Element )
         {
-          isBadTrackerId = ProcessErrorTag( asyncChainedState, xmlReader );
+          isBadTrackerId = ProcessErrorTag( xmlReader );
           if ( isBadTrackerId )
             break;
         }
@@ -817,21 +767,17 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       return BasePosixDateTime.AddSeconds( posixTime );
     }
 
-    private bool ProcessErrorTag(
-      AsyncChainedState<TrackerState> asyncChainedState,
-      XmlReader xmlReader
-    )
+    private bool ProcessErrorTag( XmlReader xmlReader )
     {
-      string errorDescr;
-
-      string noDataMsg;
-      string wrongTrackerIdMsg;
-      string feedNotActiveMsg;
-
       bool isBadTrackerId = false;
 
       try
       {
+        string errorDescr;
+        string noDataMsg;
+        string wrongTrackerIdMsg;
+        string feedNotActiveMsg;
+
         if ( this.FeedKind == FeedKind.Feed_1_0 )
         {
           errorDescr = xmlReader.ReadElementContentAsString( );

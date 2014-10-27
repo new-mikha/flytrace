@@ -68,7 +68,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     /// Normally this.attemptsOrder should have all values from FeedKind enum except None. But it's very 
     /// important that it's always true, otherwise it could stuck with wrong feed kind(s) or even without 
     /// any at all. So check that these values are really there, and there is no garbage from any kind of,
-    /// a bug, and do that synchronzing access to this.attemptsOrder.
+    /// a problem, and do that synchronzing access to this.attemptsOrder.
     /// </summary>
     /// <returns></returns>
     private IEnumerable<FeedKind> GetSanitizedAttemptsOrder( )

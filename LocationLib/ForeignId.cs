@@ -20,8 +20,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Diagnostics;
 
 namespace FlyTrace.LocationLib
@@ -35,6 +33,7 @@ namespace FlyTrace.LocationLib
       Id = id;
     }
 
+    // ReSharper disable once InconsistentNaming (name is OK)
     public const string SPOT = "SPOT";
 
     /// <summary>E.g. SPOT, DeLorme, etc. Intentionally not strong typed.</summary>

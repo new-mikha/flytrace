@@ -19,9 +19,6 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Globalization;
 using System.Threading;
 
@@ -35,13 +32,7 @@ namespace FlyTrace.LocationLib
     /// This field is initially set to the system culture, but the caller can (and does) set it 
     /// to some English culture.
     /// </summary>
-    private static CultureInfo defaultCulture = CultureInfo.CurrentCulture;
-
-    public static CultureInfo DefaultCulture
-    {
-      get { return defaultCulture; }
-      set { defaultCulture = value; }
-    }
+    public static CultureInfo DefaultCulture;
 
     internal static void SetUpThreadCulture( )
     {

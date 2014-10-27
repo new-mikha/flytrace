@@ -20,21 +20,15 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Runtime.Serialization;
-using System.Text;
 using System.Threading;
-using System.Web;
-using System.Xml;
 
 using log4net;
 
 namespace FlyTrace.LocationLib.ForeignAccess.Spot
 {
+  // ReSharper disable InconsistentNaming (names are OK)
   public enum FeedKind
   {
     None,
@@ -42,6 +36,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     Feed_1_0_undoc,
     Feed_2_0
   };
+  // ReSharper restore InconsistentNaming
 
   /// <summary>
   /// Used to ask a foreign server for coordinates. Returns Tracker, that contains either Error or Location with FullTrack. 
@@ -68,7 +63,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     private readonly FeedKind[] attemptsOrder;
 
     public static readonly FeedKind[] DefaultAttemptsOrder =
-      new FeedKind[] 
       { 
         FeedKind.Feed_2_0,
         FeedKind.Feed_1_0_undoc,
@@ -77,7 +71,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     /// <summary>
     /// </summary>
-    /// <param name="foreignId"></param>
+    /// <param name="id"></param>
     /// <param name="appAuxLogFolder">It's where this class puts "*.succ.timestamp" files.
     /// That's needed for logging purposes. It could be null  (no flag files then), or e.g. a value of 
     /// Path.Combine( HttpRuntime.AppDomainAppPath , "logs" ).
@@ -101,10 +95,12 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       this.appAuxLogFolder = appAuxLogFolder;
       this.consequentErrorsCounter = consequentErrorsCounter;
 
+      FeedKind[] feedKindsArr = attemptsOrder as FeedKind[] ?? attemptsOrder.ToArray( );
+
       if ( attemptsOrder != null &&
-           attemptsOrder.Any( fk => fk != FeedKind.None ) )
+           feedKindsArr.Any( fk => fk != FeedKind.None ) )
       {
-        this.attemptsOrder = attemptsOrder.ToArray( );
+        this.attemptsOrder = feedKindsArr;
       }
       else
       {
@@ -125,7 +121,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       this.testXml = testXml;
       this.appAuxLogFolder = appAuxLogFolder;
-      this.attemptsOrder = new FeedKind[] { requestType };
+      this.attemptsOrder = new[] { requestType };
     }
 
     public override string ForeignType
@@ -134,33 +130,16 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     }
 
     /// <summary>Number of attempt for this request (where 0 is first attempt), corresponds to an element 
-    /// in <see cref="feedsPriorities"/>.</summary>
+    /// in <see cref="attemptsOrder"/>.</summary>
     private volatile int iAttempt;
 
     private volatile FeedKind currentFeedKind;
 
     internal FeedKind CurrentFeedKind { get { return this.currentFeedKind; } }
 
-
-    //private static Random rand = new Random( );
-
-    private void DebugTest( string msg )
-    {
-      //double d;
-      //lock ( rand )
-      //{
-      //  d = rand.NextDouble( );
-      //}
-
-      //if ( d > 0.75 )
-      //{
-      //  throw new ApplicationException( "Debug :" + msg );
-      //}
-    }
-
     private readonly object sync = new object( );
 
-    private bool inCall = false;
+    private bool inCall;
 
     // Can be written from different threads (in case of retry) so making it volatile. Probably there would be 
     // a bit too many volatile reads after that, but it shouldn't be a problem - not thousands of them per seconds anyway.
@@ -176,8 +155,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         this.inCall = true;
       }
 
-      DebugTest( "BeginReadLocation" );
-
       var asyncChainedState = new AsyncChainedState<TrackerState>( callback, state );
 
       Lrid = asyncChainedState.Id;
@@ -186,7 +163,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       if ( this.testXml == null )
       { // Normal working mode
-        this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id, this.iAttempt );
+        this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id );
         Log.InfoFormat( "Created request for {0}, {1} lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
       }
       else
@@ -198,7 +175,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       return asyncChainedState.FinalAsyncResult;
     }
 
-    private bool isAborted = false;
+    private bool isAborted;
 
     /// <summary>
     /// Normally this method should not be called. This only happens in cases like if SpotFeedRequest.ResponseStreamReadCallback 
@@ -282,7 +259,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
             this.currentFeedKind = this.attemptsOrder[this.iAttempt];
 
-            this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id, this.iAttempt );
+            this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id );
 
             Thread.MemoryBarrier( );
             // If isAborted but we're here then "bad" request was finished and closed.
@@ -319,7 +296,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         if ( this.consequentErrorsCounter != null )
         {
-          consequentErrorsCount = 
+          consequentErrorsCount =
             this.consequentErrorsCounter.RequestsErrorsCounter.Increment( out shouldReportError );
         }
 

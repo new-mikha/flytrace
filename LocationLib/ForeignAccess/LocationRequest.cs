@@ -19,9 +19,6 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 using log4net;
 
@@ -35,7 +32,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
 
     public readonly string Id;
 
-    public LocationRequest( string id )
+    protected LocationRequest( string id )
     {
       Id = id;
     }

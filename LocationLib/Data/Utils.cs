@@ -21,10 +21,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Reflection;
 using System.Linq.Expressions;
-using System.Diagnostics;
+using System.Reflection;
 
 namespace FlyTrace.LocationLib.Data
 {
@@ -243,6 +241,9 @@ namespace FlyTrace.LocationLib.Data
       IEnumerable<string> excludedMembers
     )
     {
+      if ( namesToCheck == null )
+        throw new ArgumentNullException( "namesToCheck" );
+
       if ( excludedMembers == null )
         excludedMembers = Enumerable.Empty<string>( );
 
@@ -269,10 +270,13 @@ namespace FlyTrace.LocationLib.Data
 
         type = type.BaseType;
 
-        if ( type.FullName.StartsWith( "System" ) ) break;
+        if ( type == null ||
+             type.FullName.StartsWith( "System" ) ) break;
       }
 
-      if ( typeFieldsAndProps.Except( namesToCheck ).Except( excludedMembers ).Any( ) )
+      string[] excludedMembersArr = excludedMembers as string[] ?? excludedMembers.ToArray( );
+
+      if ( typeFieldsAndProps.Except( namesToCheck ).Except( excludedMembersArr ).Any( ) )
       {
         throw new ApplicationException(
           string.Format(
@@ -282,7 +286,7 @@ namespace FlyTrace.LocationLib.Data
         );
       }
 
-      if ( excludedMembers.Except( typeFieldsAndProps ).Any( ) )
+      if ( excludedMembersArr.Except( typeFieldsAndProps ).Any( ) )
       {
         throw new ApplicationException(
           string.Format(

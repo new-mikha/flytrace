@@ -1,20 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
 
 namespace FlyTrace.LocationLib.ForeignAccess
 {
   public static class ForeignAccessCentral
   {
-    private static Dictionary<string, LocationRequestFactory> locationRequestFactories;
+    private static Dictionary<string, LocationRequestFactory> LocationRequestFactoriesPrivate;
 
-    private static readonly object sync = new object( );
+    private static readonly object Sync = new object( );
 
-    private static string logFolder = null;
+    private static string LogFolder;
 
-    private static ConsequentErrorsCounter spotConsequentErrorsCounter;
+    private static ConsequentErrorsCounter SpotConsequentErrorsCounter;
 
     /// <summary>
     /// Initializes auxilliary facilities like logging. Call is optional.
@@ -28,9 +25,9 @@ namespace FlyTrace.LocationLib.ForeignAccess
       int spotConsequentTimedOutRequestsThresold
     )
     {
-      ForeignAccessCentral.logFolder = logFolder;
+      LogFolder = logFolder;
       
-      ForeignAccessCentral.spotConsequentErrorsCounter =
+      SpotConsequentErrorsCounter =
         new ConsequentErrorsCounter( 
           spotConsequentRequestsErrorCountThresold, 
           spotConsequentTimedOutRequestsThresold 
@@ -41,24 +38,24 @@ namespace FlyTrace.LocationLib.ForeignAccess
     {
       get
       {
-        lock ( sync )
+        lock ( Sync )
         {
-          if ( locationRequestFactories == null )
+          if ( LocationRequestFactoriesPrivate == null )
           {
-            locationRequestFactories =
+            LocationRequestFactoriesPrivate =
               new Dictionary<string, LocationRequestFactory>( StringComparer.InvariantCultureIgnoreCase );
 
-            locationRequestFactories.Add(
+            LocationRequestFactoriesPrivate.Add(
               ForeignId.SPOT,
               new Spot.SpotLocationRequestFactory( 
-                logFolder ,
-                spotConsequentErrorsCounter
+                LogFolder ,
+                SpotConsequentErrorsCounter
               )
             );
           }
         }
 
-        return locationRequestFactories;
+        return LocationRequestFactoriesPrivate;
       }
     }
   }

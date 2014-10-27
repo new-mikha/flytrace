@@ -297,7 +297,7 @@ namespace FlyTrace.Service.RequestsSchedule
       return result;
     }
 
-    private TimeSpan GetAverageSpan( EventQueue<TimeSpan> eventQueue, string foreignType, TimeSpan reportSpan )
+    private static TimeSpan GetAverageSpan( EventQueue<TimeSpan> eventQueue, string foreignType, TimeSpan reportSpan )
     {
       int count = eventQueue.GetCount( foreignType, reportSpan );
       if ( count == 0 )

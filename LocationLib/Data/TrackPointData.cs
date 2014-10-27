@@ -54,8 +54,10 @@ namespace FlyTrace.LocationLib.Data
       Utils.EqualityExpressionCheck<TrackPointData>(
         ( x, y ) =>
           x.LocationType == y.LocationType &&
+          // ReSharper disable CompareOfFloatsByEqualityOperator (same data from foreign server comes to same doubles)
           x.Latitude == y.Latitude &&
           x.Longitude == y.Longitude &&
+          // ReSharper restore CompareOfFloatsByEqualityOperator
           x.ForeignTime == y.ForeignTime &&
           x.UserMessage == y.UserMessage
       );
