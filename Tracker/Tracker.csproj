@@ -81,8 +81,8 @@
     <Content Include="EmailTemplates\resetPassword.txt" />
     <Content Include="EmailTemplates\restorePassword.txt" />
     <Content Include="Administration\manageUsers.aspx" />
-    <None Include="logs\config\ui.log4net.config.default" />
-    <None Include="logs\config\ui.log4net.config" />
+    <None Include="ui.log4net.config.default" />
+    <None Include="ui.log4net.config" />
     <Content Include="help\commonhelp.aspx" />
     <Content Include="help\getting-started.png" />
     <Content Include="help\infoWindow.png" />

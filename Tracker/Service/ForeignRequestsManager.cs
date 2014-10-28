@@ -99,14 +99,14 @@ namespace FlyTrace.Service
       }
     }
 
-    private static readonly ILog Log = LogManager.GetLogger( "TDM" );
+    private readonly ILog Log = LogManager.GetLogger( "TDM" );
 
     /// <summary>
     /// Supposed to be always in at least for INFO level, i.e. don't use it too often. E.g. start/stop messages could go there.
     /// </summary>
-    private static readonly ILog InfoLog = LogManager.GetLogger( "InfoLog" );
+    private readonly ILog InfoLog = LogManager.GetLogger( "InfoLog" );
 
-    private static readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
+    private readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
     public AdminAlerts AdminAlerts = new AdminAlerts( );
 
@@ -125,7 +125,7 @@ namespace FlyTrace.Service
 
       try
       {
-        string revisionFilePath = HttpContext.Current.Server.MapPath( @"~/App_Data/revision.bin" );
+        string revisionFilePath = System.Web.Hosting.HostingEnvironment.MapPath( @"~/App_Data/revision.bin" );
         string initWarnings;
 
         if ( this.revisionPersister.Init( revisionFilePath, out initWarnings ) )

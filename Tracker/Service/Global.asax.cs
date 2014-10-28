@@ -144,7 +144,7 @@ namespace FlyTrace.Service
 
       try
       {
-        TrackerDataManager.Singleton.ClearCache( );
+        MgrService.ClearCache();
         timeLog.InfoFormat( "Cache has been cleared after system time adjusted" );
       }
       catch ( Exception exc )
@@ -193,7 +193,8 @@ namespace FlyTrace.Service
 
     protected void Application_End( object sender, EventArgs e )
     {
-      TrackerDataManager.Singleton.Stop( );
+      MgrService.Stop();
+      
 
       try
       {

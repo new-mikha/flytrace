@@ -84,7 +84,7 @@ namespace FlyTrace.Service.Administration
       }
 
       result.Messages =
-        TrackerDataManager.Singleton.AdminAlerts
+        MgrService.AdminAlerts
         .GetMessages( )
         .Select(
           kvp =>
@@ -94,9 +94,9 @@ namespace FlyTrace.Service.Administration
 
       RevisionGenerator.TryGetCurrentRevision( out result.CurrentRevision );
 
-      result.CoordAccessCount = TrackerDataManager.Singleton.AdminAlerts.CoordAccessCount;
+      result.CoordAccessCount = MgrService.AdminAlerts.CoordAccessCount;
 
-      result.StartTime = TrackerDataManager.Singleton.AdminAlerts.StartTime;
+      result.StartTime = MgrService.AdminAlerts.StartTime;
 
       return result;
     }

@@ -29,7 +29,7 @@ using FlyTrace.LocationLib.Data;
 namespace FlyTrace.Service.Subservices
 {
   // TODO: remove
-  internal interface ITrackerService
+  public interface ITracksService
   {
     IAsyncResult BeginGetTracks
     (
@@ -43,7 +43,7 @@ namespace FlyTrace.Service.Subservices
     List<TrackResponseItem> EndGetTracks( IAsyncResult asyncResult );
   }
 
-  public class TracksService : TrackerServiceBase<List<TrackResponseItem>>, ITrackerService
+  public class TracksService : TrackerServiceBase<List<TrackResponseItem>>, ITracksService
   {
     private readonly TrackRequestItem[] trackRequests;
 

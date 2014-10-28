@@ -102,6 +102,7 @@
     <Compile Include="Administration\serviceLogConfig.aspx.designer.cs">
       <DependentUpon>serviceLogConfig.aspx</DependentUpon>
     </Compile>
+    <Compile Include="MgrService.cs" />
     <Compile Include="ReaderWriterLockSlimEx.cs" />
     <Compile Include="RequestsSchedule\StatTimer.cs" />
     <Compile Include="RequestsSchedule\StatQueue.cs" />
@@ -163,8 +164,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
-    <None Include="logs\config\service.log4net.config.default" />
-    <None Include="logs\config\service.log4net.config">
+    <None Include="service.log4net.config.default" />
+    <None Include="service.log4net.config">
       <SubType>Designer</SubType>
     </None>
     <None Include="Properties\Settings.settings">

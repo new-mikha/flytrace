@@ -18,7 +18,6 @@
  * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-using System;
 using System.Collections.Generic;
 using FlyTrace.LocationLib;
 
@@ -44,11 +43,11 @@ namespace FlyTrace.Service
         tracker0.Lon = 150.43362;
         tracker0.IsOfficial = false;
         tracker0.Ts = TimeService.Now.AddMinutes( -5 );
-        tracker0.Age = TrackerDataManager.CalcAge( tracker0.Ts );
+        tracker0.Age = Subservices.CommonBase.CalcAgeInSeconds( tracker0.Ts );
         tracker0.PrevLat = -30.94232;
         tracker0.PrevLon = 150.53076;
         tracker0.PrevTs = tracker0.Ts.AddMinutes( -5 );
-        tracker0.PrevAge = TrackerDataManager.CalcAge( tracker0.PrevTs );
+        tracker0.PrevAge = Subservices.CommonBase.CalcAgeInSeconds( tracker0.PrevTs );
 
         result.Trackers.Add( tracker0 );
       }
@@ -61,11 +60,11 @@ namespace FlyTrace.Service
         tracker1.Lon = 150.43362 - 0.1;
         tracker1.IsOfficial = false;
         tracker1.Ts = TimeService.Now.AddMinutes( -5 );
-        tracker1.Age = TrackerDataManager.CalcAge( tracker1.Ts );
+        tracker1.Age = Subservices.CommonBase.CalcAgeInSeconds( tracker1.Ts );
         tracker1.PrevLat = -30.94232 - 0.25;
         tracker1.PrevLon = 150.53076 - 0.08;
         tracker1.PrevTs = tracker1.Ts.AddMinutes( -5 );
-        tracker1.PrevAge = TrackerDataManager.CalcAge( tracker1.PrevTs );
+        tracker1.PrevAge = Subservices.CommonBase.CalcAgeInSeconds( tracker1.PrevTs );
         tracker1.UsrMsg = "Just landed and would love to see my driver";
 
         result.Trackers.Add( tracker1 );

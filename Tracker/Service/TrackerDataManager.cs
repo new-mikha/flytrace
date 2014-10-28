@@ -39,7 +39,7 @@ using log4net.Appender;
 
 namespace FlyTrace.Service
 {
-  internal class TrackerDataManager : Subservices.ICoordinatesService, Subservices.ITrackerService
+  internal class TrackerDataManager : Subservices.ICoordinatesService, Subservices.ITracksService
   {
     /// <summary>
     /// TODO: the comment is obsolete.
@@ -136,7 +136,7 @@ namespace FlyTrace.Service
       try
       {
 
-        string revisionFilePath = HttpContext.Current.Server.MapPath( @"~/App_Data/revision.bin" );
+        string revisionFilePath = System.Web.Hosting.HostingEnvironment.MapPath( @"~/App_Data/revision.bin" );
         string initWarnings;
 
         if ( RevisionGenerator.Init( revisionFilePath, out initWarnings ) )

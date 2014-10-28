@@ -18,8 +18,12 @@
  * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+using System;
 using System.Threading;
+
 using log4net;
+
+using FlyTrace.LocationLib;
 
 namespace FlyTrace.Service.Subservices
 {
@@ -84,6 +88,15 @@ namespace FlyTrace.Service.Subservices
     protected static void DecrementCallCount( )
     {
       Interlocked.Decrement( ref SimultaneousCallCount );
+    }
+
+    public static int CalcAgeInSeconds( DateTime time )
+    {
+      if ( time == default( DateTime ) )
+        return 0;
+
+      TimeSpan locationAge = TimeService.Now - time;
+      return Math.Max( 0, ( int ) locationAge.TotalSeconds ); // to fix potential error in this server time settings
     }
   }
 }

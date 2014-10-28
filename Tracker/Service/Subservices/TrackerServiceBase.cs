@@ -169,6 +169,9 @@ namespace FlyTrace.Service.Subservices
 
       foreach ( TrackerStateHolder holder in holders )
       {
+        if ( holder == null )
+          continue;
+
         // that's a bit of a semantics break for rwLock used for MT operations with holders because it's out 
         // of lock, but AccessTimestamp is used for diag purposes only by a admins. For purists reason, it should
         // be under write lock, but it would slow down the things so cutting the corner here:
@@ -183,15 +186,5 @@ namespace FlyTrace.Service.Subservices
 
       return snapshots;
     }
-
-    protected static int CalcAgeInSeconds( DateTime time )
-    {
-      if ( time == default( DateTime ) )
-        return 0;
-
-      TimeSpan locationAge = TimeService.Now - time;
-      return Math.Max( 0, ( int ) locationAge.TotalSeconds ); // to fix potential error in this server time settings
-    }
-
   }
 }

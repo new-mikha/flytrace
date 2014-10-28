@@ -40,7 +40,7 @@ namespace FlyTrace.Service
   [System.Web.Script.Services.ScriptService]
   public class TrackerService : System.Web.Services.WebService
   {
-    private bool isNew = false;
+    private bool isNew = true;
 
     private static readonly ILog IncrTestLog = LogManager.GetLogger( "IncrTest" );
     private static readonly ILog Log = LogManager.GetLogger( "TDM" );
@@ -48,11 +48,8 @@ namespace FlyTrace.Service
     [WebMethod]
     public GroupData GetCoordinates( int group, string srcSeed, DateTime scrTime /* this parameter to preven client-side response caching */ )
     {
-      Subservices.ICoordinatesService trackerService;
-      if ( isNew )
-        trackerService = new Subservices.CoordinatesService( group, srcSeed );
-      else
-        trackerService = TrackerDataManager.Singleton;
+      Subservices.ICoordinatesService trackerService =
+        MgrService.GetCoordinatesService( group, srcSeed );
 
       // TODO: remove group, srcSeed params (already in constructor)
       IAsyncResult ar = trackerService.BeginGetCoordinates( group, srcSeed, null, null );
@@ -64,11 +61,8 @@ namespace FlyTrace.Service
     [WebMethod]
     public List<TrackResponseItem> GetTracks( int group, TrackRequest trackRequest, DateTime scriptCurrTimet )
     {
-      Subservices.ITrackerService trackerService;
-      if ( isNew )
-        trackerService = new Subservices.TracksService( group, trackRequest );
-      else
-        trackerService = TrackerDataManager.Singleton;
+      Subservices.ITracksService trackerService =
+        MgrService.GetTracksService( group, trackRequest );
 
       long callId;
       IAsyncResult ar = trackerService.BeginGetTracks( group, trackRequest.Items, null, null, out callId );

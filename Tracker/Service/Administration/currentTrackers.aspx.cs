@@ -78,68 +78,64 @@ namespace FlyTrace.Service.Administration
 
     private void BindDataSource( )
     {
-      Dictionary<ForeignId, TrackerStateHolder> trackers = TrackerDataManager.Singleton.Trackers;
+      List<TrackerStateHolder> trackers = MgrService.GetTrackers( );
 
       List<TrackerDisplayItem> list;
-      lock ( trackers )
+      list = new List<TrackerDisplayItem>( trackers.Count );
+
+      foreach ( TrackerStateHolder holder in trackers )
       {
-        list = new List<TrackerDisplayItem>( trackers.Count );
+        TrackerDisplayItem item = new TrackerDisplayItem( );
+        item.SpotId = holder.ForeignId.Id;
 
-        foreach ( KeyValuePair<ForeignId, TrackerStateHolder> kvp in trackers )
+        DateTime accessTime = DateTime.FromFileTime( Interlocked.Read( ref holder.ThreadDesynchronizedAccessTimestamp ) ).ToUniversalTime( );
+        item.AccessTime = accessTime;
+        item.AccessTimeStr = accessTime.ToString( "u" ) + "<br />" + LocationLib.Tools.GetAgeStr( accessTime, true );
+
+        // No need to lock on TrackerDataManager.snapshotAccessSync once it doesn't matter if one of the snapshots is
+        // updated during the cycle. MemoryBarrier for atomic read of a single Snapshot below is enough, it makes sure
+        // that Snapshot value (which is not volatile) is read only once:
+        RevisedTrackerState tracker = holder.Snapshot;
+        Thread.MemoryBarrier( );
+
+        if ( tracker != null )
         {
-          TrackerDisplayItem item = new TrackerDisplayItem( );
-          item.SpotId = kvp.Key.Id;
+          item.Revision = tracker.DataRevision;
 
-          DateTime accessTime = DateTime.FromFileTime( Interlocked.Read( ref kvp.Value.ThreadDesynchronizedAccessTimestamp ) ).ToUniversalTime( );
-          item.AccessTime = accessTime;
-          item.AccessTimeStr = accessTime.ToString( "u" ) + "<br />" + LocationLib.Tools.GetAgeStr( accessTime, true );
+          item.RefreshTime = tracker.RefreshTime;
+          item.RefreshTimeStr =
+            tracker.RefreshTime.ToString( "u" ) + "<br />" +
+            LocationLib.Tools.GetAgeStr( tracker.RefreshTime, true );
 
-          // No need to lock on TrackerDataManager.snapshotAccessSync once it doesn't matter if one of the snapshots is
-          // updated during the cycle. MemoryBarrier for atomic read of a single Snapshot below is enough, it makes sure
-          // that Snapshot value (which is not volatile) is read only once:
-          RevisedTrackerState tracker = kvp.Value.Snapshot;
-          Thread.MemoryBarrier( );
-
-          if ( tracker != null )
+          if ( tracker.Position != null )
           {
-            item.Revision = tracker.DataRevision;
+            item.Tag = tracker.Tag;
 
-            item.RefreshTime = tracker.RefreshTime;
-            item.RefreshTimeStr =
-              tracker.RefreshTime.ToString( "u" ) + "<br />" +
-              LocationLib.Tools.GetAgeStr( tracker.RefreshTime, true );
-
-            if ( tracker.Position != null )
             {
-              item.Tag = tracker.Tag;
-
-              {
-                TrackPointData currPoint = tracker.Position.CurrPoint;
-                item.CurrentTs = currPoint.ForeignTime;
-                item.CurrentCoord = string.Format( "{0}, {1}, {2}", currPoint.Latitude, currPoint.Longitude, LocationLib.Tools.GetAgeStr( currPoint.ForeignTime, true ) );
-                item.CurrentTsStr = string.Format( "{0}", currPoint.ForeignTime.ToString( "u" ) );
-              }
-
-              {
-                TrackPointData prevPoint = tracker.Position.PreviousPoint;
-                if ( prevPoint != null )
-                {
-                  item.PrevTs = prevPoint.ForeignTime;
-                  item.PrevCoord = string.Format( "{0}, {1}, {2}", prevPoint.Latitude, prevPoint.Longitude, LocationLib.Tools.GetAgeStr( prevPoint.ForeignTime, true ) );
-                  item.PrevTsStr = string.Format( "{0}", prevPoint.ForeignTime.ToString( "u" ) );
-                }
-              }
+              TrackPointData currPoint = tracker.Position.CurrPoint;
+              item.CurrentTs = currPoint.ForeignTime;
+              item.CurrentCoord = string.Format( "{0}, {1}, {2}", currPoint.Latitude, currPoint.Longitude, LocationLib.Tools.GetAgeStr( currPoint.ForeignTime, true ) );
+              item.CurrentTsStr = string.Format( "{0}", currPoint.ForeignTime.ToString( "u" ) );
             }
 
-            if ( tracker.Error != null )
             {
-              item.Error = tracker.Error.ToString( );
-              item.ErrorTag = tracker.Tag;
+              TrackPointData prevPoint = tracker.Position.PreviousPoint;
+              if ( prevPoint != null )
+              {
+                item.PrevTs = prevPoint.ForeignTime;
+                item.PrevCoord = string.Format( "{0}, {1}, {2}", prevPoint.Latitude, prevPoint.Longitude, LocationLib.Tools.GetAgeStr( prevPoint.ForeignTime, true ) );
+                item.PrevTsStr = string.Format( "{0}", prevPoint.ForeignTime.ToString( "u" ) );
+              }
             }
-
           }
-          list.Add( item );
+
+          if ( tracker.Error != null )
+          {
+            item.Error = tracker.Error.ToString( );
+            item.ErrorTag = tracker.Tag;
+          }
         }
+        list.Add( item );
       }
 
       IEnumerable<TrackerDisplayItem> sortedList = Sort( list );

@@ -74,7 +74,7 @@ namespace FlyTrace.Service.Test
       if ( this.sourceData != null )
         return;
 
-      string dataFolder = HttpContext.Current.Server.MapPath( "~/App_Data/test/" );
+      string dataFolder = System.Web.Hosting.HostingEnvironment.MapPath( "~/App_Data/test/" );
 
       string[] filesPaths = Directory.GetFiles( dataFolder, "*.xml" );
 
