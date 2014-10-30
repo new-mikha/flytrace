@@ -42,7 +42,7 @@ namespace FlyTrace.Service
   {
     private bool isNew = true;
 
-    private static readonly ILog IncrTestLog = LogManager.GetLogger( "IncrTest" );
+    private static readonly ILog IncrErrorsLog = LogManager.GetLogger( "IncrErrors" );
     private static readonly ILog Log = LogManager.GetLogger( "TDM" );
 
     [WebMethod]
@@ -85,7 +85,7 @@ namespace FlyTrace.Service
     [WebMethod]
     public void TestCheck( string msg )
     { // not just a debug method, this one is used from main.js script
-      IncrTestLog.Error( msg );
+      IncrErrorsLog.Error( msg );
     }
   }
 }

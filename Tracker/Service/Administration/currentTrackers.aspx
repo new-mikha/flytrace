@@ -30,7 +30,17 @@
 <body>
     <form id="form1" runat="server">
     <div>
-        <table>
+        <div style="display: inline-block" class="GroupTable2">
+            <div class="VisualGroupTitle2">
+                Statistics
+            </div>
+            <div style="margin-top: 0.5em">
+                <asp:Panel runat="server" ID="statPanel" EnableViewState="False">
+                </asp:Panel>
+            </div>
+        </div>
+
+        <table style="margin-top: 1em">
             <tr>
                 <td>
                     <table style="width: 100%;" class="UserInfo">

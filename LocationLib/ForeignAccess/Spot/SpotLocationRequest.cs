@@ -64,9 +64,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     public static readonly FeedKind[] DefaultAttemptsOrder =
       { 
-        FeedKind.Feed_2_0,
-        FeedKind.Feed_1_0_undoc,
-        FeedKind.Feed_1_0
+        FeedKind.Feed_2_0
+
+        // Discontinue using old feeds, so commented out:
+        //,FeedKind.Feed_1_0_undoc
+        //,FeedKind.Feed_1_0
       };
 
     /// <summary>
@@ -202,6 +204,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
+    private static bool IsWarnedAboutSuccRetry;
+
     private void SpotFeedRequestCallback( IAsyncResult ar )
     {
       var asyncChainedState = ( AsyncChainedState<TrackerState> ) ar.AsyncState;
@@ -218,7 +222,21 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
           if ( this.iAttempt != 0 )
           {
-            Log.WarnFormat( "Retry succeeded for {0}, {1}, lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
+            string msg =
+              string.Format(
+                "Retry succeeded for {0}, {1}, lrid {2}",
+                this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
+
+            // Prevent many Warns because Warnings supposed to be emailed.
+            if ( IsWarnedAboutSuccRetry )
+            {
+              Log.Info( msg );
+            }
+            else
+            {
+              Log.Warn( msg );
+              IsWarnedAboutSuccRetry = true; // multiple threads can do that, but it's ok. Deliberately do not sync it.
+            }
           }
 
           if ( this.appAuxLogFolder != null )
@@ -280,10 +298,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private void LogRequestError( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
     {
+      ILog log = LogManager.GetLogger( "TDM.LocReq.ErrorHandling" );
       if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
            result.Error.Type == Data.ErrorType.BadTrackerId )
       {
-        Log.InfoFormat(
+        log.InfoFormat(
           "Request for {0}, lrid {1} failed: {2}",
           this.Id,
           asyncChainedState.Id,
@@ -291,13 +310,13 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
       else
       {
-        bool shouldReportError = true;
+        bool shouldReportProblem = true;
         int consequentErrorsCount = 1;
 
         if ( this.consequentErrorsCounter != null )
         {
           consequentErrorsCount =
-            this.consequentErrorsCounter.RequestsErrorsCounter.Increment( out shouldReportError );
+            this.consequentErrorsCounter.RequestsErrorsCounter.Increment( out shouldReportProblem );
         }
 
         string message =
@@ -310,10 +329,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             consequentErrorsCount
           );
 
-        if ( shouldReportError )
-          Log.Error( message );
+        if ( shouldReportProblem )
+          log.Error( message );
         else
-          Log.Warn( message );
+          log.Info( message );
       }
     }
 

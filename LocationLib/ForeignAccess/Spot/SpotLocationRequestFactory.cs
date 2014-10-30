@@ -101,15 +101,16 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         }
         else
         {
-          int totalCountOfAvailableFeeds = Enum.GetValues( typeof( FeedKind ) ).Length - 1;
-          if ( result.Count != totalCountOfAvailableFeeds )
-          {
-            Log.ErrorFormat( "Attempts order list is not complete or has garbage inside ({0} values)", result.Count );
-          }
-          else
-          {
+          // decomissioned all old feed kinds, so this is not needed anymore
+          //int totalCountOfAvailableFeeds = Enum.GetValues( typeof( FeedKind ) ).Length - 1;
+          //if ( result.Count != totalCountOfAvailableFeeds )
+          //{
+          //  Log.ErrorFormat( "Attempts order list is not complete or has garbage inside ({0} values)", result.Count );
+          //}
+          //else
+          //{
             isOk = true;
-          }
+          //}
         }
       }
 
@@ -217,10 +218,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         FeedKind prevBestFeed = this.attemptsOrder.FirstOrDefault( );
         if ( bestFeed != prevBestFeed )
         {
-          Log.Warn( "Log stat for the moment: " + logString );
+          Log.Info( "Log stat for the moment: " + logString );
           this.attemptsOrder.RemoveAll( fk => fk == bestFeed );
           this.attemptsOrder.Insert( 0, bestFeed );
-          Log.WarnFormat( "Best feed was {0}, now it's {1}", prevBestFeed, bestFeed );
+          Log.InfoFormat( "Best feed was {0}, now it's {1}", prevBestFeed, bestFeed );
         }
       }
 

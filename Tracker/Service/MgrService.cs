@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Data;
 using System.Linq;
-using System.Web;
 
 namespace FlyTrace.Service
 {
   /// <summary>Temporary thing, will be removed with TrackerDataManager.</summary>
   public static class MgrService
   {
-    private static bool IsNew = true;
+    private static readonly bool IsNew =
+      Properties.Settings.Default.IsNewScheduler;
 
     public static Subservices.ICoordinatesService GetCoordinatesService( int group, string srcSeed )
     {
@@ -72,6 +72,14 @@ namespace FlyTrace.Service
         ForeignRequestsManager.Singleton.Stop( );
       else
         TrackerDataManager.Singleton.Stop( );
+    }
+
+    internal static DataSet GetStatistics( )
+    {
+      if ( IsNew )
+        return ForeignRequestsManager.Singleton.GetStatistics( );
+
+      return null;
     }
   }
 }

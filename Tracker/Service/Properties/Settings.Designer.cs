@@ -103,5 +103,14 @@ namespace FlyTrace.Service.Properties {
                 return ((string)(this["AdminTimezone"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool IsNewScheduler {
+            get {
+                return ((bool)(this["IsNewScheduler"]));
+            }
+        }
     }
 }

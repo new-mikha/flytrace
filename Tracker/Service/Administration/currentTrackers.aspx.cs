@@ -20,6 +20,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Web;
 using System.Web.UI;
@@ -33,6 +35,7 @@ namespace FlyTrace.Service.Administration
 {
   public partial class currentTrackers : System.Web.UI.Page
   {
+    [DebuggerDisplay( "{RefreshTime} - {SpotId}" )]
     public class TrackerDisplayItem
     {
       public string SpotId { get; set; }
@@ -72,6 +75,24 @@ namespace FlyTrace.Service.Administration
       {
         BindDataSource( );
       }
+
+      DataSet statistics = MgrService.GetStatistics( );
+      if ( statistics == null )
+        this.statPanel.Visible = false;
+      else
+      {
+        foreach ( DataTable table in statistics.Tables )
+        {
+          Label label = new Label( );
+          this.statPanel.Controls.Add( label );
+          label.Text = table.TableName;
+
+          GridView gridView = new GridView( );
+          this.statPanel.Controls.Add( gridView );
+          gridView.DataSource = statistics.Tables[0];
+          gridView.DataBind( );
+        }
+      }
     }
 
     private string[] spotIds;
@@ -88,7 +109,9 @@ namespace FlyTrace.Service.Administration
         TrackerDisplayItem item = new TrackerDisplayItem( );
         item.SpotId = holder.ForeignId.Id;
 
-        DateTime accessTime = DateTime.FromFileTime( Interlocked.Read( ref holder.ThreadDesynchronizedAccessTimestamp ) ).ToUniversalTime( );
+        DateTime accessTime =
+          DateTime.FromFileTime( Interlocked.Read( ref holder.ThreadDesynchronizedAccessTimestamp ) ).ToUniversalTime( );
+
         item.AccessTime = accessTime;
         item.AccessTimeStr = accessTime.ToString( "u" ) + "<br />" + LocationLib.Tools.GetAgeStr( accessTime, true );
 
@@ -102,10 +125,10 @@ namespace FlyTrace.Service.Administration
         {
           item.Revision = tracker.DataRevision;
 
-          item.RefreshTime = tracker.RefreshTime;
+          item.RefreshTime = holder.RefreshTime.GetValueOrDefault( );
           item.RefreshTimeStr =
-            tracker.RefreshTime.ToString( "u" ) + "<br />" +
-            LocationLib.Tools.GetAgeStr( tracker.RefreshTime, true );
+            item.RefreshTime.ToString( "u" ) + "<br />" +
+            LocationLib.Tools.GetAgeStr( item.RefreshTime, true );
 
           if ( tracker.Position != null )
           {

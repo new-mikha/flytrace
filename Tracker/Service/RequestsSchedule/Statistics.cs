@@ -58,7 +58,8 @@ namespace FlyTrace.Service.RequestsSchedule
   {
     private readonly object sync = new object( );
 
-    private readonly EventQueue<int> callPackSizeEvents = new EventQueue<int>( );
+    private readonly EventQueue<int> callPackSizeEvents =
+      new EventQueue<int>( ( i1, i2 ) => i1 + i2 );
 
     private static readonly ILog Log = LogManager.GetLogger( "Statistics" );
 
@@ -193,108 +194,151 @@ namespace FlyTrace.Service.RequestsSchedule
       return result;
     }
 
+    private readonly static TimeSpan span1Min = TimeSpan.FromMinutes( 1 );
+    private readonly static TimeSpan span10Min = TimeSpan.FromMinutes( 10 );
+    private readonly static TimeSpan span1Hr = TimeSpan.FromHours( 1 );
+    private readonly static TimeSpan spanOverall = TimeSpan.MaxValue;
+
+    private static void AddStatRow(
+      DataTable table,
+      string statName,
+      Func<TimeSpan, int> statFunc
+      )
+    {
+      table.Rows.Add(
+        statName,
+        statFunc( span1Min ).ToString( ),
+        statFunc( span10Min ).ToString( ),
+        statFunc( span1Hr ).ToString( ),
+        statFunc( spanOverall ).ToString( )
+      );
+    }
+
+
+    private static void AddStatRow(
+      DataTable table,
+      string statName,
+      Func<TimeSpan, TimeSpan> statFunc
+      )
+    {
+      AddStatRow( table, statName, span => statFunc( span ).TotalMilliseconds, "{0:000} ms" );
+    }
+
+    private static void AddStatRow(
+      DataTable table,
+      string statName,
+      Func<TimeSpan, double> statFunc,
+      string formatString
+      )
+    {
+      table.Rows.Add(
+        statName,
+        string.Format( formatString, statFunc( span1Min ) ),
+        string.Format( formatString, statFunc( span10Min ) ),
+        string.Format( formatString, statFunc( span1Hr ) ),
+        string.Format( formatString, statFunc( spanOverall ) )
+      );
+    }
+
+
     private DataTable CreateReportTable( string foreignType )
     {
       DataTable result = new DataTable( foreignType );
 
       result.Columns.Add( "Counter" );
-      result.Columns.Add( "1min", typeof( double ) ).Caption = "1 min";
-      result.Columns.Add( "10min", typeof( double ) ).Caption = "10 min";
-      result.Columns.Add( "1hr", typeof( double ) ).Caption = "1 hour";
-      result.Columns.Add( "Overall", typeof( double ) ).Caption = "Overall";
+      result.Columns.Add( "1min" ).Caption = "1 min";
+      result.Columns.Add( "10min" ).Caption = "10 min";
+      result.Columns.Add( "1hr" ).Caption = "1 hour";
+      result.Columns.Add( "Overall" ).Caption = "Overall";
 
-      TimeSpan span1Min = TimeSpan.FromMinutes( 1 );
-      TimeSpan span10Min = TimeSpan.FromMinutes( 10 );
-      TimeSpan span1Hr = TimeSpan.FromHours( 1 );
-      TimeSpan spanOverall = TimeSpan.MaxValue;
-
-      result.Rows.Add(
+      AddStatRow(
+        result,
         "Max Calls In Pack Count",
-        ( double ) this.callPackSizeEvents.GetMaximum( foreignType, span1Min ),
-        ( double ) this.callPackSizeEvents.GetMaximum( foreignType, span10Min ),
-        ( double ) this.callPackSizeEvents.GetMaximum( foreignType, span1Hr ),
-        ( double ) this.callPackSizeEvents.GetMaximum( foreignType, spanOverall )
+        span => this.callPackSizeEvents.GetMaximum( foreignType, span )
       );
 
-      result.Rows.Add(
+      AddStatRow(
+        result,
+        "Avg Calls In Pack Count",
+        span => GetAverageCount( this.callPackSizeEvents, foreignType, span ),
+        "{0:F1}"
+      );
+
+      AddStatRow(
+        result,
         "Min Time From Prev Start",
-        this.timeFromPrevStartEvents.GetMinimum( foreignType, span1Min ).TotalMilliseconds,
-        this.timeFromPrevStartEvents.GetMinimum( foreignType, span10Min ).TotalMilliseconds,
-        this.timeFromPrevStartEvents.GetMinimum( foreignType, span1Hr ).TotalMilliseconds,
-        this.timeFromPrevStartEvents.GetMinimum( foreignType, spanOverall ).TotalMilliseconds
+        span => this.timeFromPrevStartEvents.GetMinimum( foreignType, span )
       );
 
-      result.Rows.Add(
+      AddStatRow(
+        result,
+        "Max Time From Prev Start",
+        span => this.timeFromPrevStartEvents.GetMaximum( foreignType, span )
+      );
+
+      AddStatRow(
+        result,
         "Min Calls Gap",
-        this.callGapEvents.GetMinimum( foreignType, span1Min ).TotalMilliseconds,
-        this.callGapEvents.GetMinimum( foreignType, span10Min ).TotalMilliseconds,
-        this.callGapEvents.GetMinimum( foreignType, span1Hr ).TotalMilliseconds,
-        this.callGapEvents.GetMinimum( foreignType, spanOverall ).TotalMilliseconds
+        span => this.callGapEvents.GetMinimum( foreignType, span )
       );
 
-      result.Rows.Add(
+      AddStatRow(
+        result,
         "Same Feed Hit Interval",
-        this.sameFeedHitEvents.GetMinimum( foreignType, span1Min ).TotalSeconds,
-        this.sameFeedHitEvents.GetMinimum( foreignType, span10Min ).TotalSeconds,
-        this.sameFeedHitEvents.GetMinimum( foreignType, span1Hr ).TotalSeconds,
-        this.sameFeedHitEvents.GetMinimum( foreignType, spanOverall ).TotalSeconds
+        span => this.sameFeedHitEvents.GetMinimum( foreignType, span ).TotalMinutes,
+        "{0:F1} min"
       );
 
-      result.Rows.Add(
+      AddStatRow(
+        result,
         "Min call duration",
-        this.callDurationEvents.GetMinimum( foreignType, span1Min ).TotalSeconds,
-        this.callDurationEvents.GetMinimum( foreignType, span10Min ).TotalSeconds,
-        this.callDurationEvents.GetMinimum( foreignType, span1Hr ).TotalSeconds,
-        this.callDurationEvents.GetMinimum( foreignType, spanOverall ).TotalSeconds
+        span => this.callDurationEvents.GetMinimum( foreignType, span )
       );
 
-      result.Rows.Add(
-        "Max call duration",
-        this.callDurationEvents.GetMaximum( foreignType, span1Min ).TotalSeconds,
-        this.callDurationEvents.GetMaximum( foreignType, span10Min ).TotalSeconds,
-        this.callDurationEvents.GetMaximum( foreignType, span1Hr ).TotalSeconds,
-        this.callDurationEvents.GetMaximum( foreignType, spanOverall ).TotalSeconds
-      );
-
-      result.Rows.Add(
+      AddStatRow(
+        result,
         "Avg call duration",
-        GetAverageSpan( this.callDurationEvents, foreignType, span1Min ).TotalSeconds,
-        GetAverageSpan( this.callDurationEvents, foreignType, span10Min ).TotalSeconds,
-        GetAverageSpan( this.callDurationEvents, foreignType, span1Hr ).TotalSeconds,
-        GetAverageSpan( this.callDurationEvents, foreignType, spanOverall ).TotalSeconds
+        span => GetAverageSpan( this.callDurationEvents, foreignType, span )
       );
 
-      // ReSharper disable RedundantCast (cast to double to make sure that double goes in there,
-      // as expected by DataTable, even if return type of GetEventsPerMinute changes which is possible)
-      result.Rows.Add(
+      AddStatRow(
+        result,
+        "Max call duration",
+        span => this.callDurationEvents.GetMaximum( foreignType, span )
+      );
+
+      AddStatRow(
+        result,
         "Requests p/minute",
-        ( double ) this.timeFromPrevStartEvents.GetEventsPerMinute( foreignType, span1Min ),
-        ( double ) this.timeFromPrevStartEvents.GetEventsPerMinute( foreignType, span10Min ),
-        ( double ) this.timeFromPrevStartEvents.GetEventsPerMinute( foreignType, span1Hr ),
-        ( double ) this.timeFromPrevStartEvents.GetEventsPerMinute( foreignType, spanOverall )
+        span => this.timeFromPrevStartEvents.GetEventsPerMinute( foreignType, span ),
+        "{0:F1}"
       );
-      // ReSharper restore RedundantCast
 
-      result.Rows.Add(
+      AddStatRow(
+        result,
         "Timed-out Count",
-        ( double ) this.timedOutEvents.GetCount( foreignType, span1Min ),
-        ( double ) this.timedOutEvents.GetCount( foreignType, span10Min ),
-        ( double ) this.timedOutEvents.GetCount( foreignType, span1Hr ),
-        ( double ) this.timedOutEvents.GetCount( foreignType, spanOverall )
+        span => this.timedOutEvents.GetCount( foreignType, span )
       );
 
-      // ReSharper disable RedundantCast (cast to double to make sure that double goes in there,
-      // as expected by DataTable, even if return type of GetEventsPerMinute changes which is possible)
-      result.Rows.Add(
+      AddStatRow(
+        result,
         "Timed-out p/minute",
-        ( double ) this.timedOutEvents.GetEventsPerMinute( foreignType, span1Min ),
-        ( double ) this.timedOutEvents.GetEventsPerMinute( foreignType, span10Min ),
-        ( double ) this.timedOutEvents.GetEventsPerMinute( foreignType, span1Hr ),
-        ( double ) this.timedOutEvents.GetEventsPerMinute( foreignType, spanOverall )
+        span => this.timedOutEvents.GetEventsPerMinute( foreignType, span ),
+        "{0:F1}"
       );
-      // ReSharper restore RedundantCast
 
       return result;
+    }
+
+    private static double GetAverageCount( EventQueue<int> eventQueue, string foreignType, TimeSpan reportSpan )
+    {
+      int count = eventQueue.GetCount( foreignType, reportSpan );
+      if ( count == 0 )
+        return 0.0;
+
+      int totalValue = eventQueue.Aggregate( foreignType, reportSpan );
+
+      return ( ( double ) totalValue ) / count;
     }
 
     private static TimeSpan GetAverageSpan( EventQueue<TimeSpan> eventQueue, string foreignType, TimeSpan reportSpan )

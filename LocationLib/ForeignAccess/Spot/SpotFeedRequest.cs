@@ -288,7 +288,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       if ( abortStat != null )
       {
         Thread.MemoryBarrier( ); // to make sure it's not moved higher than prev.instruction
-        abortStat.Stage = 1;
+        abortStat.Stage = 2;
         Thread.MemoryBarrier( );  // to make sure it's not moved lower than next.instruction
       }
 
@@ -315,7 +315,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       if ( abortStat != null )
       {
         Thread.MemoryBarrier( ); // to make sure it's not moved higher than prev.instruction
-        abortStat.Stage = 2;
+        abortStat.Stage = 3;
         Thread.MemoryBarrier( );  // to make sure it's not moved lower than next.instruction
       }
 
@@ -342,7 +342,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       if ( abortStat != null )
       {
         Thread.MemoryBarrier( ); // to make sure it's not moved higher than prev.instruction
-        abortStat.Stage = 3;
+        abortStat.Stage = 4;
       }
     }
 

@@ -20,10 +20,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Threading;
 using System.Web;
-
+using FlyTrace.LocationLib.Data;
 using log4net;
 using log4net.Appender;
 using log4net.Repository;
@@ -49,6 +50,7 @@ namespace FlyTrace.Service
     {
       try
       {
+        AdminAlerts["Scheduler"] = "New";
         this.scheduler = new RequestsSchedule.Scheduler( );
         this.statistics = this.scheduler.Statistics;
 
@@ -78,6 +80,10 @@ namespace FlyTrace.Service
       get { return this.scheduler.Trackers; }
     }
 
+    public DataSet GetStatistics( )
+    {
+      return this.statistics.GetReport( );
+    }
 
     public void Stop( )
     {
@@ -303,7 +309,7 @@ namespace FlyTrace.Service
         // Need to end it even if trackerStateHolder.CurrentRequest != locationRequest (see below)
         TrackerState trackerState = locationRequest.EndReadLocation( ar );
 
-        this.statistics.AddRequestEndEvent( foreignId );
+        bool isFullRequestRoundtrip = false;
 
         this.scheduler.HolderRwLock.AttemptEnterUpgradeableReadLock( );
         // when we're here, other thread can be in read mode & no other can be in write or upgr. modes
@@ -350,6 +356,9 @@ namespace FlyTrace.Service
           {
             this.scheduler.HolderRwLock.ExitWriteLock( );
           }
+
+          isFullRequestRoundtrip = mergedResult.Error == null ||
+                          mergedResult.Error.Type != ErrorType.AuxError;
         }
         finally
         {
@@ -359,6 +368,9 @@ namespace FlyTrace.Service
           // without setting CurrentRequest, etc - anyway waking up the scheduler doesn't hurt:
           this.refreshThreadEvent.Set( );
         }
+
+        if ( isFullRequestRoundtrip )
+          this.statistics.AddRequestEndEvent( foreignId );
       }
       catch ( Exception exc )
       {

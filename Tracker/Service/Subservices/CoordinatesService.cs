@@ -267,17 +267,19 @@ namespace FlyTrace.Service.Subservices
     {
       bool isDebugFullGroup = false;
 
-      double incrDebugRatio = Settings.Default.IncrDebugRatio;
-
-      if ( incrDebugRatio > 0.0 )
       {
-        if ( incrDebugRatio >= 1.0 )
-          isDebugFullGroup = true;
-        else
+        double incrDebugRatio = Settings.Default.IncrDebugRatio;
+
+        if (incrDebugRatio > 0.0)
         {
-          lock ( debugRnd )
+          if (incrDebugRatio >= 1.0)
+            isDebugFullGroup = true;
+          else
           {
-            isDebugFullGroup = debugRnd.NextDouble( ) <= incrDebugRatio;
+            lock (debugRnd)
+            {
+              isDebugFullGroup = debugRnd.NextDouble() <= incrDebugRatio;
+            }
           }
         }
       }

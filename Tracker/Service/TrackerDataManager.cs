@@ -103,6 +103,7 @@ namespace FlyTrace.Service
     {
       try
       {
+        AdminAlerts["Scheduler"] = "Old";
         InitRevisionGenerator( );
 
         this.timer = new Timer( TimerCallback );
@@ -1220,6 +1221,7 @@ namespace FlyTrace.Service
                   lock ( this.snapshotAccessSync )
                   { // See comment in EndGetCoordinated method.
                     trackerStateHolder.Snapshot = mergedResult;
+                    trackerStateHolder.RefreshTime = mergedResult.RefreshTime;
                   }
                 }
 
@@ -1463,7 +1465,7 @@ namespace FlyTrace.Service
 
         if ( callData.TrackerIds == null || callData.TrackerIds.Count == 0 )
         {
-          Log.Warn( "Empty result by GetFullTrack" );
+          Log.Info( "Empty result by GetFullTrack" );
           return new List<TrackResponseItem>( );
         }
 
