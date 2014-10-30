@@ -170,7 +170,7 @@
                     <option value="degminsec">DD&#176;MM'SS.S&quot;</option>
                 </select>
                 <br />
-                The same map with this coordinates format pre-selected: <a id='preFormatLink' href=''>
+                The same map with the format above pre-selected: <a id='preFormatLink' href=''>
                     link</a>
                 </p>
                 <table id='listTable' border="0">

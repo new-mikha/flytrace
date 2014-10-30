@@ -824,7 +824,9 @@ function onLookupComplete(result) {
 
         var hasAnythingToProcess =
             result.Res != "NIL" &&
-                (!isIncremental || result.Src == _currentSeed);
+                (!isIncremental ||
+                  result.Src == _currentSeed // if incremental, but Src!=_currentSeed then it's result of some old call and this incremental result is just wrong for the current state
+                );
 
         if (result.IncrSurr) {
             // case when it's isIncremental but Src != _currentSeed is a bit too complicated to check, so avoid testing it.

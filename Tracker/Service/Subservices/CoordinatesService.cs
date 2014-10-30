@@ -124,9 +124,9 @@ namespace FlyTrace.Service.Subservices
       GroupData result =
         BuildGroupData(
           resultTrackers,
-          isDebugFullGroup,
-          isFullGroup,
           groupConfig,
+          isFullGroup,
+          isDebugFullGroup,
           nextThresholdRevision,
           thresholdRevision,
           incrLogicIncludeCount,
@@ -161,9 +161,9 @@ namespace FlyTrace.Service.Subservices
 
     private GroupData BuildGroupData(
       List<CoordResponseItem> resultTrackers,
-      bool isDebugFullGroup,
-      bool isFullGroup,
       GroupConfig groupConfig,
+      bool isFullGroup,
+      bool isDebugFullGroup,
       int nextThresholdRevision,
       int? thresholdRevision,
       int incrLogicIncludeCount,
@@ -612,7 +612,7 @@ namespace FlyTrace.Service.Subservices
             result.IsHidden = true;
           }
         }
-
+        
         if ( snapshot.Error != null )
         {
           result.Error = snapshot.Error.Message;
