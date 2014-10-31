@@ -127,11 +127,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       return result.ToArray( );
     }
 
-    public override LocationRequest CreateTestRequest( string foreignId, string testSource )
-    {
-      return new SpotLocationRequest( foreignId, testSource, FeedKind.Feed_2_0, this.appAuxLogFolder );
-    }
-
     private readonly object statSync = new object( );
 
     private readonly List<FeedKind> attemptsOrder =

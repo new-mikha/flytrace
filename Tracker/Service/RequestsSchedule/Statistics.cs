@@ -188,7 +188,10 @@ namespace FlyTrace.Service.RequestsSchedule
       lock ( this.sync )
       {
         foreach ( string foreignType in ForeignAccessCentral.LocationRequestFactories.Keys )
-          result.Tables.Add( CreateReportTable( foreignType ) );
+        {
+          if ( this.callDurationEvents.HasValues( foreignType ) )
+            result.Tables.Add( CreateReportTable( foreignType ) );
+        }
       }
 
       return result;

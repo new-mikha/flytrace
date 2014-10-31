@@ -29,6 +29,8 @@ using System.Text;
 using System.Windows.Forms;
 
 using System.IO;
+using FlyTrace.LocationLib.ForeignAccess;
+using FlyTrace.LocationLib.ForeignAccess.Test;
 using log4net.Layout;
 using log4net.Config;
 using log4net.Appender;
@@ -181,7 +183,7 @@ namespace LocationRequestTest
 
         string appFolder = Path.GetDirectoryName( Assembly.GetExecutingAssembly( ).CodeBase ).Replace( "file:\\", "" );
 
-        SpotLocationRequest locationRequest;
+        LocationRequest locationRequest;
         if ( this.inetSourceRadioButton.Checked )
         {
           ForeignId foreignId = new ForeignId( ForeignId.SPOT, feedId );
@@ -199,8 +201,8 @@ namespace LocationRequestTest
 
           ForeignId foreignId = new ForeignId( ForeignId.SPOT, "testxml" );
           locationRequest =
-            new SpotLocationRequest(
-              foreignId.Id, sampleXml, attemptsOrder[0], appFolder );
+            new TestLocationRequest(
+              foreignId.Id, sampleXml );
         }
 
         if ( this.resultTextBox.Text.Length > 0 )
@@ -258,7 +260,7 @@ namespace LocationRequestTest
 
           TrackerState trackerRequestResult = locationRequest.EndReadLocation( ar );
 
-          sb.AppendFormat( "\tRefreshTime: {0} ({1})\r\n", trackerRequestResult.RefreshTime, 
+          sb.AppendFormat( "\tRefreshTime: {0} ({1})\r\n", trackerRequestResult.RefreshTime,
             Tools.GetAgeStr( trackerRequestResult.RefreshTime, true ) );
 
           if ( trackerRequestResult.Position == null )
@@ -531,11 +533,11 @@ namespace LocationRequestTest
 
     private void button6_Click( object sender, EventArgs e )
     {
-      ReadOnlyCollection<TimeZoneInfo> timeZones = TimeZoneInfo.GetSystemTimeZones();
+      ReadOnlyCollection<TimeZoneInfo> timeZones = TimeZoneInfo.GetSystemTimeZones( );
 
       string str = string.Join(
         "\r\n",
-        timeZones.Select(tz => tz.Id).ToArray()
+        timeZones.Select( tz => tz.Id ).ToArray( )
         );
 
       // MessageBox.Show(str);

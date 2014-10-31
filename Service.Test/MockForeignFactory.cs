@@ -36,11 +36,6 @@ namespace Service.Test
       throw new NotImplementedException( );
     }
 
-    public override LocationRequest CreateTestRequest( string foreignId, string testSource )
-    {
-      throw new NotImplementedException( );
-    }
-
     public override string GetStat( out bool isOk )
     {
       throw new NotImplementedException( );

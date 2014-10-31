@@ -18,65 +18,35 @@
  * along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web;
 using System.Xml.Linq;
 using System.IO;
-using FlyTrace.LocationLib;
 
-namespace FlyTrace.Service.Test
+namespace FlyTrace.LocationLib
 {
-  internal class TestSource
+  public class TestSource
   {
-    private TestSource( )
+    public static TestSource Singleton { get; private set; }
+
+    private static readonly object Sync = new object( );
+
+    public static void Initialize( string testDataPath )
     {
-    }
-
-    public static TestSource Singleton = new TestSource( );
-
-    public bool IsAutoUpdate = true;
-
-    public volatile int PositionNumber;
-
-    public List<TrackerName> GetTestGroup( out int groupVersion, out bool showUserMessages )
-    {
-      lock ( this.sync )
+      // System.Web.Hosting.HostingEnvironment.MapPath( "~/App_Data/test/" );
+      lock ( Sync )
       {
-        EnsureDataLoaded( );
+        if ( Singleton != null )
+          throw new InvalidOperationException( "TestSource is already initialized." );
 
-        groupVersion = 1;
-
-        List<TrackerName> result =
-          (
-            from name in this.sourceData.Keys
-            select new TrackerName
-            {
-              ForeignId = new ForeignId( ForeignId.SPOT, TestIdPrefix + name ),
-              Name = name
-            }
-          ).ToList( );
-
-        showUserMessages = true;
-
-        return result;
+        Singleton = new TestSource( testDataPath );
       }
     }
 
-    public static readonly string TestIdPrefix = "FlyTraceTestId_";
-
-    private readonly object sync = new object( );
-
-    private SortedList<string, XDocument> sourceData;
-
-    private void EnsureDataLoaded( )
+    private TestSource( string testDataPath )
     {
-      if ( this.sourceData != null )
-        return;
-
-      string dataFolder = System.Web.Hosting.HostingEnvironment.MapPath( "~/App_Data/test/" );
-
-      string[] filesPaths = Directory.GetFiles( dataFolder, "*.xml" );
+      string[] filesPaths = Directory.GetFiles( testDataPath, "*.xml" );
 
       this.sourceData = new SortedList<string, XDocument>( );
 
@@ -99,15 +69,31 @@ namespace FlyTrace.Service.Test
         //  ).ToArray( );
       }
 
-      string emptyFeedFilePath = Path.Combine( dataFolder, "_empty.xml" );
+      string emptyFeedFilePath = Path.Combine( testDataPath, "_empty.xml" );
       this.emptySource = XDocument.Load( emptyFeedFilePath );
     }
 
-    private XDocument emptySource;
+    public bool IsAutoUpdate = true;
+
+    public volatile int PositionNumber;
+
+    public string[] GetTestNames( )
+    {
+      lock ( Sync )
+      {
+        return this.sourceData.Keys.ToArray( );
+      }
+    }
+
+    public static readonly string TestIdPrefix = "FlyTraceTestId_";
+
+    private readonly SortedList<string, XDocument> sourceData;
+
+    private readonly XDocument emptySource;
 
     internal string GetFeed( string trackerForeignId )
     {
-      lock ( this.sync )
+      lock ( Sync )
       {
         int positionNumber = PositionNumber;
 
@@ -147,13 +133,15 @@ namespace FlyTrace.Service.Test
 
         doc.AddFirst( source.Root );
 
+        // ReSharper disable PossibleNullReferenceException
         IEnumerable<XElement> messages =
           doc.Root
             .Element( "feedMessageResponse" )
             .Element( "messages" )
             .Elements( "message" );
+        // ReSharper restore PossibleNullReferenceException
 
-        var messagesArray = messages as XElement[] ?? messages.ToArray();
+        var messagesArray = messages as XElement[] ?? messages.ToArray( );
         int sourceMessagesCount = messagesArray.Count( );
 
         if ( nMaxFromThisSource < sourceMessagesCount )
@@ -176,12 +164,14 @@ namespace FlyTrace.Service.Test
 
       doc.AddFirst( this.emptySource.Root );
 
+      // ReSharper disable PossibleNullReferenceException
       doc
         .Element( "response" )
         .Element( "errors" )
         .Element( "error" )
         .Element( "description" )
         .Value += trackerForeignId;
+      // ReSharper restore PossibleNullReferenceException
 
       return doc.ToString( );
     }

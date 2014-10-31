@@ -32,35 +32,35 @@ namespace FlyTrace.Service.Test
     {
       if ( !IsPostBack )
       {
-        IsAutoUpdateCheckBox.Checked = TestSource.Singleton.IsAutoUpdate;
+        IsAutoUpdateCheckBox.Checked = LocationLib.TestSource.Singleton.IsAutoUpdate;
       }
       else
       {
-        TestSource.Singleton.IsAutoUpdate = IsAutoUpdateCheckBox.Checked;
+        LocationLib.TestSource.Singleton.IsAutoUpdate = IsAutoUpdateCheckBox.Checked;
       }
 
-      PositionNumTextBox.Text = TestSource.Singleton.PositionNumber.ToString( );
+      PositionNumTextBox.Text = LocationLib.TestSource.Singleton.PositionNumber.ToString( );
     }
 
     protected void ResetButton_Click( object sender, EventArgs e )
     {
-      TestSource.Singleton.PositionNumber = 0;
+      LocationLib.TestSource.Singleton.PositionNumber = 0;
       MgrService.ClearCache( );
     }
 
     protected void IncreaseByOneButton_Click( object sender, EventArgs e )
     {
-      TestSource.Singleton.PositionNumber++;
+      LocationLib.TestSource.Singleton.PositionNumber++;
     }
 
     protected void IncreaseByTenButton_Click( object sender, EventArgs e )
     {
-      TestSource.Singleton.PositionNumber += 10;
+      LocationLib.TestSource.Singleton.PositionNumber += 10;
     }
 
     protected void SetPositionButton_Click( object sender, EventArgs e )
     {
-      TestSource.Singleton.PositionNumber = int.Parse( PositionNumTextBox.Text );
+      LocationLib.TestSource.Singleton.PositionNumber = int.Parse( PositionNumTextBox.Text );
     }
   }
 }

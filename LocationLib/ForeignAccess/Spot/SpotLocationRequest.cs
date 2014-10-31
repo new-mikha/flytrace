@@ -110,22 +110,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
-    private readonly string testXml;
-
-    public SpotLocationRequest
-    (
-      string foreignId,
-      string testXml,
-      FeedKind requestType,
-      string appAuxLogFolder
-    )
-      : base( foreignId )
-    {
-      this.testXml = testXml;
-      this.appAuxLogFolder = appAuxLogFolder;
-      this.attemptsOrder = new[] { requestType };
-    }
-
     public override string ForeignType
     {
       get { return ForeignId.SPOT; }
@@ -163,15 +147,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       this.currentFeedKind = this.attemptsOrder[this.iAttempt];
 
-      if ( this.testXml == null )
-      { // Normal working mode
-        this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id );
-        Log.InfoFormat( "Created request for {0}, {1} lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
-      }
-      else
-      { // Debug mode
-        this.currentRequest = new SpotFeedRequest( this.currentFeedKind, "TestXml", testXml, asyncChainedState.Id );
-      }
+      this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id );
+      Log.InfoFormat( "Created request for {0}, {1} lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
+
       this.currentRequest.BeginRequest( SpotFeedRequestCallback, asyncChainedState );
 
       return asyncChainedState.FinalAsyncResult;

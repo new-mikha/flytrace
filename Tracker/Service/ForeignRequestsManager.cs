@@ -236,10 +236,15 @@ namespace FlyTrace.Service
 
     private void StartForeignRequest( TrackerStateHolder trackerStateHolder )
     {
-      LocationRequest locationRequest =
-        ForeignAccessCentral
-          .LocationRequestFactories[trackerStateHolder.ForeignId.Type]
-          .CreateRequest( trackerStateHolder.ForeignId.Id );
+      LocationRequest locationRequest;
+
+      {
+        LocationRequestFactory requestFactory =
+          ForeignAccessCentral.LocationRequestFactories[trackerStateHolder.ForeignId.Type];
+
+        locationRequest =
+          requestFactory.CreateRequest( trackerStateHolder.ForeignId.Id );
+      }
 
       if ( !this.scheduler.HolderRwLock.TryEnterWriteLock( ) )
       {

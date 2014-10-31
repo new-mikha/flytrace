@@ -60,7 +60,7 @@ namespace FlyTrace.Service
 
         this.asyncChainedState = new AsyncChainedState<Dictionary<ForeignId, TrackerState>>( callback, state );
 
-        if( AsyncResultNoResult.DefaultEndWaitTimeout > 0 )
+        if ( AsyncResultNoResult.DefaultEndWaitTimeout > 0 )
         {
           // Allow underlying requests to timeout and then report it to this async operation. 
           // Otherwise it could be this one timing out only because underlying requests is timing out 
@@ -78,19 +78,7 @@ namespace FlyTrace.Service
             LocationRequestFactory requestFactory =
               ForeignAccessCentral.LocationRequestFactories[trackerForeignId.Type];
 
-            LocationRequest locRequest;
-
-            if ( trackerForeignId.Id.StartsWith( Test.TestSource.TestIdPrefix ) )
-            {
-              string testXml = Test.TestSource.Singleton.GetFeed( trackerForeignId.Id );
-              locRequest = requestFactory.CreateTestRequest( trackerForeignId.Id, testXml );
-            }
-            else
-            {
-              locRequest = requestFactory.CreateRequest( trackerForeignId.Id );
-            }
-
-            this.requests.Add( locRequest );
+            this.requests.Add( requestFactory.CreateRequest( trackerForeignId.Id ) );
           }
           catch ( Exception exc )
           {

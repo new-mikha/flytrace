@@ -33,8 +33,12 @@ namespace FlyTrace.LocationLib
       Id = id;
     }
 
-    // ReSharper disable once InconsistentNaming (name is OK)
+    // ReSharper disable InconsistentNaming (consts are ok)
     public const string SPOT = "SPOT";
+
+    public const string TEST = "TEST";
+    // ReSharper restore InconsistentNaming
+
 
     /// <summary>E.g. SPOT, DeLorme, etc. Intentionally not strong typed.</summary>
     public readonly string Type;

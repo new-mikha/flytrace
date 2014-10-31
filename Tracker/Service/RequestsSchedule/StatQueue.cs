@@ -47,6 +47,11 @@ namespace FlyTrace.Service.RequestsSchedule
       this.aggregator = aggregator;
     }
 
+    public bool HasValues(string category)
+    {
+      return this.categoriesQueues.ContainsKey(category);
+    }
+
     /// <summary>
     /// Records an event for the given category.
     /// <para>Thread safety: NOT THREAD SAFE.</para>

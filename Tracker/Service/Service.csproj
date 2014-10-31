@@ -134,7 +134,6 @@
     <Compile Include="Test\TestControl.aspx.designer.cs">
       <DependentUpon>TestControl.aspx</DependentUpon>
     </Compile>
-    <Compile Include="Test\TestSource.cs" />
     <Compile Include="Tools\SystemEventsHiddenForm.cs">
       <SubType>Form</SubType>
     </Compile>

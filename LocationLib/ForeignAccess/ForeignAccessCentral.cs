@@ -19,18 +19,18 @@ namespace FlyTrace.LocationLib.ForeignAccess
     /// <param name="logFolder"></param>
     /// <param name="spotConsequentRequestsErrorCountThresold"></param>
     /// <param name="spotConsequentTimedOutRequestsThresold"></param>
-    public static void InitAux( 
-      string logFolder, 
-      int spotConsequentRequestsErrorCountThresold ,
+    public static void InitAux(
+      string logFolder,
+      int spotConsequentRequestsErrorCountThresold,
       int spotConsequentTimedOutRequestsThresold
     )
     {
       LogFolder = logFolder;
-      
+
       SpotConsequentErrorsCounter =
-        new ConsequentErrorsCounter( 
-          spotConsequentRequestsErrorCountThresold, 
-          spotConsequentTimedOutRequestsThresold 
+        new ConsequentErrorsCounter(
+          spotConsequentRequestsErrorCountThresold,
+          spotConsequentTimedOutRequestsThresold
         );
     }
 
@@ -47,10 +47,15 @@ namespace FlyTrace.LocationLib.ForeignAccess
 
             LocationRequestFactoriesPrivate.Add(
               ForeignId.SPOT,
-              new Spot.SpotLocationRequestFactory( 
-                LogFolder ,
+              new Spot.SpotLocationRequestFactory(
+                LogFolder,
                 SpotConsequentErrorsCounter
               )
+            );
+
+            LocationRequestFactoriesPrivate.Add(
+              ForeignId.TEST,
+              new Test.TestLocationRequestFactory( )
             );
           }
         }

@@ -87,6 +87,8 @@
     <Compile Include="Data\TrackPointData.cs" />
     <Compile Include="Data\Utils.cs" />
     <Compile Include="ForeignAccess\ConsequentErrorsCounter.cs" />
+    <Compile Include="ForeignAccess\Test\TestLocationRequest.cs" />
+    <Compile Include="ForeignAccess\Test\TestLocationRequestFactory.cs" />
     <Compile Include="ForeignId.cs" />
     <Compile Include="ForeignAccess\ForeignAccessCentral.cs" />
     <Compile Include="ForeignAccess\LocationRequest.cs" />
@@ -100,6 +102,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="TestSource.cs" />
     <Compile Include="ThresholdCounter.cs" />
     <Compile Include="TimeService.cs" />
     <Compile Include="Tools.cs" />

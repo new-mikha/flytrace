@@ -55,6 +55,8 @@ namespace FlyTrace.Service
     {
       log4net.Config.XmlConfigurator.Configure( );
 
+      TestSource.Initialize( System.Web.Hosting.HostingEnvironment.MapPath( "~/App_Data/test/" ) );
+
       string appAuxLogFolder;
       if ( Properties.Settings.Default.WriteSuccRequestFlagFile )
       {

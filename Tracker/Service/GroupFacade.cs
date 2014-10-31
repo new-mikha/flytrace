@@ -22,6 +22,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 
 using FlyTrace.LocationLib;
@@ -234,11 +235,28 @@ namespace FlyTrace.Service
       return result;
     }
 
-    private GroupConfig GetTestGroup( )
+    private static GroupConfig GetTestGroup( )
     {
       GroupConfig result;
 
-      result.TrackerNames = Test.TestSource.Singleton.GetTestGroup( out result.VersionInDb, out result.ShowUserMessages );
+      string[] names = TestSource.Singleton.GetTestNames( );
+
+      result.VersionInDb = 1;
+      result.ShowUserMessages = true;
+
+      result.TrackerNames =
+        ( from n in names
+          select new TrackerName( )
+          {
+            Name = n,
+            ForeignId =
+              new ForeignId(
+                ForeignId.TEST,
+                TestSource.TestIdPrefix + n 
+              )
+          }
+        ).ToList( );
+
       result.StartTs = null;
 
       return result;

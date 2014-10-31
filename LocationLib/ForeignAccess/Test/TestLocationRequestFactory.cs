@@ -20,20 +20,41 @@
 
 using System;
 
-namespace FlyTrace.LocationLib.ForeignAccess
+namespace FlyTrace.LocationLib.ForeignAccess.Test
 {
-  public abstract class LocationRequestFactory
+  public class TestLocationRequestFactory : LocationRequestFactory
   {
-    public abstract LocationRequest CreateRequest( string foreignId );
+    public override LocationRequest CreateRequest( string foreignId )
+    {
+      string testXml = TestSource.Singleton.GetFeed( foreignId );
 
-    public abstract string GetStat( out bool isOk );
+      return new TestLocationRequest( foreignId, testXml );
+    }
 
-    public abstract int MaxCallsInPack { get; }
+    public override string GetStat( out bool isOk )
+    {
+      isOk = true;
+      return "test stat";
+    }
 
-    public abstract TimeSpan MinTimeFromPrevStart { get; }
+    public override int MaxCallsInPack
+    {
+      get { return 1; }
+    }
 
-    public abstract TimeSpan MinCallsGap { get; }
+    public override TimeSpan MinTimeFromPrevStart
+    {
+      get { return TimeSpan.Zero; }
+    }
 
-    public abstract TimeSpan SameFeedHitInterval { get; }
+    public override TimeSpan MinCallsGap
+    {
+      get { return TimeSpan.FromSeconds( 5 ); }
+    }
+
+    public override TimeSpan SameFeedHitInterval
+    {
+      get { return TimeSpan.Zero; }
+    }
   }
 }
