@@ -23,12 +23,18 @@
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
+<script type="text/javascript" src="jquery-1.7.1.min.js"></script>
+<script type="text/javascript" src="tools.js"></script>
+<script type="text/javascript">
+    setScrollHiddenInputId('<%= scrollHiddenField.ClientID %>');
+</script>
 <head runat="server">
     <link href="../../App_Themes/Default/site2.css" type="text/css" rel="stylesheet" />
     <title>Current Trackers State - FlyTrace</title>
 </head>
 <body>
     <form id="form1" runat="server">
+    <asp:HiddenField ID="scrollHiddenField" runat="server" />
     <div>
         <div style="display: inline-block" class="GroupTable2">
             <div class="VisualGroupTitle2">
@@ -60,7 +66,8 @@
             </tr>
             <tr>
                 <td>
-                    <asp:Button ID="refreshButton" runat="server" Text="Refresh" OnClick="refreshButton_Click" />
+                    <asp:Button ID="refreshButton" runat="server" Text="Refresh" 
+                        OnClick="refreshButton_Click" AccessKey="R" />
                     <br />
                     SPOT Id Filter:&nbsp;<asp:TextBox runat="server" ID="idFilterTextBox"></asp:TextBox>&nbsp;
                     <asp:Button ID="applyFilterButton" runat="server" Text="Apply Filter" OnClick="applyFilterButton_Click" />
@@ -114,6 +121,11 @@
                                 <asp:TemplateField HeaderText="Access Time" ItemStyle-HorizontalAlign="Center" SortExpression="AccessTime">
                                     <ItemTemplate>
                                         <asp:Label ID="accessTime" runat="server" Text='<%# Bind("AccessTimeStr") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="State Time" ItemStyle-HorizontalAlign="Center" SortExpression="CreateTime">
+                                    <ItemTemplate>
+                                        <asp:Label ID="createTime" runat="server" Text='<%# Bind("CreateTimeStr") %>'></asp:Label>
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:TemplateField HeaderText="Refresh Time" ItemStyle-HorizontalAlign="Center" SortExpression="RefreshTime">

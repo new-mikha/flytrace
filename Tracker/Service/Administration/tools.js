@@ -13,12 +13,12 @@ var _scrollingHiddenInputId;
 // store the current scroll position into the input
 function storeScrollPosition()
 {
+
     $('#' + _scrollingHiddenInputId)[0].value = scrollPosition();
 }
 
 // load the value out of the input and scroll the page
-function loadScrollPosition()
-{
+function loadScrollPosition() {
     var curPosition = $('#' + _scrollingHiddenInputId)[0].value;
     if (curPosition > 0)
     {

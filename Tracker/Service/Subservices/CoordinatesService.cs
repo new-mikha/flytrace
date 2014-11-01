@@ -392,7 +392,7 @@ namespace FlyTrace.Service.Subservices
                 trackerNames[i].Name,
                 trackerNames[i].ForeignId,
                 nullableSnapshot.Position != null ? nullableSnapshot.Position.CurrPoint.ForeignTime.ToString( ) : null,
-                nullableSnapshot.RefreshTime,
+                nullableSnapshot.CreateTime,
                 nullableSnapshot.DataRevision,
                 nullableSnapshot.UpdatedPart,
                 isIncluded

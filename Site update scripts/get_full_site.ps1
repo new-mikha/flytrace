@@ -12,6 +12,7 @@ where {
 } |
 where {
     $_.FullName -notlike "*log4net.xml" -and
+    $_.FullName -notlike "*dev.config" -and
     $_.FullName -notlike "*\obj\*" 
 } |
 where {

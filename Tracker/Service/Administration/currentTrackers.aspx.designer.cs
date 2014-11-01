@@ -22,6 +22,15 @@ namespace FlyTrace.Service.Administration {
         protected global::System.Web.UI.HtmlControls.HtmlForm form1;
         
         /// <summary>
+        /// scrollHiddenField control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.HiddenField scrollHiddenField;
+        
+        /// <summary>
         /// statPanel control.
         /// </summary>
         /// <remarks>

@@ -438,6 +438,7 @@ namespace FlyTrace
 
     protected void Application_Start( object sender, EventArgs e )
     {
+      LogManager.GetLogger(this.GetType()).InfoFormat("Application started.");
       //string log4netConfigFilePath = Path.Combine( HttpRuntime.AppDomainAppPath, "log4net.config" );
       //log4net.Config.XmlConfigurator.ConfigureAndWatch( new FileInfo( log4netConfigFilePath ) );
     }

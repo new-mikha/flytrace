@@ -19,10 +19,6 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Data;
 
@@ -39,7 +35,7 @@ namespace FlyTrace
           this.othersGroupsPanel.Visible = false;
         }
 
-        this.groupsGridView.Sort( "NewestCoordTs", System.Web.UI.WebControls.SortDirection.Descending );
+        this.groupsGridView.Sort( "NewestCoordTs", SortDirection.Descending );
       }
     }
 
@@ -87,7 +83,7 @@ namespace FlyTrace
           updateTsLabel.Text = newestCoordTs.ToString( Resources.Resources.AgeFormat ) + " UTC";
 
           double totalDays;
-          ageLabel.Text = FlyTrace.LocationLib.Tools.GetAgeStr( newestCoordTs, false, out totalDays );
+          ageLabel.Text = LocationLib.Tools.GetAgeStr( newestCoordTs, false, out totalDays );
 
           agePanel.Visible = totalDays >= 0.0 && totalDays < 1.0;
         }

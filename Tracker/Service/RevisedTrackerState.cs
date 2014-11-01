@@ -78,7 +78,7 @@ namespace FlyTrace.Service
     }
 
     // TODO: remove
-    /// <summary>Only <see cref="LocationLib.TrackerState.RefreshTime"/> is changed, everything else 
+    /// <summary>Only <see cref="LocationLib.TrackerState.CreateTime"/> is changed, everything else 
     /// including DataRevision is the same as in <paramref name="oldTrackerState"/>.</summary>
     private RevisedTrackerState
     (

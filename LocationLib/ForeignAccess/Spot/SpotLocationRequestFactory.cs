@@ -151,9 +151,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         {
           DateTime otherFeedSuccTime;
           if ( !this.feedsSuccTimes.TryGetValue( feedKind, out otherFeedSuccTime ) ||
-               otherFeedSuccTime < result.RefreshTime )
+               otherFeedSuccTime < result.CreateTime )
           {
-            feedsSuccTimes[feedKind] = result.RefreshTime;
+            feedsSuccTimes[feedKind] = result.CreateTime;
           }
 
           UpdateAttemptsOrder( feedKind );

@@ -712,7 +712,7 @@ namespace FlyTrace.Service
                 callData.TrackerIds[i].Name,
                 callData.TrackerIds[i].ForeignId,
                 nullableSnapshot.Position != null ? nullableSnapshot.Position.CurrPoint.ForeignTime.ToString( ) : null,
-                nullableSnapshot.RefreshTime,
+                nullableSnapshot.CreateTime,
                 nullableSnapshot.DataRevision,
                 nullableSnapshot.UpdatedPart,
                 isIncluded
@@ -1221,7 +1221,7 @@ namespace FlyTrace.Service
                   lock ( this.snapshotAccessSync )
                   { // See comment in EndGetCoordinated method.
                     trackerStateHolder.Snapshot = mergedResult;
-                    trackerStateHolder.RefreshTime = mergedResult.RefreshTime;
+                    trackerStateHolder.RefreshTime = mergedResult.CreateTime;
                   }
                 }
 
@@ -1308,8 +1308,8 @@ namespace FlyTrace.Service
           IOrderedEnumerable<KeyValuePair<ForeignId, TrackerStateHolder>> expiredTrackers =
             ( from pair in this.trackers
               where pair.Value.Snapshot != null &&
-                pair.Value.Snapshot.RefreshTime < threshold
-              orderby pair.Value.Snapshot.RefreshTime
+                pair.Value.Snapshot.CreateTime < threshold
+              orderby pair.Value.Snapshot.CreateTime
               select pair );
 
           foreach ( KeyValuePair<ForeignId, TrackerStateHolder> pair in expiredTrackers )

@@ -60,6 +60,10 @@ namespace FlyTrace.Service.Administration
 
       public string AccessTimeStr { get; set; }
 
+      public DateTime CreateTime { get; set; }
+
+      public string CreateTimeStr { get; set; }
+
       public DateTime RefreshTime { get; set; }
 
       public string RefreshTimeStr { get; set; }
@@ -81,16 +85,21 @@ namespace FlyTrace.Service.Administration
         this.statPanel.Visible = false;
       else
       {
+        bool isFirst = true;
         foreach ( DataTable table in statistics.Tables )
         {
           Label label = new Label( );
           this.statPanel.Controls.Add( label );
-          label.Text = table.TableName;
+          label.Text = ( isFirst ? "<br />" : "" ) + table.TableName;
+          label.Font.Bold = true;
+          label.Font.Size = FontUnit.Larger;
 
           GridView gridView = new GridView( );
           this.statPanel.Controls.Add( gridView );
           gridView.DataSource = statistics.Tables[0];
           gridView.DataBind( );
+
+          isFirst = false;
         }
       }
     }
@@ -125,6 +134,11 @@ namespace FlyTrace.Service.Administration
         {
           item.Revision = tracker.DataRevision;
 
+          item.CreateTime = tracker.CreateTime;
+          item.CreateTimeStr =
+            item.CreateTime.ToString( "u" ) + "<br />" +
+            LocationLib.Tools.GetAgeStr( item.CreateTime, true );
+
           item.RefreshTime = holder.RefreshTime.GetValueOrDefault( );
           item.RefreshTimeStr =
             item.RefreshTime.ToString( "u" ) + "<br />" +
@@ -137,7 +151,7 @@ namespace FlyTrace.Service.Administration
             {
               TrackPointData currPoint = tracker.Position.CurrPoint;
               item.CurrentTs = currPoint.ForeignTime;
-              item.CurrentCoord = string.Format( "{0}, {1}, {2}", currPoint.Latitude, currPoint.Longitude, LocationLib.Tools.GetAgeStr( currPoint.ForeignTime, true ) );
+              item.CurrentCoord = string.Format( "{0}, {1}<br/>{2}", currPoint.Latitude, currPoint.Longitude, LocationLib.Tools.GetAgeStr( currPoint.ForeignTime, true ) );
               item.CurrentTsStr = string.Format( "{0}", currPoint.ForeignTime.ToString( "u" ) );
             }
 
@@ -146,7 +160,7 @@ namespace FlyTrace.Service.Administration
               if ( prevPoint != null )
               {
                 item.PrevTs = prevPoint.ForeignTime;
-                item.PrevCoord = string.Format( "{0}, {1}, {2}", prevPoint.Latitude, prevPoint.Longitude, LocationLib.Tools.GetAgeStr( prevPoint.ForeignTime, true ) );
+                item.PrevCoord = string.Format( "{0}, {1}<br/>{2}", prevPoint.Latitude, prevPoint.Longitude, LocationLib.Tools.GetAgeStr( prevPoint.ForeignTime, true ) );
                 item.PrevTsStr = string.Format( "{0}", prevPoint.ForeignTime.ToString( "u" ) );
               }
             }
@@ -207,6 +221,14 @@ namespace FlyTrace.Service.Administration
           return list.OrderBy( i => i.AccessTime ); ;
 
         return list.OrderByDescending( i => i.AccessTime );
+      }
+
+      if ( SortExpression == "CreateTime" )
+      {
+        if ( SortDirection == SortDirection.Ascending )
+          return list.OrderBy( i => i.CreateTime ); ;
+
+        return list.OrderByDescending( i => i.CreateTime );
       }
 
       if ( SortExpression == "RefreshTime" )

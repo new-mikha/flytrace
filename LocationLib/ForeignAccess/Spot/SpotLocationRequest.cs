@@ -280,7 +280,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
            result.Error.Type == Data.ErrorType.BadTrackerId )
       {
-        log.InfoFormat(
+        log.DebugFormat(
           "Request for {0}, lrid {1} failed: {2}",
           this.Id,
           asyncChainedState.Id,

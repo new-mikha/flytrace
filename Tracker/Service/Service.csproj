@@ -69,7 +69,9 @@
   <ItemGroup>
     <Content Include="Administration\AdminFacade.asmx" />
     <Content Include="Administration\currentTrackers.aspx" />
+    <Content Include="Administration\jquery-1.7.1.min.js" />
     <Content Include="Administration\LogConfig.ascx" />
+    <Content Include="Administration\tools.js" />
     <Content Include="Administration\serviceLogConfig.aspx" />
     <Content Include="Test\TestControl.aspx" />
     <Content Include="Web.config">

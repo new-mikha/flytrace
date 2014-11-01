@@ -2,7 +2,9 @@
 <log4net>
   <appender name="ServiceNormalRollingFile" type="log4net.Appender.RollingFileAppender">
     <file value="logs\service.log" />
-    <appendToFile value="true" />
+    <appendToFile value="false" />
+    <rollingStyle value="once"/>
+    <datePattern value="yyyy-MM-dd"/>
     <preserveLogFileNameExtension value="true" />
     <maximumFileSize value="200KB" />
     <maxSizeRollBackups value="1000" />
@@ -13,15 +15,31 @@
     </layout>
   </appender>
 
-  <appender name="EmailFlushAppender" type="log4net.Appender.FileAppender">
-    <file value="logs\smtp_flush.log" />
+  <appender name="ErrorsAppender" type="log4net.Appender.FileAppender">
+    <file value="logs\service.errors.log" />
     <appendToFile value="true" />
+
+    <filter type="log4net.Filter.LevelRangeFilter">
+      <levelMin value="ERROR" />
+    </filter>
 
     <layout type="log4net.Layout.PatternLayout">
       <conversionPattern value="%date{dd MMM HH:mm:ss} [%thread] [%level] [%logger] %message%newline" />
     </layout>
   </appender>
 
+  <appender name="IncrErrorsAppender" type="log4net.Appender.FileAppender">
+    <file value="logs\incr.errors.log" />
+    <appendToFile value="true" />
+
+    <filter type="log4net.Filter.LevelRangeFilter">
+      <levelMin value="ERROR" />
+    </filter>
+
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%date{dd MMM HH:mm:ss} [%thread] [%level] [%logger] %message%newline" />
+    </layout>
+  </appender>
 
   <appender name="TimedOutAbortsAppender" type="log4net.Appender.FileAppender">
     <file value="logs\timed_out_aborts.log" />
@@ -49,7 +67,7 @@
     <bufferSize value="512" />
     <lossy value="false" />
     <filter type="log4net.Filter.LevelRangeFilter">
-      <levelMin value="ERROR" />
+      <levelMin value="WARN" />
     </filter>
     <evaluator type="log4net.Core.TimeEvaluator">
       <interval value="1800"/>
@@ -62,18 +80,24 @@
   <root>
     <level value="WARN" />
     <appender-ref ref="ServiceNormalRollingFile" />
+    <appender-ref ref="ErrorsAppender" />
     <appender-ref ref="SmtpAppender" />
   </root>
+
+  <logger name="TDM.LocReq.ErrorHandling">
+    <!-- Set level to INFO so info messages from here always logged. It shouldn't happen too often -->
+    <level value="INFO" />
+  </logger>
+
+  <logger name="IncrErrors">
+    <level value="INFO" />
+    <appender-ref ref="IncrErrorsAppender" />
+  </logger>
 
   <logger name="TimedOutAborts">
     <level value="DEBUG" />
     <appender-ref ref="TimedOutRequestsAppender" />
     <appender-ref ref="TimedOutAbortsAppender" />
-  </logger>
-
-  <logger name="LogFlush">
-    <level value="INFO" />
-    <appender-ref ref="EmailFlushAppender" />
   </logger>
 
   <logger name="TimedOutRequests">

@@ -260,8 +260,8 @@ namespace LocationRequestTest
 
           TrackerState trackerRequestResult = locationRequest.EndReadLocation( ar );
 
-          sb.AppendFormat( "\tRefreshTime: {0} ({1})\r\n", trackerRequestResult.RefreshTime,
-            Tools.GetAgeStr( trackerRequestResult.RefreshTime, true ) );
+          sb.AppendFormat( "\tRefreshTime: {0} ({1})\r\n", trackerRequestResult.CreateTime,
+            Tools.GetAgeStr( trackerRequestResult.CreateTime, true ) );
 
           if ( trackerRequestResult.Position == null )
           {
