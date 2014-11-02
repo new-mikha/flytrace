@@ -143,17 +143,21 @@ namespace FlyTrace.Service
           Log.Error( message );
         }
 
-        if ( CurrentRequest == null &&
-             RequestStartTime.HasValue &&
-             (
-                RefreshTime == null ||
-                RequestStartTime.Value > RefreshTime.Value
-             )
-          )
-        {
-          message = "Request start without actual request for " + ForeignId;
-          Log.Error( message );
-        }
+        // If a tracker has timed out before, its RequestStartTime could be is set 
+        // while it could be greater than RefreshTime, all with CurrentRequest null.
+        // So comment out the check below, this is valid:
+        // 
+        //if ( CurrentRequest == null &&
+        //     RequestStartTime.HasValue &&
+        //     (
+        //        RefreshTime == null ||
+        //        RequestStartTime.Value > RefreshTime.Value
+        //     )
+        //  )
+        //{
+        //  message = "Request start without actual request for " + ForeignId;
+        //  Log.Error( message );
+        //}
 
         return message;
       }
