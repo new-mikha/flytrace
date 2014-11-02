@@ -16,3 +16,5 @@ Tracker/Service/App_Data/test/*.xml
 !Tracker/Service/App_Data/test/_*.xml
 Tracker.sln.DotSettings.user
 Site update scripts/Full.zip
+*.testsettings
+*.vsmdi
