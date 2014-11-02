@@ -34,7 +34,7 @@
 
 
   <appender name="UiFailuresRollingFile" type="log4net.Appender.RollingFileAppender">
-    <file value="logs\failures.log" />
+    <file value="logs\errors.log" />
     <appendToFile value="false" />
     <preserveLogFileNameExtension value="true" />
     <maximumFileSize value="1024KB" />
@@ -42,8 +42,7 @@
     <countDirection value="1" />
 
     <filter type="log4net.Filter.LevelRangeFilter">
-      <levelMin value="FATAL" />
-      <levelMax value="FATAL" />
+      <levelMin value="ERROR" />
     </filter>
 
     <layout type="log4net.Layout.PatternLayout">
