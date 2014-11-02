@@ -53,6 +53,11 @@ namespace FlyTrace.Service
 
     protected void Application_Start( object sender, EventArgs e )
     {
+      LocationLib.Tools.DefaultCulture = DefaultCulture;
+
+      ConfigureThreadCulture();
+
+
       log4net.Config.XmlConfigurator.Configure( );
 
       TestSource.Initialize( System.Web.Hosting.HostingEnvironment.MapPath( "~/App_Data/test/" ) );
@@ -74,8 +79,6 @@ namespace FlyTrace.Service
         Properties.Settings.Default.SpotConsequentRequestsErrorCountThresold,
         Properties.Settings.Default.SpotConsequentTimedOutRequestsThresold
       );
-
-      LocationLib.Tools.DefaultCulture = DefaultCulture;
 
       try
       { // that's a service feauture, so don't stop if it fails

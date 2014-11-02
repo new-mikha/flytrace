@@ -274,9 +274,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         if ( localWebRequest != null )
         {
-          logToUse.InfoFormat( "webRequest.Abort starting for lrid {0}...", callId );
+          logToUse.DebugFormat( "webRequest.Abort starting for lrid {0}...", callId );
           localWebRequest.Abort( );
-          logToUse.InfoFormat( "webRequest.Abort done for lrid {0}", callId );
+          logToUse.DebugFormat( "webRequest.Abort done for lrid {0}", callId );
         }
         this.webRequest = null;
       }
@@ -301,9 +301,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         if ( localResponseStream != null )
         {
-          logToUse.InfoFormat( "responseStream.Close starting for lrid {0}...", callId );
+          logToUse.DebugFormat( "responseStream.Close starting for lrid {0}...", callId );
           localResponseStream.Close( );
-          logToUse.InfoFormat( "responseStream.Close done for lrid {0}", callId );
+          logToUse.DebugFormat( "responseStream.Close done for lrid {0}", callId );
         }
         this.responseStream = null;
       }
@@ -328,9 +328,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         if ( localWebResponse != null )
         {
-          logToUse.InfoFormat( "webResponse.Close starting for lrid {0}...", callId );
+          logToUse.DebugFormat( "webResponse.Close starting for lrid {0}...", callId );
           localWebResponse.Close( );
-          logToUse.InfoFormat( "webResponse.Close done for lrid {0}", callId );
+          logToUse.DebugFormat( "webResponse.Close done for lrid {0}", callId );
         }
         this.webResponse = null;
       }

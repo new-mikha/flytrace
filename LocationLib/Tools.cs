@@ -21,6 +21,7 @@
 using System;
 using System.Globalization;
 using System.Threading;
+using log4net;
 
 namespace FlyTrace.LocationLib
 {
@@ -32,12 +33,19 @@ namespace FlyTrace.LocationLib
     /// This field is initially set to the system culture, but the caller can (and does) set it 
     /// to some English culture.
     /// </summary>
-    public static CultureInfo DefaultCulture;
+    public static CultureInfo DefaultCulture;//=  CultureInfo.GetCultureInfo( "en-AU" );
 
     internal static void SetUpThreadCulture( )
     {
-      Thread.CurrentThread.CurrentCulture = DefaultCulture;
-      Thread.CurrentThread.CurrentUICulture = DefaultCulture;
+      try
+      {
+        Thread.CurrentThread.CurrentCulture = DefaultCulture;
+        Thread.CurrentThread.CurrentUICulture = DefaultCulture;
+      }
+      catch ( Exception exc )
+      {
+        LogManager.GetLogger( typeof( Tools ) ).Error( "Can't set culture to the thread", exc );
+      }
     }
 
     public static string GetAgeStr( DateTime dateTime, bool withSec )
