@@ -214,7 +214,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private void GetResponseCallback( IAsyncResult ar )
     {
-      Tools.SetUpThreadCulture( );
+      Tools.ConfigureThreadCulture( );
 
       var asyncChainedState = ( AsyncChainedState<TrackerState> ) ar.AsyncState;
 
@@ -375,7 +375,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private void ResponseStreamReadCallback( IAsyncResult ar )
     {
-      Tools.SetUpThreadCulture( );
+      Tools.ConfigureThreadCulture( );
 
       try
       {

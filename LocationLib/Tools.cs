@@ -33,9 +33,9 @@ namespace FlyTrace.LocationLib
     /// This field is initially set to the system culture, but the caller can (and does) set it 
     /// to some English culture.
     /// </summary>
-    public static CultureInfo DefaultCulture;//=  CultureInfo.GetCultureInfo( "en-AU" );
+    public static CultureInfo DefaultCulture = CultureInfo.GetCultureInfo( "en-AU" );
 
-    internal static void SetUpThreadCulture( )
+    internal static void ConfigureThreadCulture( )
     {
       try
       {
