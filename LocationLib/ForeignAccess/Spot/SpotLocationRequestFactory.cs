@@ -55,7 +55,12 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     public override LocationRequest CreateRequest( string foreignId )
     {
       LocationRequest locationRequest =
-        new SpotLocationRequest( foreignId, this.appAuxLogFolder, this.consequentErrorsCounter, GetSanitizedAttemptsOrder( ) );
+        new SpotLocationRequest(
+          foreignId,
+          this.appAuxLogFolder,
+          this.consequentErrorsCounter,
+          GetSanitizedAttemptsOrder( )
+        );
 
       locationRequest.ReadLocationFinished += locationRequest_ReadLocationFinished;
 
@@ -109,7 +114,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           //}
           //else
           //{
-            isOk = true;
+          isOk = true;
           //}
         }
       }
@@ -271,6 +276,35 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     public override TimeSpan SameFeedHitInterval
     {
       get { return TimeSpan.FromSeconds( Settings.Default.SPOT_SameFeedHitInterval_Seconds ); }
+    }
+
+    public override void RequestFinished( LocationRequest locReq, bool isTimedOut )
+    {
+      if ( this.consequentErrorsCounter == null )
+        return;
+
+      if ( !isTimedOut )
+      {
+        this.consequentErrorsCounter.TimedOutRequestsCounter.Reset( );
+      }
+      else
+      {
+        bool shouldReportProblem;
+        int consequentErrorsCount =
+          this.consequentErrorsCounter.RequestsErrorsCounter.Increment( out shouldReportProblem );
+
+        string message = 
+          string.Format(
+            "Location request hasn't finished in time for lrid {0}, tracker id {1}. That's a consequent time out #{2}",
+            locReq.Lrid,
+            locReq.Id,
+            consequentErrorsCount );
+
+        if ( shouldReportProblem )
+          LocationRequest.ErrorHandlingLog.Error( message );
+        else
+          LocationRequest.ErrorHandlingLog.Info( message );
+      }
     }
   }
 }

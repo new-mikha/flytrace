@@ -56,5 +56,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Test
     {
       get { return TimeSpan.Zero; }
     }
+
+    public override void RequestFinished( LocationRequest locReq, bool isTimedOut )
+    {
+      if ( isTimedOut )
+        throw new ApplicationException( "Test requests should not time out" );
+    }
   }
 }

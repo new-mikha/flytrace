@@ -697,8 +697,6 @@ namespace Service.Test
       }
     }
 
-    private int revisionToUse = 0;
-
     private class FakeLocationRequest : LocationRequest
     {
       public FakeLocationRequest( string id )

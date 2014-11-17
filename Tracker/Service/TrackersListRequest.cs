@@ -122,7 +122,7 @@ namespace FlyTrace.Service
       }
       catch ( Exception exc )
       {
-        LocationRequest.TimedOutRequestsLog.Error( "Can't end getting trackers locations", exc );
+        LocationRequest.ErrorHandlingLog.Error( "Can't end getting trackers locations", exc );
 
         bool hasAbortedRequests = false;
 
@@ -138,9 +138,9 @@ namespace FlyTrace.Service
             }
             else
             {
-              LocationRequest.TimedOutRequestsLog.ErrorFormat( "Location request hasn't finished for lrid {0}, tracker id {1}", locReq.Lrid, locReq.Id );
+              LocationRequest.ErrorHandlingLog.ErrorFormat( "Location request hasn't finished for lrid {0}, tracker id {1}", locReq.Lrid, locReq.Id );
               ThreadPool.QueueUserWorkItem( AsyncAbortRequest, locReq );
-              LocationRequest.TimedOutRequestsLog.ErrorFormat( "Location request with lrid {0} queued for abort.", locReq.Lrid );
+              LocationRequest.ErrorHandlingLog.ErrorFormat( "Location request with lrid {0} queued for abort.", locReq.Lrid );
 
               hasAbortedRequests = true;
 
@@ -238,11 +238,11 @@ namespace FlyTrace.Service
         }
 
         locReq.SafelyAbortRequest( abortStat );
-        LocationRequest.TimedOutRequestsLog.InfoFormat( "AsyncAbortRequest finished for lrid {0}", lrid );
+        LocationRequest.ErrorHandlingLog.InfoFormat( "AsyncAbortRequest finished for lrid {0}", lrid );
       }
       catch ( Exception exc )
       {
-        LocationRequest.TimedOutRequestsLog.ErrorFormat( "AsyncAbortRequest error for lrid {0}: {1}", lrid, exc );
+        LocationRequest.ErrorHandlingLog.ErrorFormat( "AsyncAbortRequest error for lrid {0}: {1}", lrid, exc );
       }
       finally
       {

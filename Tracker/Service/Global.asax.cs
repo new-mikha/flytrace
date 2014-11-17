@@ -54,9 +54,7 @@ namespace FlyTrace.Service
     protected void Application_Start( object sender, EventArgs e )
     {
       LocationLib.Tools.DefaultCulture = DefaultCulture;
-
       ConfigureThreadCulture();
-
 
       log4net.Config.XmlConfigurator.Configure( );
 

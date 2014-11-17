@@ -173,7 +173,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         if ( this.currentRequest != null )
         {
-          this.currentRequest.SafelyCloseRequest( abortStat, TimedOutRequestsLog );
+          this.currentRequest.SafelyCloseRequest( abortStat, ErrorHandlingLog );
         }
       }
       catch ( Exception exc )
@@ -278,11 +278,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private void LogRequestError( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
     {
-      ILog log = LogManager.GetLogger( "TDM.LocReq.ErrorHandling" );
       if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
            result.Error.Type == Data.ErrorType.BadTrackerId )
       {
-        log.DebugFormat(
+        ErrorHandlingLog.DebugFormat(
           "Request for {0}, lrid {1} failed: {2}",
           this.Id,
           asyncChainedState.Id,
@@ -310,9 +309,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           );
 
         if ( shouldReportProblem )
-          log.Error( message );
+          ErrorHandlingLog.Error( message );
         else
-          log.Info( message );
+          ErrorHandlingLog.Info( message );
       }
     }
 

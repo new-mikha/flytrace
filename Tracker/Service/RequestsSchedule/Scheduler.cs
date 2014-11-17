@@ -138,7 +138,7 @@ namespace FlyTrace.Service.RequestsSchedule
     {
       bool isTimedOutOrBoringDetected;
 
-      // key is foreign type (Spot, DeLorme etc), value is the tracker that needs an update most urgently:
+      // key is a foreign type (Spot, DeLorme etc), value is the tracker that needs an update most urgently:
       IDictionary<string, ForeignStat> trackerStat =
         GetForeignStats( out isTimedOutOrBoringDetected );
 
@@ -289,12 +289,19 @@ namespace FlyTrace.Service.RequestsSchedule
         // Can do it out of lock because Trackers don't reference those LocationRequests anymore
         foreach ( LocationRequest locReq in timedOut )
         {
-          LocationRequest.TimedOutRequestsLog.ErrorFormat(
-            "Location request hasn't finished in time for lrid {0}, tracker id {1}",
-            locReq.Lrid,
-            locReq.Id );
+          try
+          {
+            LocationRequestFactory factory =
+              ForeignAccessCentral.LocationRequestFactories[locReq.ForeignType];
 
-          ThreadPool.QueueUserWorkItem( AbortRequest, locReq );
+            factory.RequestFinished( locReq, true );
+
+            ThreadPool.QueueUserWorkItem( AbortRequest, locReq );
+          }
+          catch ( Exception exc )
+          {
+            Log.ErrorFormat( "Error when cancelling timed out request {0} / {1}: {2}", locReq.Lrid, locReq.ForeignId, exc.ToString( ) );
+          }
         }
       }
       catch ( Exception exc )
@@ -314,7 +321,7 @@ namespace FlyTrace.Service.RequestsSchedule
       {
         LocationRequest locReq = ( LocationRequest ) state;
         lrid = locReq.Lrid;
-        LocationRequest.TimedOutRequestsLog.InfoFormat( "Starting AbortRequest for lrid {0}...", lrid );
+        LocationRequest.ErrorHandlingLog.InfoFormat( "Starting AbortRequest for lrid {0}...", lrid );
 
         Statistics.AddTimedOutEvent( locReq.ForeignId.Type );
 
@@ -328,12 +335,12 @@ namespace FlyTrace.Service.RequestsSchedule
         }
 
         locReq.SafelyAbortRequest( abortStat );
-        LocationRequest.TimedOutRequestsLog.InfoFormat( "AbortRequest finished for lrid {0}", lrid );
+        LocationRequest.ErrorHandlingLog.InfoFormat( "AbortRequest finished for lrid {0}", lrid );
 
       }
       catch ( Exception exc )
       {
-        LocationRequest.TimedOutRequestsLog.ErrorFormat( "AbortRequest error for lrid {0}: {1}", lrid, exc );
+        LocationRequest.ErrorHandlingLog.ErrorFormat( "AbortRequest error for lrid {0}: {1}", lrid, exc );
       }
       finally
       {

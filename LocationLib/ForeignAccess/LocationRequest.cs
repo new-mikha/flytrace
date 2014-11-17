@@ -26,7 +26,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
 {
   public abstract class LocationRequest
   {
-    public static ILog TimedOutRequestsLog = LogManager.GetLogger( "TimedOutRequests" );
+    public static ILog ErrorHandlingLog = LogManager.GetLogger( "TDM.LocReq.ErrorHandling" );
 
     public readonly DateTime StartTs = TimeService.Now;
 

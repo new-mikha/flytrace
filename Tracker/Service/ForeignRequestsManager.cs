@@ -311,6 +311,13 @@ namespace FlyTrace.Service
         lrid = locationRequest.Lrid;
         foreignId = trackerStateHolder.ForeignId;
 
+        {
+          LocationRequestFactory factory =
+            ForeignAccessCentral.LocationRequestFactories[foreignId.Type];
+
+          factory.RequestFinished( locationRequest, false );
+        }
+
         // Need to end it even if trackerStateHolder.CurrentRequest != locationRequest (see below)
         TrackerState trackerState = locationRequest.EndReadLocation( ar );
 

@@ -35,5 +35,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
     public abstract TimeSpan MinCallsGap { get; }
 
     public abstract TimeSpan SameFeedHitInterval { get; }
+
+    public abstract void RequestFinished( LocationRequest locReq, bool isTimedOut );
   }
 }

@@ -67,8 +67,12 @@ namespace Service.Test
           return TimeSpan.FromSeconds( SameFeedHitIntervalSeconds.Value );
 
         throw new InvalidOperationException( "Neither parameter for SameFeedHitInterval has set." );
-
       }
+    }
+
+    public override void RequestFinished( LocationRequest locReq, bool isTimedOut )
+    {
+      throw new NotImplementedException( );
     }
   }
 }

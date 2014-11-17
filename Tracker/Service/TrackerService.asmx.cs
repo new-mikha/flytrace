@@ -40,8 +40,6 @@ namespace FlyTrace.Service
   [System.Web.Script.Services.ScriptService]
   public class TrackerService : System.Web.Services.WebService
   {
-    private bool isNew = true;
-
     private static readonly ILog IncrErrorsLog = LogManager.GetLogger( "IncrErrors" );
     private static readonly ILog Log = LogManager.GetLogger( "TDM" );
 
