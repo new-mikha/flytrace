@@ -291,7 +291,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       {
         bool shouldReportProblem;
         int consequentErrorsCount =
-          this.consequentErrorsCounter.RequestsErrorsCounter.Increment( out shouldReportProblem );
+          this.consequentErrorsCounter.TimedOutRequestsCounter.Increment( out shouldReportProblem );
 
         string message = 
           string.Format(
