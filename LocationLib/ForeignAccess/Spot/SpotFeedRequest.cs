@@ -253,8 +253,12 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
+    private bool isClosed;
+
     public void SafelyCloseRequest( AbortStat abortStat = null, ILog specialLog = null )
     {
+      this.isClosed = true;
+
       ILog logToUse = specialLog ?? Log;
 
       // don't want to use locks anywhere in this class to minimize a risk of deadlock
@@ -262,8 +266,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       if ( abortStat != null )
       {
         abortStat.Stage = 1;
-        Thread.MemoryBarrier( );  // to make sure it's not moved lower than next.instruction
       }
+
+      Thread.MemoryBarrier( );  // to make sure that writes above not moved lower than this.
 
       try
       {
@@ -421,20 +426,33 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         }
         catch ( Exception exc )
         {
-          Log.ErrorFormat(
-            "ResponseStreamReadCallback for {0}, {1}, lrid {2} processing: {3}",
-            this.trackerForeignId,
-            this.FeedKind,
-            this.callId,
-            exc.Message
-          );
+          string msg =
+            string.Format(
+              "ResponseStreamReadCallback for {0}, {1}, lrid {2} processing: {3}",
+              this.trackerForeignId,
+              this.FeedKind,
+              this.callId,
+              exc.Message
+            );
+
+          Thread.MemoryBarrier( ); // to make sure that the read of isClosed is not hoisted from the 'if' below
+
+          if ( this.isClosed &&
+               exc is OperationCanceledException )
+          {
+            LocationRequest.ErrorHandlingLog.Info( msg );
+          }
+          else
+          {
+            LocationRequest.ErrorHandlingLog.Error( msg );
+          }
 
           SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind.ToString( ) ) );
         }
       }
       catch ( Exception outerExc )
       {
-        Log.Error( "Something really bad happened", outerExc );
+        LocationRequest.ErrorHandlingLog.Error( "Something really bad happened", outerExc );
       }
     }
 
