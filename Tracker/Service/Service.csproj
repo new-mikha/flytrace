@@ -165,6 +165,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="ClassDiagram.cd" />
+    <Content Include="local.config" />
     <None Include="service.log4net.config.default" />
     <None Include="service.log4net.config">
       <SubType>Designer</SubType>

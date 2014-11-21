@@ -90,6 +90,7 @@
     <Content Include="help\marker.png" />
     <Content Include="help\usermessageshelp.aspx" />
     <Content Include="help\userMsgHelp.png" />
+    <Content Include="local.config" />
     <Content Include="privacy-policy.htm" />
     <Content Include="profile.aspx" />
     <Content Include="restorePassword.aspx" />

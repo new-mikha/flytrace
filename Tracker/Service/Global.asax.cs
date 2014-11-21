@@ -23,8 +23,10 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Web;
-using FlyTrace.LocationLib;
+
 using log4net;
+
+using FlyTrace.LocationLib;
 
 namespace FlyTrace.Service
 {
@@ -53,8 +55,10 @@ namespace FlyTrace.Service
 
     protected void Application_Start( object sender, EventArgs e )
     {
+      LocationLib.Tools.ConfigureLog4Net( HttpRuntime.AppDomainAppPath );
+
       LocationLib.Tools.DefaultCulture = DefaultCulture;
-      ConfigureThreadCulture();
+      ConfigureThreadCulture( );
 
       log4net.Config.XmlConfigurator.Configure( );
 
@@ -147,7 +151,7 @@ namespace FlyTrace.Service
 
       try
       {
-        MgrService.ClearCache();
+        MgrService.ClearCache( );
         timeLog.InfoFormat( "Cache has been cleared after system time adjusted" );
       }
       catch ( Exception exc )
@@ -196,8 +200,8 @@ namespace FlyTrace.Service
 
     protected void Application_End( object sender, EventArgs e )
     {
-      MgrService.Stop();
-      
+      MgrService.Stop( );
+
 
       try
       {

@@ -20,7 +20,7 @@
 -->
 <log4net>
   <appender name="UiNormalRollingFile" type="log4net.Appender.RollingFileAppender">
-    <file value="logs\normal.log" />
+    <file value="${log_folder}\normal.log" />
     <appendToFile value="false" />
     <preserveLogFileNameExtension value="true" />
     <maximumFileSize value="1024KB" />
@@ -34,7 +34,7 @@
 
 
   <appender name="UiFailuresRollingFile" type="log4net.Appender.RollingFileAppender">
-    <file value="logs\errors.log" />
+    <file value="${log_folder}\errors.log" />
     <appendToFile value="false" />
     <preserveLogFileNameExtension value="true" />
     <maximumFileSize value="1024KB" />

@@ -55,7 +55,7 @@ namespace FlyTrace.Service.Administration
       }
       else if ( sender == this.restoreDefaultConfigButton )
       {
-        string defFileSettingName = "log4net.Config.Default";
+        string defFileSettingName = "DefaultLogConfig";
         string defFileRelPath = ConfigurationManager.AppSettings[defFileSettingName];
         if ( string.IsNullOrEmpty( defFileRelPath ) )
         {

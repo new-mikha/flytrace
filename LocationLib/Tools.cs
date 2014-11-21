@@ -19,9 +19,13 @@
  *****************************************************************************/
 
 using System;
+using System.Configuration;
 using System.Globalization;
 using System.Threading;
+
 using log4net;
+using System.IO;
+
 
 namespace FlyTrace.LocationLib
 {
@@ -109,6 +113,63 @@ namespace FlyTrace.LocationLib
       result += " " + addOn;
 
       return result;
+    }
+
+    public static void ConfigureLog4Net( string appRootFolder )
+    {
+      string errorToLog = null;
+
+      try
+      {
+        string prevCurrDir = Directory.GetCurrentDirectory( );
+        Directory.SetCurrentDirectory( appRootFolder );
+
+        try
+        {
+          try
+          {
+            const string logFolderSettingName = "log_folder";
+            string logFolderRelativePath = ConfigurationManager.AppSettings[logFolderSettingName];
+            string fullLogRootPath = Path.GetFullPath( logFolderRelativePath );
+
+            if ( !fullLogRootPath.EndsWith( @"\" ) &&
+                 !fullLogRootPath.EndsWith( @"/" ) )
+            {
+              fullLogRootPath = fullLogRootPath + @"\";
+            }
+
+            Environment.SetEnvironmentVariable( logFolderSettingName, fullLogRootPath );
+          }
+          catch ( Exception exc )
+          {
+            errorToLog = "Can't set up log root folder: " + exc.Message;
+          }
+
+          {
+            string configFilePath = ConfigurationManager.AppSettings["LogConfig"];
+            if ( string.IsNullOrEmpty( configFilePath ) )
+            { // try to fall back to normal web.config:
+              log4net.Config.XmlConfigurator.Configure( );
+            }
+            else
+            {
+              log4net.Config.XmlConfigurator.ConfigureAndWatch( new FileInfo( configFilePath ) );
+            }
+          }
+        }
+        finally
+        {
+          Directory.SetCurrentDirectory( prevCurrDir );
+        }
+      }
+      catch ( Exception exc )
+      {
+        log4net.Config.XmlConfigurator.Configure( );
+        LogManager.GetLogger( typeof( Tools ) ).Error( exc );
+      }
+
+      if ( errorToLog != null )
+        LogManager.GetLogger( typeof( Tools ) ).Error( errorToLog );
     }
   }
 }

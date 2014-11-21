@@ -440,6 +440,8 @@ namespace FlyTrace
 
     protected void Application_Start( object sender, EventArgs e )
     {
+      LocationLib.Tools.ConfigureLog4Net( HttpRuntime.AppDomainAppPath );
+
       LocationLib.Tools.DefaultCulture = DefaultCulture;
 
       LogManager.GetLogger(this.GetType()).InfoFormat("Application started.");
