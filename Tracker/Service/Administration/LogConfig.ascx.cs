@@ -47,7 +47,7 @@ namespace FlyTrace.Service.Administration
       string configFilePath =
         Path.Combine(
           HttpRuntime.AppDomainAppPath,
-          ConfigurationManager.AppSettings["log4net.Config"] );
+          ConfigurationManager.AppSettings["LogConfig"] );
 
       if ( sender == this.updateConfigButton )
       {
@@ -88,14 +88,11 @@ namespace FlyTrace.Service.Administration
       string configFilePath =
         Path.Combine(
           HttpRuntime.AppDomainAppPath,
-          ConfigurationManager.AppSettings["log4net.Config"] );
+          ConfigurationManager.AppSettings["LogConfig"] );
 
-      bool shouldWatch;
-      string shouldWatchConfigString = ConfigurationManager.AppSettings["log4net.Config.Watch"];
-      bool.TryParse( shouldWatchConfigString, out shouldWatch );
-
+      bool shouldWatch = true;
       this.configFileNameLabel.Text = configFilePath;
-      this.shouldWatchLabel.Text = string.Format( "'{0}' ({1})", shouldWatchConfigString, shouldWatch );
+      this.shouldWatchLabel.Text = string.Format( "'{0}' ({1})", shouldWatch, shouldWatch );
 
       try
       {
