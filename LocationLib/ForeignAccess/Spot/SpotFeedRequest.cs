@@ -795,6 +795,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         string noDataMsg;
         string wrongTrackerIdMsg;
         string feedNotActiveMsg;
+        string passwordRequiredMsg = "Feed Password required";
 
         if ( this.FeedKind == FeedKind.Feed_1_0 )
         {
@@ -825,7 +826,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           // do nothing, the well-formed XML without data will be processed as ResponseHadNoData later.
         }
         else if ( errorDescr.Contains( wrongTrackerIdMsg ) ||
-                  errorDescr.Contains( feedNotActiveMsg ) )
+                  errorDescr.Contains( feedNotActiveMsg ) ||
+                  errorDescr.Contains( passwordRequiredMsg ) )
         {
           isBadTrackerId = true;
         }
