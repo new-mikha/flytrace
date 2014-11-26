@@ -823,19 +823,21 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         if ( errorDescr.Contains( noDataMsg ) )
         {
+          Log.InfoFormat( "No data message for {0}: {1}", this.trackerForeignId, errorDescr );
           // do nothing, the well-formed XML without data will be processed as ResponseHadNoData later.
         }
         else if ( errorDescr.Contains( wrongTrackerIdMsg ) ||
                   errorDescr.Contains( feedNotActiveMsg ) ||
                   errorDescr.Contains( passwordRequiredMsg ) )
         {
+          Log.InfoFormat( "Consider {0} as a \"bad tracker\": {1}", this.trackerForeignId, errorDescr );
           isBadTrackerId = true;
         }
         else
         {
           if ( this.FeedKind == FeedKind.Feed_1_0 )
           { // if a deleted page id is passed to Feed_1_0, it returns a bit of a crap, but it seems it contains this:
-            isBadTrackerId = errorDescr.Contains( "Guest Link  Does not exist in database" );
+            isBadTrackerId = errorDescr.Contains( "Does not exist in database" );
           }
 
           if ( !isBadTrackerId )
@@ -844,7 +846,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
             // Don't really know what to do in this case, assume that the tracker id is OK and it's just NO DATA.
             // But log it as error
-            Log.FatalFormat( "Unknown error message for call to {0}, {1}, lrid {2}: {3}",
+            Log.ErrorFormat( "Unknown error message for call to {0}, {1}, lrid {2}: {3}",
               this.trackerForeignId,
               this.FeedKind,
               this.callId,
