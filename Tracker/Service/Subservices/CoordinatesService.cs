@@ -30,14 +30,7 @@ using FlyTrace.Service.Properties;
 
 namespace FlyTrace.Service.Subservices
 {
-  public interface ICoordinatesService
-  {
-    IAsyncResult BeginGetCoordinates( int group, string clientSeed, AsyncCallback callback, object state );
-
-    GroupData EndGetCoordinates( IAsyncResult asyncResult );
-  }
-
-  public class CoordinatesService : TrackerServiceBase<GroupData>, ICoordinatesService
+  public class CoordinatesService : TrackerServiceBase<GroupData>
   {
     private readonly string clientSeed;
 
@@ -47,7 +40,7 @@ namespace FlyTrace.Service.Subservices
       this.clientSeed = clientSeed;
     }
 
-    public IAsyncResult BeginGetCoordinates( int unused1, string unused2, AsyncCallback callback, object state )
+    public IAsyncResult BeginGetCoordinates( AsyncCallback callback, object state )
     {
       Global.ConfigureThreadCulture( );
 

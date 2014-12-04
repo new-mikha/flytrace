@@ -373,11 +373,14 @@ namespace LocationRequestTest
       }
     }
 
+    RevisionPersister revisionPersister = new FlyTrace.Service.RevisionPersister( );
+
     private void InitRevGen( )
     {
+      
       string initWarnings;
-      bool result = RevisionGenerator.Init( revgenFilePathTextBox.Text, out initWarnings );
-      AddResultTextLine( "Init: " + result.ToString( ) + ", revision: " + RevisionGenerator.Revision.ToString( ) );
+      bool result = this.revisionPersister.Init( revgenFilePathTextBox.Text, out initWarnings );
+      AddResultTextLine( "Init: " + result.ToString( ) + ", revision: " + this.revisionPersister.ThreadUnsafeRevision.ToString( ) );
       AddResultTextLine( string.Format( "Init warnings: {0}", initWarnings ) );
     }
 
@@ -385,7 +388,7 @@ namespace LocationRequestTest
     {
       try
       {
-        RevisionGenerator.Shutdown( );
+        this.revisionPersister.Shutdown( );
         AddResultTextLine( "Shutdown done" );
       }
       catch ( Exception exc )
@@ -399,12 +402,12 @@ namespace LocationRequestTest
       try
       {
         AddResultText( "Start revision: " );
-        AddResultText( RevisionGenerator.Revision.ToString( ) );
+        AddResultText( this.revisionPersister.ThreadUnsafeRevision.ToString( ) );
         AddResultText( ", incrementing by 1..." );
 
-        RevisionGenerator.IncrementRevision( );
+        this.revisionPersister.ThreadUnsafeRevision++;
         AddResultText( "Done, new revision: " );
-        AddResultTextLine( RevisionGenerator.Revision.ToString( ) );
+        AddResultTextLine( this.revisionPersister.ThreadUnsafeRevision.ToString( ) );
       }
       catch ( Exception exc )
       {
@@ -416,7 +419,7 @@ namespace LocationRequestTest
     {
       try
       {
-        AddResultTextLine( "Current revision: " + RevisionGenerator.Revision.ToString( ) );
+        AddResultTextLine( "Current revision: " + this.revisionPersister.ThreadUnsafeRevision.ToString( ) );
       }
       catch ( Exception exc )
       {
@@ -429,12 +432,12 @@ namespace LocationRequestTest
       try
       {
         AddResultText( "Start revision: " );
-        AddResultText( RevisionGenerator.Revision.ToString( ) );
+        AddResultText( this.revisionPersister.ThreadUnsafeRevision.ToString( ) );
         AddResultText( ", incrementing by 10..." );
         for ( int i = 0; i < 10; i++ )
-          RevisionGenerator.IncrementRevision( );
+          this.revisionPersister.ThreadUnsafeRevision++;
         AddResultText( "Done, new revision: " );
-        AddResultTextLine( RevisionGenerator.Revision.ToString( ) );
+        AddResultTextLine( this.revisionPersister.ThreadUnsafeRevision.ToString( ) );
       }
       catch ( Exception exc )
       {
@@ -447,12 +450,12 @@ namespace LocationRequestTest
       try
       {
         AddResultText( "Start revision: " );
-        AddResultText( RevisionGenerator.Revision.ToString( ) );
+        AddResultText( this.revisionPersister.ThreadUnsafeRevision.ToString( ) );
         AddResultText( ", incrementing by 100..." );
         for ( int i = 0; i < 100; i++ )
-          RevisionGenerator.IncrementRevision( );
+          this.revisionPersister.ThreadUnsafeRevision++;
         AddResultText( "Done, new revision: " );
-        AddResultTextLine( RevisionGenerator.Revision.ToString( ) );
+        AddResultTextLine( this.revisionPersister.ThreadUnsafeRevision.ToString( ) );
       }
       catch ( Exception exc )
       {
@@ -465,7 +468,7 @@ namespace LocationRequestTest
       try
       {
         AddResultTextLine( "ShutownAndIncrement..." );
-        if ( !RevisionGenerator.IsActive )
+        if ( !this.revisionPersister.IsActive )
           InitRevGen( );
 
         ManualResetEvent stEvent = new ManualResetEvent( false );
@@ -483,7 +486,7 @@ namespace LocationRequestTest
                 stEvent.WaitOne( );
                 try
                 {
-                  RevisionGenerator.Shutdown( );
+                  this.revisionPersister.Shutdown( );
                 }
                 catch ( Exception exc1 )
                 {
@@ -504,7 +507,7 @@ namespace LocationRequestTest
 
                 try
                 {
-                  resultRev = RevisionGenerator.IncrementRevision( );
+                  resultRev = ++this.revisionPersister.ThreadUnsafeRevision;
                 }
                 catch ( Exception exc1 )
                 {

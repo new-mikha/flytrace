@@ -44,23 +44,37 @@ namespace FlyTrace.Service
     private static readonly ILog Log = LogManager.GetLogger( "TDM" );
 
     [WebMethod]
-    public GroupData GetCoordinates( int group, string srcSeed, DateTime scrTime /* this parameter to preven client-side response caching */ )
+    public GroupData GetCoordinates
+    (
+      int group,
+      string srcSeed,
+      DateTime scrTime // this parameter to preven client-side response caching
+    )
     {
-      Subservices.ICoordinatesService trackerService =
-        MgrService.GetCoordinatesService( group, srcSeed );
+      var coordinatesService = new Subservices.CoordinatesService( group, srcSeed );
 
-      // TODO: remove group, srcSeed params (already in constructor)
-      IAsyncResult ar = trackerService.BeginGetCoordinates( group, srcSeed, null, null );
-      ar.AsyncWaitHandle.WaitOne( );
+      IAsyncResult ar = coordinatesService.BeginGetCoordinates( null, null );
 
-      return trackerService.EndGetCoordinates( ar );
+      bool handleSignaled;
+      if ( AsyncResultNoResult.DefaultEndWaitTimeout > 0 )
+        handleSignaled = ar.AsyncWaitHandle.WaitOne( AsyncResultNoResult.DefaultEndWaitTimeout );
+      else
+        handleSignaled = ar.AsyncWaitHandle.WaitOne( );
+
+      if ( !handleSignaled )
+      {
+        Log.FatalFormat( "GetCoordinates call has timed out for call id {0}.", coordinatesService.CallId );
+        return default( GroupData );
+      }
+
+      return coordinatesService.EndGetCoordinates( ar );
     }
 
     [WebMethod]
     public List<TrackResponseItem> GetTracks( int group, TrackRequest trackRequest, DateTime scriptCurrTimet )
     {
-      Subservices.ITracksService trackerService =
-        MgrService.GetTracksService( group, trackRequest );
+      var trackerService =
+        new Subservices.TracksService( group, trackRequest );
 
       long callId;
       IAsyncResult ar = trackerService.BeginGetTracks( group, trackRequest.Items, null, null, out callId );

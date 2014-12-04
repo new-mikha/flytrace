@@ -84,7 +84,9 @@ namespace FlyTrace.Service.Administration
       }
 
       result.Messages =
-        MgrService.AdminAlerts
+        ForeignRequestsManager
+        .Singleton
+        .AdminAlerts
         .GetMessages( )
         .Select(
           kvp =>
@@ -92,11 +94,11 @@ namespace FlyTrace.Service.Administration
         )
         .ToArray( );
 
-      RevisionGenerator.TryGetCurrentRevision( out result.CurrentRevision );
+      result.CurrentRevision = 0; // TODO: replace with new rev.persister result
 
-      result.CoordAccessCount = MgrService.AdminAlerts.CoordAccessCount;
+      result.CoordAccessCount = ForeignRequestsManager.Singleton.AdminAlerts.CoordAccessCount;
 
-      result.StartTime = MgrService.AdminAlerts.StartTime;
+      result.StartTime = ForeignRequestsManager.Singleton.AdminAlerts.StartTime;
 
       return result;
     }

@@ -28,22 +28,7 @@ using FlyTrace.LocationLib.Data;
 
 namespace FlyTrace.Service.Subservices
 {
-  // TODO: remove
-  public interface ITracksService
-  {
-    IAsyncResult BeginGetTracks
-    (
-      int group,
-      TrackRequestItem[] trackRequests,
-      AsyncCallback callback,
-      object asyncState,
-      out long callId
-    );
-
-    List<TrackResponseItem> EndGetTracks( IAsyncResult asyncResult );
-  }
-
-  public class TracksService : TrackerServiceBase<List<TrackResponseItem>>, ITracksService
+  public class TracksService : TrackerServiceBase<List<TrackResponseItem>>
   {
     private readonly TrackRequestItem[] trackRequests;
 

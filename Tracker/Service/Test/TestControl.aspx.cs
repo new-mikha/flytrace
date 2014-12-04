@@ -45,7 +45,7 @@ namespace FlyTrace.Service.Test
     protected void ResetButton_Click( object sender, EventArgs e )
     {
       LocationLib.TestSource.Singleton.PositionNumber = 0;
-      MgrService.ClearCache( );
+      ForeignRequestsManager.Singleton.ClearTrackers( );
     }
 
     protected void IncreaseByOneButton_Click( object sender, EventArgs e )

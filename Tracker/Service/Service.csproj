@@ -79,6 +79,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AdminAlerts.cs" />
     <Compile Include="Administration\AdminFacade.asmx.cs">
       <DependentUpon>AdminFacade.asmx</DependentUpon>
       <SubType>Component</SubType>
@@ -104,7 +105,6 @@
     <Compile Include="Administration\serviceLogConfig.aspx.designer.cs">
       <DependentUpon>serviceLogConfig.aspx</DependentUpon>
     </Compile>
-    <Compile Include="MgrService.cs" />
     <Compile Include="ReaderWriterLockSlimEx.cs" />
     <Compile Include="RequestsSchedule\StatTimer.cs" />
     <Compile Include="RequestsSchedule\StatQueue.cs" />
@@ -116,7 +116,6 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="GroupFacade.cs" />
-    <Compile Include="RevisionGenerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -142,14 +141,12 @@
     <Compile Include="Tools\SystemEventsHiddenForm.Designer.cs">
       <DependentUpon>SystemEventsHiddenForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="TrackerDataManager.cs" />
     <Compile Include="ForeignRequestsManager.cs" />
     <Compile Include="TrackerStateHolder.cs" />
     <Compile Include="TrackerService.asmx.cs">
       <DependentUpon>TrackerService.asmx</DependentUpon>
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="TrackersListRequest.cs" />
     <Compile Include="RevisedTrackerState.cs" />
     <Compile Include="Tuple2.cs" />
   </ItemGroup>
@@ -164,7 +161,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ClassDiagram.cd" />
     <Content Include="local.config" />
     <None Include="service.log4net.config.default" />
     <None Include="service.log4net.config">

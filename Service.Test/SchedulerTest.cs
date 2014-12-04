@@ -725,6 +725,8 @@ namespace Service.Test
       }
     }
 
+    private int revision;
+
     private RevisedTrackerState CreateMockupSnapshot( DateTime timeToUseAsNow )
     {
       var originalReplacement = TimeService.DebugReplacement;
@@ -733,7 +735,7 @@ namespace Service.Test
         TimeService.DebugReplacement = ( ) => timeToUseAsNow;
 
         TrackerState trackerState = new TrackerState( "foo", "foo" );
-        return RevisedTrackerState.Merge( null, trackerState );
+        return RevisedTrackerState.Merge( null, trackerState, revision++ );
       }
       finally
       {

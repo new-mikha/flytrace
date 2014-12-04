@@ -80,7 +80,7 @@ namespace FlyTrace.Service.Administration
         BindDataSource( );
       }
 
-      DataSet statistics = MgrService.GetStatistics( );
+      DataSet statistics = ForeignRequestsManager.Singleton.GetStatistics( );
       if ( statistics == null )
         this.statPanel.Visible = false;
       else
@@ -108,7 +108,17 @@ namespace FlyTrace.Service.Administration
 
     private void BindDataSource( )
     {
-      List<TrackerStateHolder> trackers = MgrService.GetTrackers( );
+      List<TrackerStateHolder> trackers;
+
+      ForeignRequestsManager.Singleton.HolderRwLock.AttemptEnterReadLock( );
+      try
+      {
+        trackers = ForeignRequestsManager.Singleton.Trackers.Values.ToList( );
+      }
+      finally
+      {
+        ForeignRequestsManager.Singleton.HolderRwLock.ExitReadLock( );
+      }
 
       List<TrackerDisplayItem> list;
       list = new List<TrackerDisplayItem>( trackers.Count );
@@ -124,9 +134,9 @@ namespace FlyTrace.Service.Administration
         item.AccessTime = accessTime;
         item.AccessTimeStr = accessTime.ToString( "u" ) + "<br />" + LocationLib.Tools.GetAgeStr( accessTime, true );
 
-        // No need to lock on TrackerDataManager.snapshotAccessSync once it doesn't matter if one of the snapshots is
+        // No need to lock on TrackerDataManager.snapshotAccessSync since it doesn't matter if one of the snapshots is
         // updated during the cycle. MemoryBarrier for atomic read of a single Snapshot below is enough, it makes sure
-        // that Snapshot value (which is not volatile) is read only once:
+        // that Snapshot value (which is not volatile) is read once only:
         RevisedTrackerState tracker = holder.Snapshot;
         Thread.MemoryBarrier( );
 

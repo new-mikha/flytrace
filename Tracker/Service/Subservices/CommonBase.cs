@@ -34,7 +34,7 @@ namespace FlyTrace.Service.Subservices
   {
     private static long CallIdSource;
 
-    protected readonly long CallId;
+    public long CallId { get; private set; }
 
     public CommonBase( )
     {
