@@ -18,3 +18,4 @@ Tracker.sln.DotSettings.user
 Site update scripts/Full.zip
 *.testsettings
 *.vsmdi
+*no_scc*
