@@ -161,7 +161,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="local.config" />
+    <Content Include="local.config">
+      <SubType>Designer</SubType>
+    </Content>
     <None Include="service.log4net.config.default" />
     <None Include="service.log4net.config">
       <SubType>Designer</SubType>
