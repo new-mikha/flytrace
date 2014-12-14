@@ -253,7 +253,7 @@ namespace LocationRequestTest
       {
         try
         {
-          SpotLocationRequest locationRequest = ( SpotLocationRequest ) ar.AsyncState;
+          LocationRequest locationRequest = ( LocationRequest ) ar.AsyncState;
 
           StringBuilder sb = new StringBuilder( );
           sb.AppendFormat( "Result for {0}:\r\n", locationRequest.Id );
@@ -274,7 +274,7 @@ namespace LocationRequestTest
             sb.AppendFormat( "\tCurrent: {0}\r\n", trackerRequestResult.Position.CurrPoint );
             sb.AppendFormat( "\tUser message: {0}\r\n", trackerRequestResult.Position.UserMessage );
             sb.AppendFormat( "\tPrev: {0}\r\n", trackerRequestResult.Position.PreviousPoint );
-            sb.AppendLine( "\tFullTrack:" );
+            sb.AppendFormat( "\tFullTrack is of {0} points:\r\n", trackerRequestResult.Position.FullTrack.Count() );
             foreach ( FlyTrace.LocationLib.Data.TrackPointData tpd in trackerRequestResult.Position.FullTrack )
             {
               sb.AppendFormat( "\t\tPoint: {0}\r\n", tpd );

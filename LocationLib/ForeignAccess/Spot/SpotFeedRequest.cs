@@ -733,13 +733,19 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         if ( lat.HasValue && lon.HasValue && ts.HasValue && locationType != null )
         {
           // Read to the end of current <message> tag:
+
           while ( !( xmlReader.Name == "message" && xmlReader.NodeType == XmlNodeType.EndElement ) )
           {
             // if userMessage hasn't been read yet, try to catch it:
-            if ( xmlReader.Name == messageContentElementName && xmlReader.NodeType == XmlNodeType.Element )
-              userMessage = xmlReader.ReadElementContentAsString( );
 
-            if ( !xmlReader.Read( ) )
+            if ( xmlReader.Name == messageContentElementName && xmlReader.NodeType == XmlNodeType.Element )
+            {
+              userMessage = xmlReader.ReadElementContentAsString( );
+            }
+            // ReadElementContent* moves the reader past the end </messageContent> tag. I.e. now it can be
+            // on </message> tag, if <messageContent> was ending for the <message>. 
+            // So avoid xmlReader.Read after the call to ReadElementContentAsString above:
+            else if ( !xmlReader.Read( ) )
               break;
           }
 

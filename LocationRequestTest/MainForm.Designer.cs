@@ -56,14 +56,10 @@
       this.comboBox4 = new System.Windows.Forms.ComboBox();
       this.comboBox5 = new System.Windows.Forms.ComboBox();
       this.comboBox6 = new System.Windows.Forms.ComboBox();
-      this.groupBox4 = new System.Windows.Forms.GroupBox();
-      this.button4 = new System.Windows.Forms.Button();
-      this.radioButton1 = new System.Windows.Forms.RadioButton();
-      this.radioButton2 = new System.Windows.Forms.RadioButton();
-      this.textBox2 = new System.Windows.Forms.TextBox();
       this.button5 = new System.Windows.Forms.Button();
       this.tabControl2 = new System.Windows.Forms.TabControl();
       this.tabPage3 = new System.Windows.Forms.TabPage();
+      this.button6 = new System.Windows.Forms.Button();
       this.label3 = new System.Windows.Forms.Label();
       this.tabPage4 = new System.Windows.Forms.TabPage();
       this.revgenShutownAndIncrementButton = new System.Windows.Forms.Button();
@@ -75,11 +71,9 @@
       this.revgenInitButton = new System.Windows.Forms.Button();
       this.revgenFilePathTextBox = new System.Windows.Forms.TextBox();
       this.label2 = new System.Windows.Forms.Label();
-      this.button6 = new System.Windows.Forms.Button();
       this.groupBox1.SuspendLayout();
       this.groupBox2.SuspendLayout();
       this.groupBox3.SuspendLayout();
-      this.groupBox4.SuspendLayout();
       this.tabControl2.SuspendLayout();
       this.tabPage3.SuspendLayout();
       this.tabPage4.SuspendLayout();
@@ -93,7 +87,6 @@
       this.feedIdTextBox.Name = "feedIdTextBox";
       this.feedIdTextBox.Size = new System.Drawing.Size(274, 20);
       this.feedIdTextBox.TabIndex = 1;
-      this.feedIdTextBox.Text = "0k6O9bM1Yu6XtghZaRlupbKUmvl5xkm0I";
       this.feedIdTextBox.Enter += new System.EventHandler(this.feedIdTextBox_Enter);
       // 
       // requestLocationButton
@@ -425,63 +418,6 @@
       this.comboBox6.Size = new System.Drawing.Size(121, 21);
       this.comboBox6.TabIndex = 10;
       // 
-      // groupBox4
-      // 
-      this.groupBox4.Controls.Add(this.button4);
-      this.groupBox4.Controls.Add(this.radioButton1);
-      this.groupBox4.Controls.Add(this.radioButton2);
-      this.groupBox4.Controls.Add(this.textBox2);
-      this.groupBox4.Location = new System.Drawing.Point(6, 6);
-      this.groupBox4.Name = "groupBox4";
-      this.groupBox4.Size = new System.Drawing.Size(831, 100);
-      this.groupBox4.TabIndex = 15;
-      this.groupBox4.TabStop = false;
-      this.groupBox4.Text = "Source";
-      // 
-      // button4
-      // 
-      this.button4.Location = new System.Drawing.Point(112, 62);
-      this.button4.Name = "button4";
-      this.button4.Size = new System.Drawing.Size(274, 23);
-      this.button4.TabIndex = 4;
-      this.button4.Text = "See/Modify Sample XML...";
-      this.button4.UseVisualStyleBackColor = true;
-      this.button4.Click += new System.EventHandler(this.editSampleXmlButton_Click);
-      // 
-      // radioButton1
-      // 
-      this.radioButton1.AutoSize = true;
-      this.radioButton1.Location = new System.Drawing.Point(15, 65);
-      this.radioButton1.Name = "radioButton1";
-      this.radioButton1.Size = new System.Drawing.Size(88, 17);
-      this.radioButton1.TabIndex = 3;
-      this.radioButton1.TabStop = true;
-      this.radioButton1.Text = "Sample XML:";
-      this.radioButton1.UseVisualStyleBackColor = true;
-      // 
-      // radioButton2
-      // 
-      this.radioButton2.AutoSize = true;
-      this.radioButton2.Checked = true;
-      this.radioButton2.Location = new System.Drawing.Point(15, 20);
-      this.radioButton2.Name = "radioButton2";
-      this.radioButton2.Size = new System.Drawing.Size(64, 17);
-      this.radioButton2.TabIndex = 2;
-      this.radioButton2.TabStop = true;
-      this.radioButton2.Text = "Feed Id:";
-      this.radioButton2.UseVisualStyleBackColor = true;
-      // 
-      // textBox2
-      // 
-      this.textBox2.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-      this.textBox2.Location = new System.Drawing.Point(112, 19);
-      this.textBox2.Name = "textBox2";
-      this.textBox2.Size = new System.Drawing.Size(274, 20);
-      this.textBox2.TabIndex = 1;
-      this.textBox2.Text = "0k6O9bM1Yu6XtghZaRlupbKUmvl5xkm0I";
-      this.textBox2.Enter += new System.EventHandler(this.feedIdTextBox_Enter);
-      // 
       // button5
       // 
       this.button5.Location = new System.Drawing.Point(144, 199);
@@ -506,7 +442,6 @@
       // 
       this.tabPage3.Controls.Add(this.button6);
       this.tabPage3.Controls.Add(this.label3);
-      this.tabPage3.Controls.Add(this.groupBox4);
       this.tabPage3.Controls.Add(this.button5);
       this.tabPage3.Controls.Add(this.requestLocationButton);
       this.tabPage3.Controls.Add(this.button1);
@@ -521,6 +456,16 @@
       this.tabPage3.TabIndex = 0;
       this.tabPage3.Text = "Location Request Test";
       this.tabPage3.UseVisualStyleBackColor = true;
+      // 
+      // button6
+      // 
+      this.button6.Location = new System.Drawing.Point(329, 194);
+      this.button6.Name = "button6";
+      this.button6.Size = new System.Drawing.Size(75, 23);
+      this.button6.TabIndex = 18;
+      this.button6.Text = "button6";
+      this.button6.UseVisualStyleBackColor = true;
+      this.button6.Click += new System.EventHandler(this.button6_Click);
       // 
       // label3
       // 
@@ -637,16 +582,6 @@
       this.label2.TabIndex = 0;
       this.label2.Text = "&Persisting file";
       // 
-      // button6
-      // 
-      this.button6.Location = new System.Drawing.Point(329, 194);
-      this.button6.Name = "button6";
-      this.button6.Size = new System.Drawing.Size(75, 23);
-      this.button6.TabIndex = 18;
-      this.button6.Text = "button6";
-      this.button6.UseVisualStyleBackColor = true;
-      this.button6.Click += new System.EventHandler(this.button6_Click);
-      // 
       // MainForm
       // 
       this.AcceptButton = this.requestLocationButton;
@@ -663,8 +598,6 @@
       this.groupBox2.ResumeLayout(false);
       this.groupBox2.PerformLayout();
       this.groupBox3.ResumeLayout(false);
-      this.groupBox4.ResumeLayout(false);
-      this.groupBox4.PerformLayout();
       this.tabControl2.ResumeLayout(false);
       this.tabPage3.ResumeLayout(false);
       this.tabPage3.PerformLayout();
@@ -705,11 +638,6 @@
     private System.Windows.Forms.ComboBox comboBox4;
     private System.Windows.Forms.ComboBox comboBox5;
     private System.Windows.Forms.ComboBox comboBox6;
-    private System.Windows.Forms.GroupBox groupBox4;
-    private System.Windows.Forms.Button button4;
-    private System.Windows.Forms.RadioButton radioButton1;
-    private System.Windows.Forms.RadioButton radioButton2;
-    private System.Windows.Forms.TextBox textBox2;
     private System.Windows.Forms.Button button5;
     private System.Windows.Forms.TabControl tabControl2;
     private System.Windows.Forms.TabPage tabPage3;
