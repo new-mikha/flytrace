@@ -43,27 +43,23 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
   {
     private const int ChunkSize = 0x200; // Should be enough to read the first <message> element. If not, it will try to read more.
 
-    /// <summary>If point is older than number of hours defined by this const, it's ignored, unless it's the newest point.</summary>
-    private const int FullTrackPointAgeToIgnore = 12;
-
     private readonly string trackerForeignId;
-
-    public readonly FeedKind FeedKind;
 
     private readonly long callId;
 
-    public SpotFeedRequest( FeedKind feedKind, string trackerForeignId, long callId )
+    public readonly int Page;
+
+    public SpotFeedRequest( string trackerForeignId, int page, long callId )
     {
-      this.FeedKind = feedKind;
       this.trackerForeignId = trackerForeignId;
       this.callId = callId;
+      Page = page;
     }
 
     private readonly string testXml;
 
-    public SpotFeedRequest( FeedKind feedKind, string trackerForeignId, string testXml, long callId )
+    public SpotFeedRequest( string trackerForeignId, string testXml, long callId )
     {
-      this.FeedKind = feedKind;
       this.trackerForeignId = trackerForeignId;
       this.callId = callId;
       this.testXml = testXml;
@@ -96,36 +92,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         throw new InvalidOperationException( "Cannot call BeginRequest twice on the same instance" );
       }
 
-      string url;
-      switch ( FeedKind )
-      {
-        case FeedKind.Feed_1_0:
-          url =
-            string.Format(
-              @"http://share.findmespot.com/messageService/guestlinkservlet?glId={0}",
-              this.trackerForeignId
-            );
-          break;
-
-        case FeedKind.Feed_1_0_undoc:
-          url =
-            string.Format(
-              @"http://share.findmespot.com/spot-adventures/rest-api/1.0/public/feed/{0}/message",
-              this.trackerForeignId
-            );
-          break;
-
-        case FeedKind.Feed_2_0:
-          url =
-            string.Format(
-              @"https://api.findmespot.com/spot-main-web/consumer/rest-api/2.0/public/feed/{0}/message.xml",
-              this.trackerForeignId
-            );
-          break;
-
-        default:
-          throw new ApplicationException( "Unknown request destination " + FeedKind );
-      }
+      string url =
+        string.Format(
+          @"https://api.findmespot.com/spot-main-web/consumer/rest-api/2.0/public/feed/{0}/message.xml",
+          this.trackerForeignId
+        );
 
       this.webRequest = WebRequest.Create( url );
 
@@ -142,17 +113,14 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       try
       {
-        //if ( this.FeedKind == LocationLib.FeedKind.Feed_2_0 )
-        //  throw new ApplicationException( "4444" );
-
         if ( Log.IsDebugEnabled )
-          Log.Debug( string.Format( "Initiating BeginRequest for {0}, {1}, lrid {2}...", this.trackerForeignId, this.FeedKind, this.callId ) );
+          Log.Debug( string.Format( "Initiating BeginRequest for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId ) );
         this.webRequest.BeginGetResponse( GetResponseCallback, asyncChainedState );
       }
       catch ( Exception exc )
       {
-        SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind.ToString( ) ) );
-        Log.ErrorFormat( "BeginRequest throwed an error for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, this.FeedKind, this.callId, exc.Message );
+        SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, Page.ToString( ) ) );
+        Log.ErrorFormat( "BeginRequest throwed an error for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId, exc.Message );
       }
 
       return asyncChainedState.FinalAsyncResult;
@@ -165,7 +133,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         Log.ErrorFormat(
           "asyncChainedState is null for {0}, {1}, lrid {2} and result {3}",
           this.trackerForeignId,
-          this.FeedKind,
+          Page,
           this.callId,
           result
         );
@@ -178,7 +146,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           {
             Log.WarnFormat( "Discarding result for {0}, {1}, lrid {2} because the result is already completed. The discarding result is: {3}",
               this.trackerForeignId,
-              this.FeedKind,
+              Page,
               this.callId,
               result
             );
@@ -220,11 +188,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       try
       {
-        //if ( this.FeedKind == LocationLib.FeedKind.Feed_1_0_undoc )
-        //  throw new ApplicationException( "5555" );
-
         if ( Log.IsDebugEnabled )
-          Log.Debug( string.Format( "In GetResponseCallback for {0}, {1}, lrid {2}...", trackerForeignId, this.FeedKind, this.callId ) );
+          Log.Debug( string.Format( "In GetResponseCallback for {0}, {1}, lrid {2}...", trackerForeignId, Page, this.callId ) );
 
         asyncChainedState.CheckSynchronousFlag( ar.CompletedSynchronously );
 
@@ -235,21 +200,21 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         this.webResponse = localWebRequest.EndGetResponse( ar );
 
         if ( Log.IsDebugEnabled )
-          Log.Debug( string.Format( "Got WebResponse for {0}, {1}, lrid {2}...", this.trackerForeignId, this.FeedKind, this.callId ) );
+          Log.Debug( string.Format( "Got WebResponse for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId ) );
 
         this.responseStream = this.webResponse.GetResponseStream( );
 
         if ( Log.IsDebugEnabled )
-          Log.Debug( string.Format( "Got Stream for {0}, {1}, lrid {2}...", this.trackerForeignId, this.FeedKind, this.callId ) );
+          Log.Debug( string.Format( "Got Stream for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId ) );
 
         ReadNextResponseChunk( asyncChainedState );
       }
       catch ( Exception exc )
       {
-        Log.InfoFormat( "GetResponseCallback fail for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, this.FeedKind, this.callId,
+        Log.InfoFormat( "GetResponseCallback fail for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId,
           Log.IsDebugEnabled ? exc.ToString( ) : exc.Message );
 
-        SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind.ToString( ) ) );
+        SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, Page.ToString( ) ) );
       }
     }
 
@@ -368,7 +333,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         throw new OperationCanceledException( );
 
       if ( Log.IsDebugEnabled )
-        Log.DebugFormat( "Starting reading the next chunk for {0}, {1}, lrid {2}...", this.trackerForeignId, this.FeedKind, this.callId );
+        Log.DebugFormat( "Starting reading the next chunk for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId );
 
       localResponseStream.BeginRead(
         this.bufferStream.GetBuffer( ),
@@ -406,7 +371,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
                 "Read {0} bytes just now for {1}, {2}, lrid {3}, read {4} bytes in total, reading next chunk...",
                 bytesRead,
                 this.trackerForeignId,
-                this.FeedKind,
+                Page,
                 this.callId,
                 this.bufferedDataLength );
 
@@ -418,7 +383,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             TrackerState parseResult = AnalyzeCurrentBuffer( );
 
             if ( Log.IsDebugEnabled )
-              Log.DebugFormat( "Result for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, this.FeedKind, this.callId, parseResult );
+              Log.DebugFormat( "Result for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId, parseResult );
 
             // Note that parseResult can actually be just an error message (see Tracker.Error)
             SetAsCompletedAndCloseRequest( asyncChainedState, parseResult );
@@ -430,7 +395,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             string.Format(
               "ResponseStreamReadCallback for {0}, {1}, lrid {2} processing: {3}",
               this.trackerForeignId,
-              this.FeedKind,
+              Page,
               this.callId,
               exc.Message
             );
@@ -447,7 +412,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             LocationRequest.ErrorHandlingLog.Error( msg );
           }
 
-          SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, FeedKind.ToString( ) ) );
+          SetAsCompletedAndCloseRequest( asyncChainedState, new TrackerState( exc.Message, Page.ToString( ) ) );
         }
       }
       catch ( Exception outerExc )
@@ -476,7 +441,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       // RandomError( );
 
-      Log.DebugFormat( "Analyzing buffer for {0}, {1}, lrid {2}", this.trackerForeignId, this.FeedKind, this.callId );
+      Log.DebugFormat( "Analyzing buffer for {0}, {1}, lrid {2}", this.trackerForeignId, Page, this.callId );
 
       TrackerState result;
 
@@ -512,7 +477,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           else
           {
             // If there are messages already in the list, take N hours back from the latest one:
-            DateTime threshold = messages[0].ForeignTime.AddHours( -FullTrackPointAgeToIgnore );
+            DateTime threshold = messages[0].ForeignTime.AddHours( -LocationRequest.FullTrackPointAgeToIgnore );
 
             shouldBreak = message.ForeignTime <= threshold;
 
@@ -531,7 +496,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           "Parsing server response: found {0} message(s) for {1}, {2}, lrid {3}, and encountered parsing error: {4}",
           messages.Count,
           this.trackerForeignId,
-          this.FeedKind,
+          Page,
           this.callId,
           exc.Message
         );
@@ -540,16 +505,16 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       if ( isBadTrackerId )
       {
-        result = new TrackerState( Data.ErrorType.BadTrackerId, FeedKind.ToString( ) );
+        result = new TrackerState( Data.ErrorType.BadTrackerId, Page.ToString( ) );
       }
       else if ( messages.Count == 0 )
       {
         if ( parseErrorMessage != null )
-          result = new TrackerState( parseErrorMessage, FeedKind.ToString( ) );
+          result = new TrackerState( parseErrorMessage, Page.ToString( ) );
         else if ( messageTagFound )
-          result = new TrackerState( Data.ErrorType.ResponseHasBadSchema, FeedKind.ToString( ) );
+          result = new TrackerState( Data.ErrorType.ResponseHasBadSchema, Page.ToString( ) );
         else
-          result = new TrackerState( Data.ErrorType.ResponseHasNoData, FeedKind.ToString( ) );
+          result = new TrackerState( Data.ErrorType.ResponseHasNoData, Page.ToString( ) );
       }
       else
       { // we have some data
@@ -562,7 +527,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           .Distinct( TimeEqualityComparer )
           .OrderByDescending( msg => msg.ForeignTime );
 
-        result = new TrackerState( fullTrack, FeedKind.ToString( ) );
+        result = new TrackerState( fullTrack, Page.ToString( ) );
       }
 
       return result;
@@ -576,37 +541,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       Data.TrackPointData result = null;
 
-      string messageTypeElementName;
-      string dateTimeElementName;
-      string posixTimeElementName;
-      string messageContentElementName;
-
-      switch ( this.FeedKind )
-      {
-        case FeedKind.Feed_1_0:
-          messageTypeElementName = "messageType";
-          posixTimeElementName = "timeInGMTSecond";
-          dateTimeElementName = "timestamp";
-          messageContentElementName = "messageDetail";
-          break;
-
-        case FeedKind.Feed_1_0_undoc:
-          messageTypeElementName = "type";
-          posixTimeElementName = "timeInSec";
-          dateTimeElementName = "dateTime";
-          messageContentElementName = "messageDetail";
-          break;
-
-        case FeedKind.Feed_2_0:
-          messageTypeElementName = "messageType";
-          posixTimeElementName = "unixTime";
-          dateTimeElementName = "dateTime";
-          messageContentElementName = "messageContent";
-          break;
-
-        default:
-          throw new ApplicationException( "Unknown request destination " + this.FeedKind );
-      }
+      string messageTypeElementName = "messageType";
+      string posixTimeElementName = "unixTime";
+      string dateTimeElementName = "dateTime";
+      string messageContentElementName = "messageContent";
 
       string locationType = null;
       double? lat = null;
@@ -679,16 +617,16 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             string timeValue = xmlReader.ReadContentAsString( );
 
             if ( Log.IsDebugEnabled )
-              Log.DebugFormat( "Parsing XML date/time: {0} for {1}, {2}, lrid {3}", timeValue, this.trackerForeignId, this.FeedKind, this.callId );
+              Log.DebugFormat( "Parsing XML date/time: {0} for {1}, {2}, lrid {3}", timeValue, this.trackerForeignId, Page, this.callId );
 
             ts = ParseXmlDateTime( timeValue );
 
             if ( Log.IsDebugEnabled )
-              Log.DebugFormat( "XML date/time parsed: {0} for {1}, {2}, lrid {3}", ts, this.trackerForeignId, this.FeedKind, this.callId );
+              Log.DebugFormat( "XML date/time parsed: {0} for {1}, {2}, lrid {3}", ts, this.trackerForeignId, Page, this.callId );
           }
           catch ( Exception exc )
           {
-            Log.ErrorFormat( "Can't parse date/time: {0} for {1}, {2}, lrid {3}", exc.Message, this.trackerForeignId, this.FeedKind, this.callId );
+            Log.ErrorFormat( "Can't parse date/time: {0} for {1}, {2}, lrid {3}", exc.Message, this.trackerForeignId, Page, this.callId );
           }
         }
 
@@ -708,18 +646,18 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
                 "Parsing POSIX date/time: {0} for {1}, {2}, lrid {3}",
                 posixTime,
                 this.trackerForeignId,
-                this.FeedKind,
+                Page,
                 this.callId
               );
 
             ts = ParsePosixTime( posixTime );
 
             if ( Log.IsDebugEnabled )
-              Log.DebugFormat( "POSIX date/time parsed: {0} for {1}, {2}, lrid {3}", ts, this.trackerForeignId, this.FeedKind, this.callId );
+              Log.DebugFormat( "POSIX date/time parsed: {0} for {1}, {2}, lrid {3}", ts, this.trackerForeignId, Page, this.callId );
           }
           catch ( Exception exc )
           {
-            Log.ErrorFormat( "Can't parse date/time: {0} for {1}, {2}, lrid {3}", exc.Message, this.trackerForeignId, this.FeedKind, this.callId );
+            Log.ErrorFormat( "Can't parse date/time: {0} for {1}, {2}, lrid {3}", exc.Message, this.trackerForeignId, Page, this.callId );
           }
         }
 
@@ -803,29 +741,17 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         string feedNotActiveMsg;
         string passwordRequiredMsg = "Feed Password required";
 
-        if ( this.FeedKind == FeedKind.Feed_1_0 )
+        if ( !xmlReader.ReadToDescendant( "text" ) )
         {
-          errorDescr = xmlReader.ReadElementContentAsString( );
-
-          // these are the messages that SPOT server return when different errors happen in SecondChance request:
-          noDataMsg = "Error happened. No data returned";
-          wrongTrackerIdMsg = "Wrong guestLinkId";
-          feedNotActiveMsg = wrongTrackerIdMsg;
+          throw new ApplicationException( "Can't find 'text' element" );
         }
-        else
-        { //
-          if ( !xmlReader.ReadToDescendant( "text" ) )
-          {
-            throw new ApplicationException( "Can't find 'text' element" );
-          }
 
-          errorDescr = xmlReader.ReadElementContentAsString( );
+        errorDescr = xmlReader.ReadElementContentAsString( );
 
-          // these are the messages that SPOT server return when different errors happen in Unofficial request:
-          noDataMsg = "No Messages to display";
-          wrongTrackerIdMsg = "Feed Not Found";
-          feedNotActiveMsg = "Feed Currently Not Active"; // occurs when tracker was deleted?
-        }
+        // these are the messages that SPOT server return when different errors happen in Unofficial request:
+        noDataMsg = "No Messages to display";
+        wrongTrackerIdMsg = "Feed Not Found";
+        feedNotActiveMsg = "Feed Currently Not Active"; // occurs when tracker was deleted?
 
         if ( errorDescr.Contains( noDataMsg ) )
         {
@@ -841,30 +767,22 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         }
         else
         {
-          if ( this.FeedKind == FeedKind.Feed_1_0 )
-          { // if a deleted page id is passed to Feed_1_0, it returns a bit of a crap, but it seems it contains this:
-            isBadTrackerId = errorDescr.Contains( "Does not exist in database" );
-          }
+          // errorDescr != noDataMsg && errorDescr != wrongTrackerIdMsg
 
-          if ( !isBadTrackerId )
-          {
-            // errorDescr != noDataMsg && errorDescr != wrongTrackerIdMsg
-
-            // Don't really know what to do in this case, assume that the tracker id is OK and it's just NO DATA.
-            // But log it as error
-            Log.ErrorFormat( "Unknown error message for call to {0}, {1}, lrid {2}: {3}",
-              this.trackerForeignId,
-              this.FeedKind,
-              this.callId,
-              errorDescr );
-          }
+          // Don't really know what to do in this case, assume that the tracker id is OK and it's just NO DATA.
+          // But log it as error
+          Log.ErrorFormat( "Unknown error message for call to {0}, {1}, lrid {2}: {3}",
+            this.trackerForeignId,
+            Page,
+            this.callId,
+            errorDescr );
         }
       }
       catch ( Exception exc )
       {
         Log.FatalFormat( "Exception during processing an error message for a call to {0}, {1}, lrid {2}: {3}",
           this.trackerForeignId,
-          this.FeedKind,
+          Page,
           this.callId,
           exc.Message
         );

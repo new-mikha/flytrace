@@ -31,7 +31,7 @@ namespace Service.Test
     public double? SameFeedHitIntervalMinutes;
     public double? SameFeedHitIntervalSeconds;
 
-    public override LocationRequest CreateRequest( string foreignId )
+    public override LocationRequest CreateRequest( RequestParams requestParams )
     {
       throw new NotImplementedException( );
     }

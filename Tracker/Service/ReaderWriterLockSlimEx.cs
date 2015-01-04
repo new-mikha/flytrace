@@ -43,6 +43,18 @@ namespace FlyTrace.Service
     }
 
     /// <summary>Do not throw a TimeoutException, works as base EnterReadLock but use std timeout</summary>
+    public bool TryEnterReadLock( )
+    {
+      return TryEnterReadLock( waitTimeout );
+    }
+
+    /// <summary>Do not throw a TimeoutException, works as base EnterUpgradeableReadLock but use std timeout</summary>
+    public bool TryEnterUpgradeableReadLock( )
+    {
+      return TryEnterUpgradeableReadLock( waitTimeout );
+    }
+
+    /// <summary>Do not throw a TimeoutException, works as base EnterReadLock but use std timeout</summary>
     public bool TryEnterWriteLock( )
     {
       return TryEnterWriteLock( waitTimeout );

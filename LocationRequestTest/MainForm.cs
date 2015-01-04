@@ -63,8 +63,6 @@ namespace LocationRequestTest
 
     private void MainForm_Load( object sender, EventArgs e )
     {
-      SetDefaultFeeds( );
-
       TextWriterAppender textWriterAppender = new TextWriterAppender( );
       textWriterAppender.Layout = new SimpleLayout( );
       textWriterAppender.Writer = new StreamWriter( new LogStream( this.resultTextBox ) );
@@ -173,36 +171,27 @@ namespace LocationRequestTest
       {
         string feedId = this.feedIdTextBox.Text.Trim( );
 
-        List<FeedKind> attemptsOrder = new List<FeedKind>( );
-        ReadDestComboBox( dest1ComboBox, attemptsOrder );
-        ReadDestComboBox( dest2ComboBox, attemptsOrder );
-        ReadDestComboBox( dest3ComboBox, attemptsOrder );
-        ReadDestComboBox( dest4ComboBox, attemptsOrder );
-        ReadDestComboBox( dest5ComboBox, attemptsOrder );
-        ReadDestComboBox( dest6ComboBox, attemptsOrder );
-
         string appFolder = Path.GetDirectoryName( Assembly.GetExecutingAssembly( ).CodeBase ).Replace( "file:\\", "" );
 
         LocationRequest locationRequest;
         if ( this.inetSourceRadioButton.Checked )
         {
-          ForeignId foreignId = new ForeignId( ForeignId.SPOT, feedId );
+          RequestParams requestParams = default( RequestParams );
+          requestParams.Id = feedId;
+
           locationRequest =
-            new SpotLocationRequest( foreignId.Id, appFolder, null, attemptsOrder.ToArray( ) );
+            new SpotLocationRequest( requestParams, appFolder, null );
         }
         else
         {
-          if ( attemptsOrder.Count == 0 )
-            throw new ApplicationException( "Select a value in 1st destination combo" );
-
           string sampleXml = this.sampleXml;
           if ( sampleXml == null )
             sampleXml = ( new SampleXmlForm( ) ).SampleXml; // bad, bad style :)
 
-          ForeignId foreignId = new ForeignId( ForeignId.SPOT, "testxml" );
-          locationRequest =
-            new TestLocationRequest(
-              foreignId.Id, sampleXml );
+          RequestParams requestParams = default( RequestParams );
+          requestParams.Id = "testxml";
+
+          locationRequest = new TestLocationRequest( requestParams, sampleXml );
         }
 
         if ( this.resultTextBox.Text.Length > 0 )
@@ -222,12 +211,6 @@ namespace LocationRequestTest
       AddResultText( "OnClick: DONE\r\n" );
 
       Cursor = currCursor;
-    }
-
-    private void ReadDestComboBox( ComboBox destComboBox, List<FeedKind> attemptsOrder )
-    {
-      if ( destComboBox.SelectedItem != null )
-        attemptsOrder.Add( ( FeedKind ) Enum.Parse( typeof( FeedKind ), destComboBox.SelectedItem.ToString( ) ) );
     }
 
     private void AddResultTextLine( string text )
@@ -274,7 +257,7 @@ namespace LocationRequestTest
             sb.AppendFormat( "\tCurrent: {0}\r\n", trackerRequestResult.Position.CurrPoint );
             sb.AppendFormat( "\tUser message: {0}\r\n", trackerRequestResult.Position.UserMessage );
             sb.AppendFormat( "\tPrev: {0}\r\n", trackerRequestResult.Position.PreviousPoint );
-            sb.AppendFormat( "\tFullTrack is of {0} points:\r\n", trackerRequestResult.Position.FullTrack.Count() );
+            sb.AppendFormat( "\tFullTrack is of {0} points:\r\n", trackerRequestResult.Position.FullTrack.Count( ) );
             foreach ( FlyTrace.LocationLib.Data.TrackPointData tpd in trackerRequestResult.Position.FullTrack )
             {
               sb.AppendFormat( "\t\tPoint: {0}\r\n", tpd );
@@ -301,32 +284,6 @@ namespace LocationRequestTest
 
         AddResultText( "Async: DONE\r\n" );
       }
-    }
-
-    private void defaultFeeds_Click( object sender, EventArgs e )
-    {
-      SetDefaultFeeds( );
-    }
-
-    private void SetDefaultFeeds( )
-    {
-      dest1ComboBox.SelectedIndex = 2;
-      dest2ComboBox.SelectedIndex = 1;
-      dest3ComboBox.SelectedIndex = 0;
-      dest4ComboBox.SelectedIndex = -1;
-      dest5ComboBox.SelectedIndex = -1;
-      dest6ComboBox.SelectedIndex = -1;
-    }
-
-    private void clearFeeds_Click( object sender, EventArgs e )
-    {
-      dest1ComboBox.SelectedIndex = -1;
-      dest2ComboBox.SelectedIndex = -1;
-      dest3ComboBox.SelectedIndex = -1;
-      dest4ComboBox.SelectedIndex = -1;
-      dest5ComboBox.SelectedIndex = -1;
-      dest6ComboBox.SelectedIndex = -1;
-
     }
 
     private void feedIdTextBox_Enter( object sender, EventArgs e )
@@ -377,7 +334,7 @@ namespace LocationRequestTest
 
     private void InitRevGen( )
     {
-      
+
       string initWarnings;
       bool result = this.revisionPersister.Init( revgenFilePathTextBox.Text, out initWarnings );
       AddResultTextLine( "Init: " + result.ToString( ) + ", revision: " + this.revisionPersister.ThreadUnsafeRevision.ToString( ) );

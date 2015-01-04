@@ -24,11 +24,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Test
 {
   public class TestLocationRequestFactory : LocationRequestFactory
   {
-    public override LocationRequest CreateRequest( string foreignId )
+    public override LocationRequest CreateRequest( RequestParams requestParams )
     {
-      string testXml = TestSource.Singleton.GetFeed( foreignId );
+      string testXml = TestSource.Singleton.GetFeed( requestParams.Id );
 
-      return new TestLocationRequest( foreignId, testXml );
+      return new TestLocationRequest( requestParams, testXml );
     }
 
     public override string GetStat( out bool isOk )

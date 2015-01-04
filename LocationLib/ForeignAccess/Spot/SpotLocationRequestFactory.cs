@@ -52,14 +52,13 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       this.consequentErrorsCounter = consequentErrorsCounter;
     }
 
-    public override LocationRequest CreateRequest( string foreignId )
+    public override LocationRequest CreateRequest( RequestParams requestParams )
     {
       LocationRequest locationRequest =
         new SpotLocationRequest(
-          foreignId,
+          requestParams,
           this.appAuxLogFolder,
-          this.consequentErrorsCounter,
-          GetSanitizedAttemptsOrder( )
+          this.consequentErrorsCounter
         );
 
       locationRequest.ReadLocationFinished += locationRequest_ReadLocationFinished;
@@ -69,79 +68,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private static readonly ILog Log = LogManager.GetLogger( "SLRF" );
 
-    /// <summary>
-    /// Normally this.attemptsOrder should have all values from FeedKind enum except None. But it's very 
-    /// important that it's always true, otherwise it could stuck with wrong feed kind(s) or even without 
-    /// any at all. So check that these values are really there, and there is no garbage from any kind of,
-    /// a problem, and do that synchronzing access to this.attemptsOrder.
-    /// </summary>
-    /// <returns></returns>
-    private IEnumerable<FeedKind> GetSanitizedAttemptsOrder( )
-    {
-      List<FeedKind> result;
-      lock ( this.statSync )
-      {
-        result = new List<FeedKind>( this.attemptsOrder );
-      }
-
-      bool isOk = false;
-      if ( result.Count == 0 )
-      {
-        Log.Error( "Attempts order list is empty" );
-      }
-      else if ( result.Contains( FeedKind.None ) )
-      {
-        Log.Error( "Attempts order list contains None" );
-      }
-      else
-      {
-        int distinctCount = result.Distinct( ).Count( );
-        if ( result.Count != distinctCount )
-        {
-          Log.ErrorFormat(
-            "Attempts order list contains non-unique values ({0} total and {1} unique)",
-            result.Count,
-            distinctCount
-          );
-        }
-        else
-        {
-          // decomissioned all old feed kinds, so this is not needed anymore
-          //int totalCountOfAvailableFeeds = Enum.GetValues( typeof( FeedKind ) ).Length - 1;
-          //if ( result.Count != totalCountOfAvailableFeeds )
-          //{
-          //  Log.ErrorFormat( "Attempts order list is not complete or has garbage inside ({0} values)", result.Count );
-          //}
-          //else
-          //{
-          isOk = true;
-          //}
-        }
-      }
-
-      if ( !isOk )
-      {
-        result = new List<FeedKind>( SpotLocationRequest.DefaultAttemptsOrder );
-        lock ( this.statSync )
-        {
-          this.attemptsOrder.Clear( );
-          this.attemptsOrder.AddRange( SpotLocationRequest.DefaultAttemptsOrder );
-        }
-      }
-
-      return result.ToArray( );
-    }
-
     private readonly object statSync = new object( );
 
-    private readonly List<FeedKind> attemptsOrder =
-      new List<FeedKind>( SpotLocationRequest.DefaultAttemptsOrder );
-
-    private readonly Dictionary<FeedKind, DateTime> feedsSuccTimes = new Dictionary<FeedKind, DateTime>( );
+    private DateTime? succTime;
 
     private int feedCheckStat;
-
-    private readonly Dictionary<FeedKind, int> feedsSuccStats = new Dictionary<FeedKind, int>( );
 
     private void locationRequest_ReadLocationFinished( LocationRequest locationRequest, TrackerState result )
     {
@@ -150,18 +81,13 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       try
       {
-        FeedKind feedKind = ( ( SpotLocationRequest ) locationRequest ).CurrentFeedKind;
-
         lock ( this.statSync )
         {
-          DateTime otherFeedSuccTime;
-          if ( !this.feedsSuccTimes.TryGetValue( feedKind, out otherFeedSuccTime ) ||
-               otherFeedSuccTime < result.CreateTime )
+          if ( this.succTime == null ||
+               this.succTime.Value < result.CreateTime )
           {
-            feedsSuccTimes[feedKind] = result.CreateTime;
+            this.succTime = result.CreateTime;
           }
-
-          UpdateAttemptsOrder( feedKind );
         }
       }
       catch ( Exception exc )
@@ -170,89 +96,20 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
-    private void UpdateAttemptsOrder( FeedKind feedKind )
-    {
-      {
-        int feedStat;
-        this.feedsSuccStats.TryGetValue( feedKind, out feedStat );
-        this.feedsSuccStats[feedKind] = feedStat + 1;
-
-        this.feedCheckStat++;
-      }
-
-      if ( this.feedCheckStat < 100 )
-        return;
-
-      string logString = "";
-      FeedKind defaultFeed = SpotLocationRequest.DefaultAttemptsOrder[0];
-      int bestStat = 0;
-      FeedKind bestFeed = FeedKind.None;
-      foreach ( KeyValuePair<FeedKind, int> kvpFeedStat in this.feedsSuccStats )
-      {
-        if ( logString != "" )
-          logString += ", ";
-        logString += string.Format( "{0}/{1}", kvpFeedStat.Key, kvpFeedStat.Value );
-
-        if ( kvpFeedStat.Value > bestStat )
-        {
-          bestStat = kvpFeedStat.Value;
-          bestFeed = kvpFeedStat.Key;
-        }
-        else if ( kvpFeedStat.Value == bestStat &&
-                  kvpFeedStat.Key == defaultFeed )
-        {
-          bestFeed = defaultFeed;
-        }
-      }
-
-      if ( bestFeed == FeedKind.None )
-      { // Should not happen, but let's check for that too. No need to uodate this.attemptsOrder because
-        // GetSanitizedAttemptsOrder will return correct sequence anyway.
-        Log.ErrorFormat(
-          "NONE obtained as \"best feed\", total number value in feedsSuccStats is {0}",
-          this.feedsSuccStats.Count
-        );
-      }
-      else
-      {
-        FeedKind prevBestFeed = this.attemptsOrder.FirstOrDefault( );
-        if ( bestFeed != prevBestFeed )
-        {
-          Log.Info( "Log stat for the moment: " + logString );
-          this.attemptsOrder.RemoveAll( fk => fk == bestFeed );
-          this.attemptsOrder.Insert( 0, bestFeed );
-          Log.InfoFormat( "Best feed was {0}, now it's {1}", prevBestFeed, bestFeed );
-        }
-      }
-
-      this.feedsSuccStats.Clear( );
-      this.feedCheckStat = 0;
-    }
-
     public override string GetStat( out bool isOk )
     {
       StringBuilder sb = new StringBuilder( );
 
+      isOk = true;
+
       lock ( this.statSync )
       {
-        for ( int i = 0; i < this.attemptsOrder.Count; i++ )
-        {
-          if ( i > 0 )
-            sb.AppendLine( );
+        sb.Append( "Succ.request:\t" );
 
-          FeedKind feedKind = this.attemptsOrder[i];
-          sb.AppendFormat( "{0}:\t", feedKind.ToString( ) );
-
-          DateTime dtSucc;
-          if ( this.feedsSuccTimes.TryGetValue( feedKind, out dtSucc ) )
-            sb.Append( Tools.GetAgeStr( dtSucc, true ) );
-          else
-            sb.Append( "None" );
-        }
-
-        isOk =
-          this.attemptsOrder.Count > 0 &&
-          this.attemptsOrder[0] == SpotLocationRequest.DefaultAttemptsOrder[0];
+        if ( this.succTime != null )
+          sb.Append( Tools.GetAgeStr( succTime.Value, true ) );
+        else
+          sb.Append( "None" );
       }
 
       return sb.ToString( );
@@ -293,7 +150,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         int consequentErrorsCount =
           this.consequentErrorsCounter.TimedOutRequestsCounter.Increment( out shouldReportProblem );
 
-        string message = 
+        string message =
           string.Format(
             "Location request hasn't finished in time for lrid {0}, tracker id {1}. That's a consequent time out #{2}",
             locReq.Lrid,

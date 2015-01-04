@@ -30,11 +30,25 @@ namespace FlyTrace.LocationLib.ForeignAccess
 
     public readonly DateTime StartTs = TimeService.Now;
 
-    public readonly string Id;
+    /// <summary>Track points that are older than the newest point by this number of hours are ignored.</summary>
+    public const int FullTrackPointAgeToIgnore = 12;
 
-    protected LocationRequest( string id )
+    public readonly RequestParams RequestParams;
+
+    protected LocationRequest( RequestParams requestParams )
     {
-      Id = id;
+      RequestParams = requestParams;
+    }
+
+    /// <summary>
+    /// Just a helper property, returns <see cref="RequestParams.Id"/>
+    /// </summary>
+    public string Id
+    {
+      get
+      {
+        return RequestParams.Id;
+      }
     }
 
     /// <summary>

@@ -24,7 +24,7 @@ namespace FlyTrace.LocationLib.ForeignAccess
 {
   public abstract class LocationRequestFactory
   {
-    public abstract LocationRequest CreateRequest( string foreignId );
+    public abstract LocationRequest CreateRequest( RequestParams requestParams );
 
     public abstract string GetStat( out bool isOk );
 

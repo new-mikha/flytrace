@@ -251,12 +251,14 @@ namespace FlyTrace
             { // the tracker doesn't exists in the database, so we need to check it:
               string appAuxLogFolder = Path.Combine( HttpRuntime.AppDomainAppPath, "logs" );
 
-              ForeignId foreignId = new ForeignId( ForeignId.SPOT, spotId );
-
               LocationRequestFactory locationRequestFactory =
                ForeignAccessCentral.LocationRequestFactories[ForeignId.SPOT];
 
-              LocationRequest locationRequest = locationRequestFactory.CreateRequest( foreignId.Id );
+              RequestParams requestParams;
+              requestParams.Id = spotId;
+              requestParams.ExistingTrack = null;
+
+              LocationRequest locationRequest = locationRequestFactory.CreateRequest( requestParams );
 
               TrackerState tracker = locationRequest.ReadLocation( );
               if ( tracker.Error != null &&

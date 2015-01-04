@@ -25,7 +25,7 @@ namespace FlyTrace.LocationLib.Data
   /// <summary>
   /// Point with its time, location type and optinally user message
   /// </summary>
-  public class TrackPointData
+  public class TrackPointData : IEquatable<TrackPointData>
   {
     internal TrackPointData(
       string locationType,
@@ -40,7 +40,9 @@ namespace FlyTrace.LocationLib.Data
       Longitude = longitude;
       ForeignTime = foreignTime;
       UserMessage = userMessage;
-      // If adding new field/property - don't forget to add it to equalityExpression below
+      // If adding new field/property - don't forget to add it to:
+      // - EqualityExpression below
+      // - GetHashCode method
     }
 
     public readonly string LocationType;
@@ -64,7 +66,8 @@ namespace FlyTrace.LocationLib.Data
 
     internal static bool ArePointsEqual( TrackPointData x, TrackPointData y )
     {
-      if ( ReferenceEquals( x, y ) ) return true;
+      if ( ReferenceEquals( x, y ) )  // returns true also if both are null
+        return true;
 
       // at this point at least one is not null because of ReferenceEquals above.
       if ( x == null || y == null ) return false;
@@ -76,10 +79,12 @@ namespace FlyTrace.LocationLib.Data
 
     internal static bool ArePointArraysEqual( TrackPointData[] x, TrackPointData[] y )
     {
-      if ( ReferenceEquals( x, y ) ) return true;
+      if ( ReferenceEquals( x, y ) ) // returns true also if both are null
+        return true;
 
       // at this point at least one is not null because of ReferenceEquals above.
-      if ( x == null || y == null ) return false;
+      if ( x == null || y == null )
+        return false;
 
       // so now both are not nulls and different instances.
 
@@ -97,6 +102,35 @@ namespace FlyTrace.LocationLib.Data
       }
 
       return true;
+    }
+
+    public bool Equals( TrackPointData other )
+    {
+      return
+        other != null &&
+        (
+          ReferenceEquals( this, other ) ||
+          EqualityExpression( this, other )
+        );
+    }
+
+    public override bool Equals( object obj )
+    {
+      return Equals( obj as TrackPointData );
+    }
+
+    public override int GetHashCode( )
+    {
+      unchecked
+      {
+        int result = LocationType == null ? 0 : LocationType.GetHashCode( );
+        result = ( result * 397 ) ^ Latitude.GetHashCode( );
+        result = ( result * 397 ) ^ Longitude.GetHashCode( );
+        result = ( result * 397 ) ^ ForeignTime.GetHashCode( );
+        result = ( result * 397 ) ^ ( UserMessage == null ? 0 : UserMessage.GetHashCode( ) );
+
+        return result;
+      }
     }
 
     public override string ToString( )

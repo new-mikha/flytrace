@@ -28,16 +28,6 @@ using log4net;
 
 namespace FlyTrace.LocationLib.ForeignAccess.Spot
 {
-  // ReSharper disable InconsistentNaming (names are OK)
-  public enum FeedKind
-  {
-    None,
-    Feed_1_0,
-    Feed_1_0_undoc,
-    Feed_2_0
-  };
-  // ReSharper restore InconsistentNaming
-
   /// <summary>
   /// Used to ask a foreign server for coordinates. Returns Tracker, that contains either Error or Location with FullTrack. 
   /// If requested in the constructor, it also fills Tracker.FullTrack field (if there is no Error). See Remarks 
@@ -58,19 +48,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private readonly ConsequentErrorsCounter consequentErrorsCounter;
 
-    /// <summary>Requests for different destinations are executed in this order until any one succeeds or there 
-    /// are no more unrequested destinations in this array.</summary>
-    private readonly FeedKind[] attemptsOrder;
-
-    public static readonly FeedKind[] DefaultAttemptsOrder =
-      { 
-        FeedKind.Feed_2_0
-
-        // Discontinue using old feeds, so commented out:
-        //,FeedKind.Feed_1_0_undoc
-        //,FeedKind.Feed_1_0
-      };
-
     /// <summary>
     /// </summary>
     /// <param name="id"></param>
@@ -85,43 +62,21 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     /// - a successful request sets this counter to zero.
     /// - ResponseHasNoData or BadTrackerId are ignored and not counted as neither fail nor success.
     /// </param>
-    /// <param name="attemptsOrder"></param>
     public SpotLocationRequest(
-      string id,
+      RequestParams requestParams,
       string appAuxLogFolder,
-      ConsequentErrorsCounter consequentErrorsCounter,
-      IEnumerable<FeedKind> attemptsOrder
+      ConsequentErrorsCounter consequentErrorsCounter
     )
-      : base( id )
+      : base( requestParams )
     {
       this.appAuxLogFolder = appAuxLogFolder;
       this.consequentErrorsCounter = consequentErrorsCounter;
-
-      FeedKind[] feedKindsArr = attemptsOrder as FeedKind[] ?? attemptsOrder.ToArray( );
-
-      if ( attemptsOrder != null &&
-           feedKindsArr.Any( fk => fk != FeedKind.None ) )
-      {
-        this.attemptsOrder = feedKindsArr;
-      }
-      else
-      {
-        this.attemptsOrder = DefaultAttemptsOrder;
-      }
     }
 
     public override string ForeignType
     {
       get { return ForeignId.SPOT; }
     }
-
-    /// <summary>Number of attempt for this request (where 0 is first attempt), corresponds to an element 
-    /// in <see cref="attemptsOrder"/>.</summary>
-    private volatile int iAttempt;
-
-    private volatile FeedKind currentFeedKind;
-
-    internal FeedKind CurrentFeedKind { get { return this.currentFeedKind; } }
 
     private readonly object sync = new object( );
 
@@ -145,10 +100,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       Lrid = asyncChainedState.Id;
 
-      this.currentFeedKind = this.attemptsOrder[this.iAttempt];
-
-      this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id );
-      Log.InfoFormat( "Created request for {0}, {1} lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
+      this.currentRequest = new SpotFeedRequest( this.Id, 0, asyncChainedState.Id );
+      Log.InfoFormat( "Created request for {0}, lrid {1}", this.Id, asyncChainedState.Id );
 
       this.currentRequest.BeginRequest( SpotFeedRequestCallback, asyncChainedState );
 
@@ -188,87 +141,48 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       Tools.ConfigureThreadCulture( );
 
+      Thread.MemoryBarrier( );
+
       var asyncChainedState = ( AsyncChainedState<TrackerState> ) ar.AsyncState;
 
       try
       {
         TrackerState result = this.currentRequest.EndRequest( ar );
 
-        if ( result.Error == null )
+        bool isSubsequentRequestStarted = false;
+
+        if ( result.Error != null )
         {
-          string tsFileName = string.Format( "{0}.succ.timestamp", this.currentRequest.FeedKind );
-          if ( Log.IsDebugEnabled )
-            Log.DebugFormat( "Call succeeded for {0}, {1}, lrid {2}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
-
-          if ( this.iAttempt != 0 )
-          {
-            string msg =
-              string.Format(
-                "Retry succeeded for {0}, {1}, lrid {2}",
-                this.Id, this.currentRequest.FeedKind, asyncChainedState.Id );
-
-            // Prevent many Warns because Warnings supposed to be emailed.
-            if ( IsWarnedAboutSuccRetry )
-            {
-              Log.Info( msg );
-            }
-            else
-            {
-              Log.Warn( msg );
-              IsWarnedAboutSuccRetry = true; // multiple threads can do that, but it's ok. Deliberately do not sync it.
-            }
-          }
-
-          if ( this.appAuxLogFolder != null )
-          {
-            try
-            { // we need an idea of how diff.feeds work without keeping log on. 
-              // Creation of a timestamp file is not synced, because it's no problem when it fails - the next one will eventually succeed.
-              string path = Path.Combine( this.appAuxLogFolder, tsFileName );
-              File.WriteAllText( path, "" );
-            }
-            catch ( Exception exc )
-            {
-              Log.ErrorFormat( "SpotFeedRequestCallback for {0}, {1}, lrid {2}: {3}", this.Id, this.currentRequest.FeedKind, asyncChainedState.Id, exc );
-            }
-          }
-
-          asyncChainedState.SetAsCompleted( result );
-
-          if ( this.consequentErrorsCounter != null )
-            this.consequentErrorsCounter.RequestsErrorsCounter.Reset( );
+          ProcessFailedRequestEnd( asyncChainedState, result );
         }
         else
         {
-          bool havingMoreAttempts =
-            this.iAttempt < this.attemptsOrder.Length - 1 &&
-              result.Error.Type != Data.ErrorType.BadTrackerId &&
-              result.Error.Type != Data.ErrorType.ResponseHasNoData;
+          bool needContinue = MergeWithExistingData( ref result );
 
-          if ( !havingMoreAttempts )
+          if ( !needContinue )
           {
-            LogRequestError( asyncChainedState, result );
-
-            asyncChainedState.SetAsCompleted( result );
+            ProcessSuccRequestEnd( asyncChainedState );
           }
           else
           {
-            this.iAttempt++;
+            this.currentRequest =
+              new SpotFeedRequest(
+                this.Id,
+                this.currentRequest.Page + 1,
+                asyncChainedState.Id
+              );
 
-            this.currentFeedKind = this.attemptsOrder[this.iAttempt];
-
-            this.currentRequest = new SpotFeedRequest( this.currentFeedKind, this.Id, asyncChainedState.Id );
-
-            Thread.MemoryBarrier( );
-            // If isAborted but we're here then "bad" request was finished and closed.
+            // If isAborted but we're here then "bad" (timed out?) request was finished and closed.
             if ( !this.isAborted )
             {
-              Log.WarnFormat( "Retrying using {0} for {1}, lrid {2} after an error: {3}", this.currentFeedKind, this.Id, asyncChainedState.Id, result.Error );
-
               this.currentRequest.BeginRequest( SpotFeedRequestCallback, asyncChainedState );
+              isSubsequentRequestStarted = true;
             }
           }
         }
+
+        if ( !isSubsequentRequestStarted )
+          asyncChainedState.SetAsCompleted( result );
       }
       catch ( Exception exc )
       {
@@ -276,7 +190,113 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
-    private void LogRequestError( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
+    private void ProcessSuccRequestEnd( AsyncChainedState<TrackerState> asyncChainedState )
+    {
+      if ( Log.IsDebugEnabled )
+        Log.DebugFormat( "Call succeeded for {0}, lrid {1}", this.Id, asyncChainedState.Id );
+
+      if ( this.appAuxLogFolder != null )
+      {
+        try
+        { // we need an idea of how diff.feeds work without keeping log on. 
+          // Creation of a timestamp file is not synced, because it's no problem when it fails - the next one will eventually succeed.
+          string path = Path.Combine( this.appAuxLogFolder, "succ.timestamp" );
+          File.WriteAllText( path, "" );
+        }
+        catch ( Exception exc )
+        {
+          Log.ErrorFormat( "SpotFeedRequestCallback for {0}, lrid {1}: {2}", this.Id, asyncChainedState.Id, exc );
+        }
+      }
+
+      if ( this.consequentErrorsCounter != null )
+        this.consequentErrorsCounter.RequestsErrorsCounter.Reset( );
+    }
+
+    private Data.TrackPointData[] prevPagesTrack;
+
+    /// <summary>Max number of messages in the SPOT feed page</summary>
+    private const int MaxFeedLength = 50;
+
+    private bool MergeWithExistingData( ref TrackerState newestTrackerState )
+    {
+      bool needContinue;
+
+      bool needUpdate = false;
+
+      Data.TrackPointData[] mergedTrack;
+      if ( this.prevPagesTrack == null )
+      {
+        mergedTrack =
+          this.prevPagesTrack =
+          newestTrackerState.Position.FullTrack;
+      }
+      else
+      {
+        needUpdate = true;
+
+        mergedTrack =
+          this.prevPagesTrack
+          .Union( newestTrackerState.Position.FullTrack )
+          .OrderByDescending( point => point.ForeignTime )
+          .Distinct( ) // e.g. page 2 can start with a message that is ending for page 1 (e.g. if a new point passed through to the SPOT server after page 1 retrieved)
+          .ToArray( );
+      }
+
+      if ( mergedTrack.Length == 0 )
+      { // should never happen because this method called for succ.request end only, but let's check anyway
+        Log.ErrorFormat( "mergedResult.Length == 0" );
+        return false;
+      }
+
+      Data.TrackPointData oldestRequestedPoint = mergedTrack.Last( );
+
+      Data.TrackPointData newestExistingTrackPoint = null;
+      if ( RequestParams.ExistingTrack != null )
+        newestExistingTrackPoint = RequestParams.ExistingTrack.FirstOrDefault( );
+
+      if (
+        // no pre-loaded track:
+           newestExistingTrackPoint == null ||
+
+           // there is a gap between just loaded and pre-loaded track - this hardly would happen but let's check:
+           oldestRequestedPoint.ForeignTime > newestExistingTrackPoint.ForeignTime
+        )
+      {
+        double mergedTrackTotalHours =
+          ( mergedTrack.First( ).ForeignTime - mergedTrack.Last( ).ForeignTime ).TotalHours;
+
+        needContinue =
+          newestTrackerState.Position.FullTrack.Length == MaxFeedLength  // check that page just loaded by the request is full - hence "result", not "mergedTrack"
+          && mergedTrackTotalHours < LocationRequest.FullTrackPointAgeToIgnore
+          && this.currentRequest.Page < 5; // we need to stop somewhere
+      }
+      else
+      {
+        needContinue = false;
+
+        needUpdate = true;
+
+        mergedTrack =
+          mergedTrack
+          .Union( RequestParams.ExistingTrack )
+          .OrderByDescending( point => point.ForeignTime )
+          .Distinct( ) // tracks would mostly overlap, normally except the newest point (if it's there at all)
+          .ToArray( );
+      }
+
+      if ( needUpdate )
+      {
+        if ( newestTrackerState.Error != null ) // should never happen because here TrackerState is after succ.request, but let's check
+          Log.ErrorFormat( "result.Error != null" );
+
+        newestTrackerState = new TrackerState( mergedTrack, newestTrackerState.Tag );
+      }
+
+      return needContinue;
+    }
+
+    private void ProcessFailedRequestEnd( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
     {
       if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
            result.Error.Type == Data.ErrorType.BadTrackerId )
@@ -301,8 +321,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         string message =
           string.Format
           (
-            "Request for {0}, lrid {1} failed: {2}. That's a consequent request error #{3}",
+            "Request for {0}, {1}, lrid {2} failed: {3}. That's a consequent request error #{4}",
             this.Id,
+            this.currentRequest.Page,
             asyncChainedState.Id,
             result.Error,
             consequentErrorsCount
@@ -313,6 +334,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         else
           ErrorHandlingLog.Info( message );
       }
+    }
+
+    private void LogRequestError( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
+    {
     }
 
     protected override TrackerState EndReadLocationProtected( IAsyncResult ar )
@@ -331,7 +356,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         TrackerState result = finalAsyncResult.EndInvoke( );
 
-        Log.InfoFormat( "Got some result for {0} ({1}): {2}", this.Id, this.currentRequest.FeedKind, result );
+        Log.InfoFormat( "Got some result for {0}: {1}", this.Id, result );
 
         return result;
       }

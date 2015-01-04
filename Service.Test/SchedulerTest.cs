@@ -664,7 +664,10 @@ namespace Service.Test
           {
             TimeService.DebugReplacement = ( ) => holder.RequestStartTime.Value;
 
-            holder.CurrentRequest = new FakeLocationRequest( id.Id );
+            RequestParams requestParams = default( RequestParams );
+            requestParams.Id = id.Id;
+
+            holder.CurrentRequest = new FakeLocationRequest( requestParams );
           }
           finally
           {
@@ -699,8 +702,8 @@ namespace Service.Test
 
     private class FakeLocationRequest : LocationRequest
     {
-      public FakeLocationRequest( string id )
-        : base( id )
+      public FakeLocationRequest( RequestParams requestParams )
+        : base( requestParams )
       {
       }
 

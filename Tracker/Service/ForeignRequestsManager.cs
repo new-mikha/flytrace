@@ -72,7 +72,7 @@ namespace FlyTrace.Service
 
     public ReaderWriterLockSlimEx HolderRwLock
     {
-      get { return this.scheduler.HolderRwLock; }
+      get { return HolderRwLock; }
     }
 
     public IDictionary<ForeignId, TrackerStateHolder> Trackers
@@ -236,24 +236,19 @@ namespace FlyTrace.Service
 
     private void StartForeignRequest( TrackerStateHolder trackerStateHolder )
     {
-      LocationRequest locationRequest;
+      LocationRequest locationRequest = PrepareLocationRequest( trackerStateHolder );
 
-      {
-        LocationRequestFactory requestFactory =
-          ForeignAccessCentral.LocationRequestFactories[trackerStateHolder.ForeignId.Type];
-
-        locationRequest =
-          requestFactory.CreateRequest( trackerStateHolder.ForeignId.Id );
-      }
-
-      if ( !this.scheduler.HolderRwLock.TryEnterWriteLock( ) )
-      {
-        Log.ErrorFormat( "Can't enter write mode in BeginRequest for {0}", trackerStateHolder.ForeignId );
+      if ( locationRequest == null )
         return;
-      }
 
       try
       {
+        if ( !HolderRwLock.TryEnterWriteLock( ) )
+        {
+          Log.ErrorFormat( "Can't enter write mode in BeginRequest for {0}", trackerStateHolder.ForeignId );
+          return;
+        }
+
         try
         {
           trackerStateHolder.CurrentRequest = locationRequest;
@@ -261,11 +256,11 @@ namespace FlyTrace.Service
         }
         finally
         {
-          this.scheduler.HolderRwLock.ExitWriteLock( );
+          HolderRwLock.ExitWriteLock( );
         }
 
         // Despite TrackerStateHolder having CurrentRequest field, locationRequest still need to 
-        // be passed as a implicit parameter because there is no guarantee that at the moment when 
+        // be passed as an implicit parameter because there is no guarantee that at the moment when 
         // OnEndReadLocation is called there will be no other request started. E.g. this request 
         // can be stuck, aborted by timeout, and then suddenly pop in again in OnEndReadLocation. 
         // It's unlikely but still possible. So pass locationRequest to avoid any chance that 
@@ -280,13 +275,52 @@ namespace FlyTrace.Service
       }
       catch
       {
-        trackerStateHolder.CurrentRequest = null; // no good => no CurrentRequest, no setting ScheduledTime to null.
+        trackerStateHolder.CurrentRequest = null; // no-good => no CurrentRequest, no setting ScheduledTime to null.
         throw;
       }
 
       Thread.MemoryBarrier( ); // set ScheduledTime only _after_ successful BeginReadLocation.
 
       trackerStateHolder.ScheduledTime = null;
+    }
+
+    private LocationRequest PrepareLocationRequest( TrackerStateHolder trackerStateHolder )
+    {
+      LocationRequestFactory requestFactory =
+        ForeignAccessCentral.LocationRequestFactories[trackerStateHolder.ForeignId.Type];
+
+      RequestParams requestParams;
+      requestParams.Id = trackerStateHolder.ForeignId.Id;
+
+      // Read lock needed to read trackerStateHolder.Snapshot.Position
+      if ( !HolderRwLock.TryEnterReadLock( ) )
+      {
+        Log.ErrorFormat( "Can't enter read mode in PrepareLocationRequest for {0}", trackerStateHolder.ForeignId );
+        return null;
+      }
+
+      try
+      {
+        // Potentially, the snapshot with the existing track might change while the new data is being requested.
+        // But it's not a problem because the old track is valid anyway - to make sure that, the requesting
+        // algorithm will check if the old track's starting section matches new data loaded from the foreign 
+        // system. So existing track (most probably its trailing points) would be in use anyway.
+        if ( trackerStateHolder.Snapshot == null ||
+             trackerStateHolder.Snapshot.Position == null )
+        {
+          requestParams.ExistingTrack = null;
+        }
+        else
+        {
+          requestParams.ExistingTrack = trackerStateHolder.Snapshot.Position.FullTrack;
+        }
+      }
+      finally
+      {
+        HolderRwLock.ExitReadLock( );
+      }
+
+      return requestFactory.CreateRequest( requestParams );
     }
 
     private void OnEndReadLocation( IAsyncResult ar )
@@ -323,7 +357,7 @@ namespace FlyTrace.Service
 
         bool isFullRequestRoundtrip = false;
 
-        this.scheduler.HolderRwLock.AttemptEnterUpgradeableReadLock( );
+        HolderRwLock.AttemptEnterUpgradeableReadLock( );
         // when we're here, other thread can be in read mode & no other can be in write or upgr. modes
 
         try
@@ -344,7 +378,7 @@ namespace FlyTrace.Service
           RevisedTrackerState mergedResult =
             RevisedTrackerState.Merge( trackerStateHolder.Snapshot, trackerState, newRevisionToUse );
 
-          this.scheduler.HolderRwLock.AttemptEnterWriteLock( );
+          HolderRwLock.AttemptEnterWriteLock( );
 
           try
           { // Rolling through the write mode as quick as possible:
@@ -366,7 +400,7 @@ namespace FlyTrace.Service
           }
           finally
           {
-            this.scheduler.HolderRwLock.ExitWriteLock( );
+            HolderRwLock.ExitWriteLock( );
           }
 
           isFullRequestRoundtrip = mergedResult.Error == null ||
@@ -374,7 +408,7 @@ namespace FlyTrace.Service
         }
         finally
         {
-          this.scheduler.HolderRwLock.ExitUpgradeableReadLock( );
+          HolderRwLock.ExitUpgradeableReadLock( );
 
           // Notify scheduler that something's happened. Even if it's exception, or return 
           // without setting CurrentRequest, etc - anyway waking up the scheduler doesn't hurt:

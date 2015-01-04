@@ -28,10 +28,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Test
   {
     private readonly SpotFeedRequest spotFeedRequest;
 
-    public TestLocationRequest( string id, string testXml )
-      : base( id )
+    public TestLocationRequest( RequestParams requestParams, string testXml )
+      : base( requestParams )
     {
-      this.spotFeedRequest = new SpotFeedRequest( FeedKind.Feed_2_0, Id, testXml, -1 );
+      this.spotFeedRequest = new SpotFeedRequest( requestParams.Id, testXml, -1 );
     }
 
     public override string ForeignType
