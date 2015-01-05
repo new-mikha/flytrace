@@ -72,7 +72,7 @@ namespace FlyTrace.Service
 
     public ReaderWriterLockSlimEx HolderRwLock
     {
-      get { return HolderRwLock; }
+      get { return this.scheduler.HolderRwLock; }
     }
 
     public IDictionary<ForeignId, TrackerStateHolder> Trackers

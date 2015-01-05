@@ -98,6 +98,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           this.trackerForeignId
         );
 
+      if ( Page > 0 )
+        url = string.Format( "{0}?start={1}", url, Page * 50 + 1 );
+
       this.webRequest = WebRequest.Create( url );
 
       if ( Log.IsDebugEnabled )
@@ -731,14 +734,17 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private bool ProcessErrorTag( XmlReader xmlReader )
     {
+      // these are the messages that SPOT server return when different errors happen:
+      const string noDataMsg = "No Messages to display";
+      const string wrongTrackerIdMsg = "Feed Not Found";
+      const string feedNotActiveMsg = "Feed Currently Not Active"; // occurs when tracker was deleted?
+
       bool isBadTrackerId = false;
 
       try
       {
         string errorDescr;
-        string noDataMsg;
-        string wrongTrackerIdMsg;
-        string feedNotActiveMsg;
+        
         string passwordRequiredMsg = "Feed Password required";
 
         if ( !xmlReader.ReadToDescendant( "text" ) )
@@ -747,11 +753,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         }
 
         errorDescr = xmlReader.ReadElementContentAsString( );
-
-        // these are the messages that SPOT server return when different errors happen in Unofficial request:
-        noDataMsg = "No Messages to display";
-        wrongTrackerIdMsg = "Feed Not Found";
-        feedNotActiveMsg = "Feed Currently Not Active"; // occurs when tracker was deleted?
 
         if ( errorDescr.Contains( noDataMsg ) )
         {

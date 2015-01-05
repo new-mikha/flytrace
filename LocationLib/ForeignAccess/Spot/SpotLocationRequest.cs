@@ -149,19 +149,26 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       {
         TrackerState result = this.currentRequest.EndRequest( ar );
 
+        if ( result.Error != null )
+          LogFailedRequestEnd( asyncChainedState, result );
+
+        bool needContinue = false;
+
+        if ( result.Error == null ||
+             result.Error.Type == Data.ErrorType.ResponseHasNoData )
+        { // Might be there is a result from the prev.pages, so try to merge it:
+          result = MergeWithExistingData( result, out needContinue );
+          // If it was an error with ResponseHasNoData, but there were data from the prev.pages,
+          // then now result has Error == null.
+        }
+
         bool isSubsequentRequestStarted = false;
 
-        if ( result.Error != null )
+        if ( result.Error == null )
         {
-          ProcessFailedRequestEnd( asyncChainedState, result );
-        }
-        else
-        {
-          bool needContinue = MergeWithExistingData( ref result );
-
           if ( !needContinue )
           {
-            ProcessSuccRequestEnd( asyncChainedState );
+            LogSuccRequestEnd( asyncChainedState );
           }
           else
           {
@@ -190,7 +197,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
-    private void ProcessSuccRequestEnd( AsyncChainedState<TrackerState> asyncChainedState )
+    private void LogSuccRequestEnd( AsyncChainedState<TrackerState> asyncChainedState )
     {
       if ( Log.IsDebugEnabled )
         Log.DebugFormat( "Call succeeded for {0}, lrid {1}", this.Id, asyncChainedState.Id );
@@ -218,35 +225,41 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     /// <summary>Max number of messages in the SPOT feed page</summary>
     private const int MaxFeedLength = 50;
 
-    private bool MergeWithExistingData( ref TrackerState newestTrackerState )
+    private TrackerState MergeWithExistingData( TrackerState result, out bool needContinue )
     {
-      bool needContinue;
-
       bool needUpdate = false;
 
       Data.TrackPointData[] mergedTrack;
       if ( this.prevPagesTrack == null )
       {
-        mergedTrack =
-          this.prevPagesTrack =
-          newestTrackerState.Position.FullTrack;
+        if ( result.Position == null )
+        { // this should be ResponseHasNoData - ok, it's really no data then.
+          needContinue = false;
+          return result;
+        }
+
+        mergedTrack = result.Position.FullTrack;
       }
       else
       {
         needUpdate = true;
 
-        mergedTrack =
-          this.prevPagesTrack
-          .Union( newestTrackerState.Position.FullTrack )
-          .OrderByDescending( point => point.ForeignTime )
-          .Distinct( ) // e.g. page 2 can start with a message that is ending for page 1 (e.g. if a new point passed through to the SPOT server after page 1 retrieved)
-          .ToArray( );
+        if ( result.Position == null ) // i.e. it's ResponseHasNoData for N'th page.
+          mergedTrack = prevPagesTrack;
+        else
+          mergedTrack =
+            this.prevPagesTrack
+            .Union( result.Position.FullTrack )
+            .OrderByDescending( point => point.ForeignTime )
+            .Distinct( ) // e.g. page 2 can start with a message that is ending for page 1 (e.g. if a new point passed through to the SPOT server after page 1 retrieved)
+            .ToArray( );
       }
 
       if ( mergedTrack.Length == 0 )
       { // should never happen because this method called for succ.request end only, but let's check anyway
         Log.ErrorFormat( "mergedResult.Length == 0" );
-        return false;
+        needContinue = false;
+        return result;
       }
 
       Data.TrackPointData oldestRequestedPoint = mergedTrack.Last( );
@@ -257,53 +270,68 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       if (
         // no pre-loaded track:
-           newestExistingTrackPoint == null ||
+            newestExistingTrackPoint == null ||
 
-           // there is a gap between just loaded and pre-loaded track - this hardly would happen but let's check:
-           oldestRequestedPoint.ForeignTime > newestExistingTrackPoint.ForeignTime
+            // there is a gap between just loaded and pre-loaded track - this hardly would happen but let's check:
+            oldestRequestedPoint.ForeignTime > newestExistingTrackPoint.ForeignTime
         )
       {
         double mergedTrackTotalHours =
           ( mergedTrack.First( ).ForeignTime - mergedTrack.Last( ).ForeignTime ).TotalHours;
 
         needContinue =
-          newestTrackerState.Position.FullTrack.Length == MaxFeedLength  // check that page just loaded by the request is full - hence "result", not "mergedTrack"
+          result.Error == null // check that it's not 50 messages on one page and "no data" on the next one.
+          && result.Position.FullTrack.Length == MaxFeedLength  // check that page just loaded by the request is full - hence "result", not "mergedTrack"
           && mergedTrackTotalHours < LocationRequest.FullTrackPointAgeToIgnore
           && this.currentRequest.Page < 5; // we need to stop somewhere
+
+        this.prevPagesTrack = mergedTrack;
       }
       else
       {
         needContinue = false;
 
-        needUpdate = true;
-
-        mergedTrack =
+        Data.TrackPointData[] mergedWithExisting =
           mergedTrack
           .Union( RequestParams.ExistingTrack )
           .OrderByDescending( point => point.ForeignTime )
           .Distinct( ) // tracks would mostly overlap, normally except the newest point (if it's there at all)
           .ToArray( );
+
+        if ( mergedWithExisting.Length != mergedTrack.Length )
+        {
+          mergedTrack = mergedWithExisting;
+          needUpdate = true;
+        }
       }
 
       if ( needUpdate )
       {
-        if ( newestTrackerState.Error != null ) // should never happen because here TrackerState is after succ.request, but let's check
+        if ( result.Error != null ) // should never happen because here TrackerState is after succ.request, but let's check
           Log.ErrorFormat( "result.Error != null" );
 
-        newestTrackerState = new TrackerState( mergedTrack, newestTrackerState.Tag );
+        DateTime thresholdDateTime = mergedTrack.First( ).ForeignTime.AddHours( -FullTrackPointAgeToIgnore );
+
+        result =
+          new TrackerState(
+            mergedTrack
+              .Where( point => point.ForeignTime > thresholdDateTime ),
+            result.Tag
+          );
       }
 
-      return needContinue;
+      return result;
     }
 
-    private void ProcessFailedRequestEnd( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
+    private void LogFailedRequestEnd( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
     {
       if ( result.Error.Type == Data.ErrorType.ResponseHasNoData ||
            result.Error.Type == Data.ErrorType.BadTrackerId )
       {
         ErrorHandlingLog.DebugFormat(
-          "Request for {0}, lrid {1} failed: {2}",
+          "Request for {0}, page {1}, lrid {2} failed: {3}",
           this.Id,
+          this.currentRequest.Page,
           asyncChainedState.Id,
           result.Error );
       }
@@ -321,7 +349,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         string message =
           string.Format
           (
-            "Request for {0}, {1}, lrid {2} failed: {3}. That's a consequent request error #{4}",
+            "Request for {0}, page {1}, lrid {2} failed: {3}. That's a consequent request error #{4}",
             this.Id,
             this.currentRequest.Page,
             asyncChainedState.Id,
@@ -334,10 +362,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         else
           ErrorHandlingLog.Info( message );
       }
-    }
-
-    private void LogRequestError( AsyncChainedState<TrackerState> asyncChainedState, TrackerState result )
-    {
     }
 
     protected override TrackerState EndReadLocationProtected( IAsyncResult ar )

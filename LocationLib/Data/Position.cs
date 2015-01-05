@@ -35,7 +35,7 @@ namespace FlyTrace.LocationLib.Data
 
       CurrPoint = fullTrackArray.First( ); // throws an exception if it's empty - it's ok (because it shouldn't be empty)
       PreviousPoint = fullTrackArray.Skip( 1 ).FirstOrDefault( ); // could be null
-      FullTrack = fullTrackArray.ToArray( );
+      FullTrack = fullTrackArray;
       // If adding new field/property - don't forget to add it to equalityExpression below
     }
 
