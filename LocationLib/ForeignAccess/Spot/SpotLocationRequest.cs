@@ -308,7 +308,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       if ( needUpdate )
       {
         if ( result.Error != null ) // should never happen because here TrackerState is after succ.request, but let's check
-          Log.ErrorFormat( "result.Error != null" );
+        {
+          Log.ErrorFormat( "result.Error != null: {0} \\ {1}", Id, result );
+        }
 
         DateTime thresholdDateTime = mergedTrack.First( ).ForeignTime.AddHours( -FullTrackPointAgeToIgnore );
 
