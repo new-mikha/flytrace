@@ -106,10 +106,19 @@ namespace FlyTrace.Service.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool IsNewScheduler {
             get {
                 return ((bool)(this["IsNewScheduler"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("20")]
+        public int TrackerLifetimeWithoutAccess {
+            get {
+                return ((int)(this["TrackerLifetimeWithoutAccess"]));
             }
         }
     }

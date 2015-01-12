@@ -176,10 +176,10 @@ namespace FlyTrace.Service.RequestsSchedule
     /// <summary>Max time for the thread to sleep before rechecking the situation</summary>
     public static readonly TimeSpan MaxSleepTimeSpan = TimeSpan.FromMilliseconds( 3000 );
 
-    /// <summary>In minutes. A tracker that has not been accessed for more than the number of minutes 
-    /// specified by this constant is considered as "old" (see other properties and methods) and is subject 
-    /// to remove from <see cref="Trackers"/></summary>
-    private const int TrackerLifetimeWithoutAccess = 20;
+    ///// <summary>In minutes. A tracker that has not been accessed for more than the number of minutes 
+    ///// specified by this constant is considered as "old" (see other properties and methods) and is subject 
+    ///// to remove from <see cref="Trackers"/></summary>
+    //private const int TrackerLifetimeWithoutAccess = 20;
 
     private struct ForeignStat
     {
@@ -420,7 +420,7 @@ namespace FlyTrace.Service.RequestsSchedule
     private bool IsBoring( TrackerStateHolder holder )
     {
       long boringThreshold =
-        TimeService.Now.AddMinutes( -TrackerLifetimeWithoutAccess ).ToFileTime( );
+        TimeService.Now.AddMinutes( -Properties.Settings.Default.TrackerLifetimeWithoutAccess ).ToFileTime( );
 
       long accessTimestamp =
         Interlocked.Read( ref holder.ThreadDesynchronizedAccessTimestamp );
