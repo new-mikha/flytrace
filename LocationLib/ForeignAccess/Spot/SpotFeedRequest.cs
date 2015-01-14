@@ -45,6 +45,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private readonly string trackerForeignId;
 
+    internal string TrackerForeignId { get { return this.trackerForeignId; } }
+
     private readonly long callId;
 
     public readonly int Page;

@@ -229,6 +229,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       bool needUpdate = false;
 
+      bool prevTrackExisted = this.prevPagesTrack != null;
+
       Data.TrackPointData[] mergedTrack;
       if ( this.prevPagesTrack == null )
       {
@@ -309,7 +311,14 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       {
         if ( result.Error != null ) // should never happen because here TrackerState is after succ.request, but let's check
         {
-          Log.ErrorFormat( "result.Error != null: {0} \\ {1}", Id, result );
+          Log.ErrorFormat( 
+            "result.Error != null: {0} \\ {1}\r\nPage={2}\r\nprevTrackExisted={3}\r\nId2={4}", 
+            Id, 
+            result, 
+            this.currentRequest.Page, 
+            prevTrackExisted ,
+            this.currentRequest.TrackerForeignId
+          );
         }
 
         DateTime thresholdDateTime = mergedTrack.First( ).ForeignTime.AddHours( -FullTrackPointAgeToIgnore );
