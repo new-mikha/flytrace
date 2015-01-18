@@ -311,13 +311,22 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       {
         if ( result.Error != null ) // should never happen because here TrackerState is after succ.request, but let's check
         {
+          string trackStat;
+          if ( mergedTrack == null )
+            trackStat = "null";
+          else if ( mergedTrack.Length == 0 )
+            trackStat = "none";
+          else
+            trackStat = string.Format( "{0} ## {1} ## {2}", mergedTrack.Length, mergedTrack.First( ), mergedTrack.Last( ) );
+
           Log.ErrorFormat( 
-            "result.Error != null: {0} \\ {1}\r\nPage={2}\r\nprevTrackExisted={3}\r\nId2={4}", 
+            "result.Error != null: {0} \\ {1}\r\nPage={2}\r\nprevTrackExisted={3}\r\nId2={4}\r\ntrack={5}", 
             Id, 
             result, 
             this.currentRequest.Page, 
             prevTrackExisted ,
-            this.currentRequest.TrackerForeignId
+            this.currentRequest.TrackerForeignId,
+            trackStat
           );
         }
 
