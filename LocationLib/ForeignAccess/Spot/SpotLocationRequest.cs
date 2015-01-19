@@ -309,7 +309,16 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       if ( needUpdate )
       {
-        if ( result.Error != null ) // should never happen because here TrackerState is after succ.request, but let's check
+        #region Logging only
+        if ( result.Error != null
+             &&
+             (
+              result.Error.Type != Data.ErrorType.ResponseHasNoData ||
+              this.currentRequest.Page == 0 ||
+              mergedTrack == null ||
+              mergedTrack.Length != MaxFeedLength 
+             )
+           ) // should never happen because here TrackerState is after succ.request, but let's check
         {
           string trackStat;
           if ( mergedTrack == null )
@@ -319,16 +328,17 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           else
             trackStat = string.Format( "{0} ## {1} ## {2}", mergedTrack.Length, mergedTrack.First( ), mergedTrack.Last( ) );
 
-          Log.ErrorFormat( 
-            "result.Error != null: {0} \\ {1}\r\nPage={2}\r\nprevTrackExisted={3}\r\nId2={4}\r\ntrack={5}", 
-            Id, 
-            result, 
-            this.currentRequest.Page, 
-            prevTrackExisted ,
+          Log.ErrorFormat(
+            "result.Error != null: {0} \\ {1}\r\nPage={2}\r\nprevTrackExisted={3}\r\nId2={4}\r\ntrack={5}",
+            Id,
+            result,
+            this.currentRequest.Page,
+            prevTrackExisted,
             this.currentRequest.TrackerForeignId,
             trackStat
           );
         }
+        #endregion
 
         DateTime thresholdDateTime = mergedTrack.First( ).ForeignTime.AddHours( -FullTrackPointAgeToIgnore );
 
