@@ -11,8 +11,5 @@
     <Setting Name="InfoEmail" Type="System.String" Scope="Application">
       <Value Profile="(Default)">info@flytrace.com</Value>
     </Setting>
-    <Setting Name="Tracker_Service_AdminFacade" Type="(Web Service URL)" Scope="Application">
-      <Value Profile="(Default)">http://localhost/Tracker/Service/Administration/AdminFacade.asmx</Value>
-    </Setting>
   </Settings>
 </SettingsFile>

@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<response>
+  <feedMessageResponse>
+    <count>44</count>
+    <feed>
+      <id>some_other_id</id>
+      <name>Some other name</name>
+      <description>Some other descr</description>
+      <status>ACTIVE</status>
+      <usage>0</usage>
+      <daysRange>7</daysRange>
+      <detailedMessageShown>false</detailedMessageShown>
+    </feed>
+    <totalCount>44</totalCount>
+    <activityCount>0</activityCount>
+    <messages>
+      <message clientUnixTime="0">
+        <id>312613401</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1408030167</unixTime>
+        <messageType>TRACK</messageType>
+        <latitude>-15.78818</latitude>
+        <longitude>-49.32718</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-14T15:29:27+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+      </message>
+      <message clientUnixTime="0">
+        <id>312610079</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1408029582</unixTime>
+        <messageType>TRACK</messageType>
+        <latitude>-15.79628</latitude>
+        <longitude>-49.33365</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-14T15:19:42+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+      </message>
+      <message clientUnixTime="0">
+        <id>312609104</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1408028966</unixTime>
+        <messageType>TRACK</messageType>
+        <latitude>-15.79645</latitude>
+        <longitude>-49.33356</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-14T15:09:26+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+      </message>
+      <message clientUnixTime="0">
+        <id>312596556</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1408027893</unixTime>
+        <messageType>TRACK</messageType>
+        <latitude>-15.7986</latitude>
+        <longitude>-49.33688</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-14T14:51:33+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+      </message>
+      <message clientUnixTime="0">
+        <id>312600187</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1408019921</unixTime>
+        <messageType>HELP</messageType>
+        <latitude>-15.75455</latitude>
+        <longitude>-49.33228</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-14T12:38:41+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+        <messageContent>Blah-blah-blah. Blah-blah-blah-blah-blah-blah-blah-blah-blah!!!</messageContent>
+      </message>
+      <message clientUnixTime="0">
+        <id>312561955</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1408019625</unixTime>
+        <messageType>HELP</messageType>
+        <latitude>-15.75449</latitude>
+        <longitude>-49.33231</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-14T12:33:45+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+        <messageContent>Blah-blah-blah. Blah-blah-blah-blah-blah-blah-blah-blah-blah!!!</messageContent>
+      </message>
+      <message clientUnixTime="0">
+        <id>312560927</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1408019356</unixTime>
+        <messageType>HELP</messageType>
+        <latitude>-15.75458</latitude>
+        <longitude>-49.33224</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-14T12:29:16+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+        <messageContent>Blah-blah-blah. Blah-blah-blah-blah-blah-blah-blah-blah-blah!!!</messageContent>
+      </message>
+      <message clientUnixTime="0">
+        <id>312550564</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1408016386</unixTime>
+        <messageType>TRACK</messageType>
+        <latitude>-15.75467</latitude>
+        <longitude>-49.33228</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-14T11:39:46+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+      </message>
+      <message clientUnixTime="0">
+        <id>312338572</id>
+        <messengerId>0-7514517</messengerId>
+        <messengerName>anna</messengerName>
+        <unixTime>1407957680</unixTime>
+        <messageType>OK</messageType>
+        <latitude>-15.3524</latitude>
+        <longitude>-49.36859</longitude>
+        <modelId>SPOT</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2014-08-13T19:21:20+0000</dateTime>
+        <messageDetail></messageDetail>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+        <messageContent>Blah-blah-blah. Blah-blah-blah-blah-blah-blah-blah-blah-blah!!!</messageContent>
+      </message>
+    </messages>
+  </feedMessageResponse>
+</response>

@@ -69,6 +69,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Administration\currentTrackers.aspx" />
     <Content Include="Administration\uiLogConfig.aspx" />
     <Content Include="App_Themes\Default\dot.png" />
     <Content Include="App_Themes\Default\finish-custom.png" />
@@ -81,7 +82,6 @@
     <Content Include="EmailTemplates\resetPassword.txt" />
     <Content Include="EmailTemplates\restorePassword.txt" />
     <Content Include="Administration\manageUsers.aspx" />
-    <Content Include="connectionStrings.config" />
     <None Include="ui.log4net.config.default" />
     <None Include="ui.log4net.config" />
     <Content Include="help\commonhelp.aspx" />
@@ -112,8 +112,8 @@
     <Content Include="Scripts\date.format.js" />
     <Content Include="Scripts\jquery-1.7.1.min.js" />
     <Content Include="Scripts\tools.js" />
-    <Content Include="Service\Administration\LogConfig.ascx" />
     <Content Include="default.aspx" />
+    <Content Include="Service\TrackerService.asmx" />
     <Content Include="unauthorizedAccess.aspx" />
     <Content Include="Administration\userInformation.aspx" />
     <Content Include="verification.aspx" />
@@ -121,16 +121,15 @@
       <SubType>Designer</SubType>
     </Content>
     <Content Include="Web.sitemap" />
-    <None Include="Web References\Service\AdminFacade.wsdl" />
-    <None Include="Web References\Service\AdminStat.datasource">
-      <DependentUpon>Reference.map</DependentUpon>
-    </None>
-    <None Include="Web References\Service\Reference.map">
-      <Generator>MSDiscoCodeGenerator</Generator>
-      <LastGenOutput>Reference.cs</LastGenOutput>
-    </None>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Administration\currentTrackers.aspx.cs">
+      <DependentUpon>currentTrackers.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Administration\currentTrackers.aspx.designer.cs">
+      <DependentUpon>currentTrackers.aspx</DependentUpon>
+    </Compile>
     <Compile Include="Administration\uiLogConfig.aspx.cs">
       <DependentUpon>uiLogConfig.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -208,12 +207,9 @@
     <Compile Include="restorePassword.aspx.designer.cs">
       <DependentUpon>restorePassword.aspx</DependentUpon>
     </Compile>
-    <Compile Include="Service\Administration\LogConfig.ascx.cs">
-      <DependentUpon>LogConfig.ascx</DependentUpon>
-      <SubType>ASPXCodeBehind</SubType>
-    </Compile>
-    <Compile Include="Service\Administration\LogConfig.ascx.designer.cs">
-      <DependentUpon>LogConfig.ascx</DependentUpon>
+    <Compile Include="Service\TrackerService.asmx.cs">
+      <DependentUpon>TrackerService.asmx</DependentUpon>
+      <SubType>Component</SubType>
     </Compile>
     <Compile Include="Site.Master.cs">
       <DependentUpon>Site.Master</DependentUpon>
@@ -343,11 +339,6 @@
     <Compile Include="verification.aspx.designer.cs">
       <DependentUpon>verification.aspx</DependentUpon>
     </Compile>
-    <Compile Include="Web References\Service\Reference.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Reference.map</DependentUpon>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Properties\Settings.settings">
@@ -393,25 +384,13 @@
       <Project>{E5A5D425-5D92-4CF8-A1D2-C7E5BCD270BA}</Project>
       <Name>LocationLib</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Service\Service.csproj">
+      <Project>{06F2EF78-C80F-4C13-86C4-02386D66AFEC}</Project>
+      <Name>Service</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
-  </ItemGroup>
-  <ItemGroup>
-    <WebReferences Include="Web References\" />
-  </ItemGroup>
-  <ItemGroup>
-    <WebReferenceUrl Include="http://localhost/Tracker/Service/Administration/AdminFacade.asmx%3fWSDL">
-      <UrlBehavior>Dynamic</UrlBehavior>
-      <RelPath>Web References\Service\</RelPath>
-      <UpdateFromURL>http://localhost/Tracker/Service/Administration/AdminFacade.asmx%3fWSDL</UpdateFromURL>
-      <ServiceLocationURL>
-      </ServiceLocationURL>
-      <CachedDynamicPropName>
-      </CachedDynamicPropName>
-      <CachedAppSettingsObjectName>Settings</CachedAppSettingsObjectName>
-      <CachedSettingsPropName>Tracker_Service_AdminFacade</CachedSettingsPropName>
-    </WebReferenceUrl>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />
@@ -440,4 +419,7 @@
       </FlavorProperties>
     </VisualStudio>
   </ProjectExtensions>
+  <PropertyGroup>
+    <PostBuildEvent>copy $(SolutionDir)Service\bin\$(ConfigurationName)\Web.*.dll.config $(ProjectDir)</PostBuildEvent>
+  </PropertyGroup>
 </Project>

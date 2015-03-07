@@ -47,8 +47,8 @@
                 <div style="display: inline-block; margin-left: 1em; vertical-align: top">
                     <a href="administration/manageUsers.aspx">Manage Users</a><br />
                     <a href="administration/uiLogConfig.aspx">UI Log Config</a><br />
-                    <a href="service/administration/serviceLogConfig.aspx">Service Log Config</a><br />
-                    <a href="service/administration/currentTrackers.aspx">Current Trackers</a><br />
+                    <a href="administration/serviceLogConfig.aspx">Service Log Config</a><br />
+                    <a href="administration/currentTrackers.aspx">Current Trackers</a><br />
                     <p>
                         Admins:
                         <%= GetAdminsList() %>

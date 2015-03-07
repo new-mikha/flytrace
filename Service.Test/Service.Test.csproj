@@ -32,6 +32,13 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="log4net, Version=1.2.11.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -75,8 +82,8 @@
       <Project>{E5A5D425-5D92-4CF8-A1D2-C7E5BCD270BA}</Project>
       <Name>LocationLib</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Tracker\Service\Service.csproj">
-      <Project>{BAC39654-0AAF-4DFD-B562-E35500643A76}</Project>
+    <ProjectReference Include="..\Service\Service.csproj">
+      <Project>{06F2EF78-C80F-4C13-86C4-02386D66AFEC}</Project>
       <Name>Service</Name>
     </ProjectReference>
   </ItemGroup>

@@ -442,11 +442,20 @@ namespace FlyTrace
     {
       LocationLib.Tools.ConfigureLog4Net( HttpRuntime.AppDomainAppPath );
 
-      LocationLib.Tools.DefaultCulture = DefaultCulture;
+      try
+      {
+        LocationLib.Tools.DefaultCulture = DefaultCulture;
 
-      LogManager.GetLogger(this.GetType()).InfoFormat("Application started.");
-      //string log4netConfigFilePath = Path.Combine( HttpRuntime.AppDomainAppPath, "log4net.config" );
-      //log4net.Config.XmlConfigurator.ConfigureAndWatch( new FileInfo( log4netConfigFilePath ) );
+        string revisionFilePath = System.Web.Hosting.HostingEnvironment.MapPath( @"~/App_Data/revision.bin" );
+        Service.ForeignRequestsManager.Init( revisionFilePath );
+      }
+      catch ( Exception exc )
+      {
+        LogManager.GetLogger( this.GetType( ) ).Error( "Cannot start the service", exc );
+        throw;
+      }
+
+      LogManager.GetLogger( this.GetType( ) ).InfoFormat( "Application started." );
     }
 
     protected void Session_Start( object sender, EventArgs e )

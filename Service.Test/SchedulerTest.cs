@@ -26,8 +26,8 @@ using System.Text;
 
 using FlyTrace.LocationLib;
 using FlyTrace.LocationLib.ForeignAccess;
-using FlyTrace.Service;
-using FlyTrace.Service.RequestsSchedule;
+using FlyTrace.Service.Internals;
+using FlyTrace.Service.Internals.RequestsSchedule;
 using NUnit.Framework;
 
 namespace Service.Test

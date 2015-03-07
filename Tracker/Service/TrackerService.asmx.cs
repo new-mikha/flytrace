@@ -27,6 +27,7 @@ using System.IO;
 using System.Xml;
 using System.Threading;
 using System.Diagnostics;
+
 using log4net;
 
 namespace FlyTrace.Service
@@ -40,64 +41,27 @@ namespace FlyTrace.Service
   [System.Web.Script.Services.ScriptService]
   public class TrackerService : System.Web.Services.WebService
   {
-    private static readonly ILog IncrErrorsLog = LogManager.GetLogger( "IncrErrors" );
-    private static readonly ILog Log = LogManager.GetLogger( "TDM" );
-
     [WebMethod]
     public GroupData GetCoordinates
     (
       int group,
       string srcSeed,
-      DateTime scrTime // this parameter to preven client-side response caching
+      DateTime scrTime // this parameter is to prevent client-side response caching, not used really on the server side.
     )
     {
-      var coordinatesService = new Subservices.CoordinatesService( group, srcSeed );
-
-      IAsyncResult ar = coordinatesService.BeginGetCoordinates( null, null );
-
-      bool handleSignaled;
-      if ( AsyncResultNoResult.DefaultEndWaitTimeout > 0 )
-        handleSignaled = ar.AsyncWaitHandle.WaitOne( AsyncResultNoResult.DefaultEndWaitTimeout );
-      else
-        handleSignaled = ar.AsyncWaitHandle.WaitOne( );
-
-      if ( !handleSignaled )
-      {
-        Log.FatalFormat( "GetCoordinates call has timed out for call id {0}.", coordinatesService.CallId );
-        return default( GroupData );
-      }
-
-      return coordinatesService.EndGetCoordinates( ar );
+      return ServiceFacade.GetCoordinates( group, srcSeed );
     }
 
     [WebMethod]
-    public List<TrackResponseItem> GetTracks( int group, TrackRequest trackRequest, DateTime scriptCurrTimet )
+    public List<TrackResponseItem> GetTracks( int group, TrackRequest trackRequest, DateTime scriptCurrTime )
     {
-      var trackerService =
-        new Subservices.TracksService( group, trackRequest );
-
-      long callId;
-      IAsyncResult ar = trackerService.BeginGetTracks( group, trackRequest.Items, null, null, out callId );
-
-      bool handleSignaled;
-      if ( AsyncResultNoResult.DefaultEndWaitTimeout > 0 )
-        handleSignaled = ar.AsyncWaitHandle.WaitOne( AsyncResultNoResult.DefaultEndWaitTimeout );
-      else
-        handleSignaled = ar.AsyncWaitHandle.WaitOne( );
-
-      if ( !handleSignaled )
-      {
-        Log.FatalFormat( "GetTracks call has timed out for call id {0}.", callId );
-        return null;
-      }
-
-      return trackerService.EndGetTracks( ar );
+      return ServiceFacade.GetTracks( group, trackRequest );
     }
 
     [WebMethod]
     public void TestCheck( string msg )
     { // not just a debug method, this one is used from main.js script
-      IncrErrorsLog.Error( msg );
+      ServiceFacade.TestCheck( msg );
     }
   }
 }

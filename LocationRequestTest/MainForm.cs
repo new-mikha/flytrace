@@ -27,16 +27,16 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-
+using System.Diagnostics;
+using System.Reflection;
+using System.Linq.Expressions;
 using System.IO;
+
 using FlyTrace.LocationLib.ForeignAccess;
 using FlyTrace.LocationLib.ForeignAccess.Test;
 using log4net.Layout;
 using log4net.Config;
 using log4net.Appender;
-using System.Diagnostics;
-using System.Reflection;
-using System.Linq.Expressions;
 
 public struct Foo
 {
@@ -330,7 +330,8 @@ namespace LocationRequestTest
       }
     }
 
-    RevisionPersister revisionPersister = new FlyTrace.Service.RevisionPersister( );
+    FlyTrace.Service.Internals.RevisionPersister revisionPersister = 
+      new FlyTrace.Service.Internals.RevisionPersister( );
 
     private void InitRevGen( )
     {

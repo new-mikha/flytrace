@@ -105,8 +105,7 @@ namespace FlyTrace
 
       try
       {
-        Service.AdminFacade serviceAdminFacade = new Service.AdminFacade( );
-        Service.AdminStat adminStat = serviceAdminFacade.GetAdminStat( );
+        Service.AdminStat adminStat = Service.ServiceFacade.GetAdminStat( );
 
         ServiceStatToDisplayMode( adminStat.ForeignSourcesStat );
 
@@ -127,7 +126,7 @@ namespace FlyTrace
 
     private void ShowAdminStatMessages( Service.AdminMessage[] adminMessages )
     {
-      foreach ( Service.AdminMessage adminMessage in adminMessages )
+      foreach ( Service.AdminFacade.AdminMessage adminMessage in adminMessages )
       {
         AddAdminMessageRow( adminMessage.Key, adminMessage.Message );
       }
@@ -158,9 +157,9 @@ namespace FlyTrace
       this.adminStatMessagesTable.Rows.Add( row );
     }
 
-    private void ServiceStatToDisplayMode( FlyTrace.Service.ForeignSourceStat[] foreignSourcesStat )
+    private void ServiceStatToDisplayMode( Service.ForeignSourceStat[] foreignSourcesStat )
     {
-      foreach ( FlyTrace.Service.ForeignSourceStat stat in foreignSourcesStat )
+      foreach ( Service.AdminFacade.ForeignSourceStat stat in foreignSourcesStat )
       {
         List<string> lines = new List<string>( );
         lines.Add( stat.Name );

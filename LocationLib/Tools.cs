@@ -39,7 +39,7 @@ namespace FlyTrace.LocationLib
     /// </summary>
     public static CultureInfo DefaultCulture = CultureInfo.GetCultureInfo( "en-AU" );
 
-    internal static void ConfigureThreadCulture( )
+    public static void ConfigureThreadCulture( )
     {
       try
       {
