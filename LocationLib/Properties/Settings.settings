@@ -14,5 +14,8 @@
     <Setting Name="SPOT_SameFeedHitInterval_Seconds" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">150</Value>
     </Setting>
+    <Setting Name="SPOT_RequestUrlTemplate" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://api.findmespot.com/spot-main-web/consumer/rest-api/2.0/public/feed/{0}/message.xml</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

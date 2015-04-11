@@ -58,5 +58,15 @@ namespace FlyTrace.LocationLib.Properties {
                 return ((int)(this["SPOT_SameFeedHitInterval_Seconds"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://api.findmespot.com/spot-main-web/consumer/rest-api/2.0/public/feed/{0}/me" +
+            "ssage.xml")]
+        public string SPOT_RequestUrlTemplate {
+            get {
+                return ((string)(this["SPOT_RequestUrlTemplate"]));
+            }
+        }
     }
 }

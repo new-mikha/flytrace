@@ -96,7 +96,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       string url =
         string.Format(
-          @"https://api.findmespot.com/spot-main-web/consumer/rest-api/2.0/public/feed/{0}/message.xml",
+          Properties.Settings.Default.SPOT_RequestUrlTemplate,
           this.trackerForeignId
         );
 
