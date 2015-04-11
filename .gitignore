@@ -19,3 +19,5 @@ Site update scripts/Full.zip
 *.testsettings
 *.vsmdi
 *no_scc*
+Tracker/Web.LocationLib.dll.config
+Tracker/Web.Service.dll.config
