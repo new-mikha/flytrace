@@ -1,9 +1,25 @@
 <?xml version='1.0' encoding='utf-8' ?>
+<!--This is an MBBuild .targets file that can be used to extract a specific section 
+from application settings in a config file. E.g. if added to the PostBuild event of 
+a DLL project which has app.config file and settings defined at the DLL level:
+    $(MSBuildBinPath)\msbuild.exe "$(SolutionDir)ApplicationSettingsExtract.targets" 
+                      "/p:InputFile=$(TargetPath).config" 
+                      "/p:OutputFile=$(TargetDir)Web.$(TargetFileName).config" 
+                      /p:SectionName=FlyTrace.LocationLib.Properties.Settings
+, it will extract DLL settings section into a separate file. 
+Say, from LocationLib.dll.config it will extract Web.LocationLib.dll.config file,
+which contains <FlyTrace.LocationLib.Properties.Settings> as the root element. This 
+file in turn can be referenced later from the main Web.config, thus allowing the DLL 
+to use its settings.
+-->
+
 <Project ToolsVersion='4.0' DefaultTargets='ApplicationSettingsExtract'
     xmlns='http://schemas.microsoft.com/developer/msbuild/2003'>
 
+  
+  
   <!--
-  this can be added to Target attributes to avoid extracting in unchanged case:
+  The line below can be added to <Target> tag attributes to avoid extracting in unchanged case:
     Inputs='$(InputFile)' Outputs='$(OutputFile)'
     (but right now prefer to make sure the target file is updated, even if it was update manually)
     -->
