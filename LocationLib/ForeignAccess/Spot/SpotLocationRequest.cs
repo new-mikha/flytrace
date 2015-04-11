@@ -135,8 +135,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       }
     }
 
-    private static bool IsWarnedAboutSuccRetry;
-
     private void SpotFeedRequestCallback( IAsyncResult ar )
     {
       Tools.ConfigureThreadCulture( );

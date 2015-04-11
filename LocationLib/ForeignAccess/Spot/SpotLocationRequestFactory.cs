@@ -72,8 +72,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private DateTime? succTime;
 
-    private int feedCheckStat;
-
     private void locationRequest_ReadLocationFinished( LocationRequest locationRequest, TrackerState result )
     {
       if ( result.Error != null )
