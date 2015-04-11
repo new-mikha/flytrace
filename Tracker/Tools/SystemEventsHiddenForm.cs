@@ -4,7 +4,7 @@ using System.Windows.Forms;
 
 using log4net;
 
-namespace FlyTrace.Service.Internals.Tools
+namespace FlyTrace.Tools
 {
   public partial class SystemEventsHiddenForm : Form
   {
@@ -47,12 +47,12 @@ namespace FlyTrace.Service.Internals.Tools
 
     private void SystemEventsHiddenForm_Load( object sender, EventArgs e )
     {
-      Log.Info( "SystemEventsHiddenForm_Load" );
+      Log.Debug( "SystemEventsHiddenForm_Load" );
     }
 
     private void SystemEventsHiddenForm_FormClosing( object sender, FormClosingEventArgs e )
     {
-      Log.Info( "SystemEventsHiddenForm_Load" );
+      Log.Debug( "SystemEventsHiddenForm_FormClosing" );
     }
   }
 }

@@ -26,46 +26,104 @@ using System.Text;
 
 namespace FlyTrace.Service
 {
+  /// <summary>
+  /// The entry point for all communication between a service host and the coordinates 
+  /// service, including requests from the end clients - those request are assumed to be 
+  /// exposed going through the host which e.g. exposes corresponding web methods to end
+  /// clients.
+  /// </summary>
   public static class ServiceFacade
   {
-    public static void Init( string revisionFilePath )
+    /// <summary>
+    /// Initialises the coordinates service.
+    /// </summary>
+    /// <param name="dataFolderPath"></param>
+    public static void Init( string dataFolderPath )
     {
-      Internals.ForeignRequestsManager.Init( revisionFilePath );
+      Internals.ForeignRequestsManager.Init( dataFolderPath );
     }
 
+    /// <summary>
+    /// Deinitialises the coordinates service.
+    /// </summary>
     public static void Deinit( )
     {
       Internals.ForeignRequestsManager.Deinit( );
     }
 
+    /// <summary>
+    /// Returns coordinates of the trackers for a specific group. This method doesn't return tracks,
+    /// it's for current coordinates only. For tracks, see <see cref="GetTracks"/> method. See also 
+    /// Remarks section for details.
+    /// </summary>
+    /// <param name="group">group id</param>
+    /// <param name="srcSeed">Seed value used for incremental group updates. Can be null. 
+    /// See Remarks section for details.</param>
+    /// <returns></returns>
+    /// <remarks>Seed value is used for incremental updates, which in turn are used to reduce amount
+    /// of the transferred data by including only updated trackers. When the seed is null, coords of
+    /// all trackers in the group are returned. For a subsequent call, a client could specify the 
+    /// value of the <see cref="GroupData.Res"/> parameter returned in the PREVIOUS call (NOT just 
+    /// the first one!) to get an incremental update.</remarks>
     public static GroupData GetCoordinates( int group, string srcSeed )
     {
       return Internals.TrackerFacade.GetCoordinates( group, srcSeed );
     }
 
+    /// <summary>
+    /// Returns tracks for specific trackers in a specific group.
+    /// </summary>
+    /// <param name="group"></param>
+    /// <param name="trackRequest"></param>
+    /// <returns></returns>
     public static List<TrackResponseItem> GetTracks( int group, TrackRequest trackRequest )
     {
       return Internals.TrackerFacade.GetTracks( group, trackRequest );
     }
 
+    /// <summary>
+    /// A client can call this method to log a client-side error
+    /// </summary>
+    /// <param name="msg"></param>
     public static void TestCheck( string msg )
     {
       Internals.TrackerFacade.TestCheck( msg );
     }
 
-    public static AdminStat GetAdminStat( )
+    /// <summary>
+    /// Resets trackers cache, so the service enters the state like it's just initialised.
+    /// Required to be called when a system time has changed (the service doesn't check it itself)
+    /// </summary>
+    public static void ResetCache( )
     {
-      return Internals.AdminFacade.GetAdminStat( );
+      Internals.ForeignRequestsManager.Singleton.ClearTrackers( );
     }
 
-    public static DataSet GetStatistics( )
+    /// <summary>
+    /// Returns current most important diag messages
+    /// </summary>
+    /// <returns></returns>
+    public static AdminStat GetAdminStatBrief( )
     {
-      return Internals.ForeignRequestsManager.Singleton.GetStatistics( );
+      return Internals.AdminFacade.GetStatBrief( );
     }
 
-    public static List<LocationLib.TrackerState> GetAdminTrackers( )
+    /// <summary>
+    /// Returns internal call statistics
+    /// </summary>
+    /// <returns></returns>
+    public static DataSet GetAdminCallStatistics( )
     {
-      return Internals.ForeignRequestsManager.Singleton.GetAdminTrackers( );
+      return Internals.AdminFacade.GetCallStatistics( );
+    }
+
+    /// <summary>
+    /// Returns diag data for each tracker that is currently cached by the service
+    /// </summary>
+    /// <returns></returns>
+    public static List<AdminTracker> GetAdminTrackers( )
+    {
+      return Internals.AdminFacade.GetAdminTrackers( );
     }
   }
 }

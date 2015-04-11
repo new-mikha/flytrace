@@ -438,6 +438,8 @@ namespace FlyTrace
 
     internal readonly static CultureInfo DefaultCulture = CultureInfo.GetCultureInfo( "en-AU" );
 
+    private readonly ILog InfoLog = LogManager.GetLogger( "InfoLog" );
+
     protected void Application_Start( object sender, EventArgs e )
     {
       LocationLib.Tools.ConfigureLog4Net( HttpRuntime.AppDomainAppPath );
@@ -445,17 +447,91 @@ namespace FlyTrace
       try
       {
         LocationLib.Tools.DefaultCulture = DefaultCulture;
+        LocationLib.Tools.ConfigureThreadCulture( );
 
-        string revisionFilePath = System.Web.Hosting.HostingEnvironment.MapPath( @"~/App_Data/revision.bin" );
-        Service.ForeignRequestsManager.Init( revisionFilePath );
+        string dataFolderPath = System.Web.Hosting.HostingEnvironment.MapPath( @"~/App_Data/" );
+        Service.ServiceFacade.Init( dataFolderPath );
+
+        // SystemEvents needs message pump, so start it
+        new Thread( RunMessagePump ).Start( );
+
+        InfoLog.InfoFormat( "Application started." );
       }
       catch ( Exception exc )
       {
-        LogManager.GetLogger( this.GetType( ) ).Error( "Cannot start the service", exc );
+        InfoLog.Error( "Cannot start the service", exc );
         throw;
       }
+    }
 
-      LogManager.GetLogger( this.GetType( ) ).InfoFormat( "Application started." );
+    public static void DelayAction( int milliseconds, Action action )
+    {
+      // ReSharper disable once ObjectCreationAsStatement
+      new Timer(
+        unused =>
+        {
+          LocationLib.Tools.ConfigureThreadCulture( );
+          action( );
+        },
+        null,
+        milliseconds,
+        Timeout.Infinite );
+    }
+
+    private Tools.SystemEventsHiddenForm hiddenForm;
+
+    private void RunMessagePump( )
+    {
+      ILog timeLog = LogManager.GetLogger( "TimeChange" );
+      Thread.Sleep( 10000 );
+      try
+      {
+        // Idea taken from http://msdn.microsoft.com/en-us/library/microsoft.win32.systemevents.aspx
+        // But the message is catched at a lower level, see form comments for some details
+
+        this.hiddenForm = new Tools.SystemEventsHiddenForm( );
+        this.hiddenForm.TimeChanged += hiddenForm_TimeChanged;
+
+        System.Windows.Forms.Application.Run( this.hiddenForm );
+        timeLog.Info( "Message pump stopped" );
+      }
+      catch ( Exception exc )
+      {
+        // The messages are could be not logged right at the service start, so delaying that:
+        DelayAction(
+          10000,
+          ( ) =>
+            timeLog.Error( "Can't start message pump", exc ) );
+      }
+    }
+
+    private void hiddenForm_TimeChanged( object sender, EventArgs e )
+    {
+      ILog timeLog = LogManager.GetLogger( "TimeChange" );
+      timeLog.WarnFormat( "System time has been adjusted, clearing the cache..." );
+
+      try
+      {
+        Service.ServiceFacade.ResetCache( );
+        timeLog.InfoFormat( "Cache has been cleared after system time adjusted" );
+      }
+      catch ( Exception exc )
+      {
+        const int pauseInSeconds = 60;
+
+        timeLog.ErrorFormat(
+          "Can't clear the cache after the time change, will restart the service in {0} seconds. {1}",
+          pauseInSeconds,
+          exc );
+
+        // Wait before restarting to give time to loggers (including SMTP one) to do their job.
+        // But avoid Sleeping for such a long time, because e.g. no guarantee what would happen
+        // with the log entry above in case of Sleep(). Or there could be other problems of any 
+        // kind due to blocking the thread for 1 minute. So just set up a timer:
+        DelayAction(
+          pauseInSeconds * 1000,
+          HttpRuntime.UnloadAppDomain );
+      }
     }
 
     protected void Session_Start( object sender, EventArgs e )
@@ -482,11 +558,6 @@ namespace FlyTrace
 
     }
 
-    protected void Application_End( object sender, EventArgs e )
-    {
-
-    }
-
     internal static bool IsSqlDuplicateError( Exception e )
     {
       if ( e is SqlException )
@@ -502,6 +573,29 @@ namespace FlyTrace
       }
 
       return false;
+    }
+
+    protected void Application_End( object sender, EventArgs e )
+    {
+      // sometimes it got to be called, sometimes not.
+      
+      try
+      {
+        Service.ServiceFacade.Deinit( );
+
+        if ( this.hiddenForm != null )
+          hiddenForm.TimeChanged -= hiddenForm_TimeChanged;
+
+        System.Windows.Forms.Application.Exit( ); // to stop Application.Run that was started earlier
+
+        InfoLog.Info( "Application stopped." );
+      }
+      catch ( Exception exc )
+      {
+        InfoLog.Error( "Cannot shutdown application properly.", exc );
+      }
+
+      LogManager.Shutdown( );
     }
   }
 }

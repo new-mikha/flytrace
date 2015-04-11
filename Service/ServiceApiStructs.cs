@@ -34,34 +34,52 @@ namespace FlyTrace.Service
   [XmlType( "Tracker" )]
   public struct CoordResponseItem
   {
+    /// <summary>Displayed name of the tracker</summary>
     public string Name;
 
+    /// <summary>Latitude. Can be zero along with <see cref="Lon"/> which 
+    /// means "no coordinates at the moment"</summary>
     public double Lat;
 
+    /// <summary>Longitude. Can be zero along with <see cref="Lat"/> which 
+    /// means "no coordinates at the moment"</summary>
     public double Lon;
 
+    /// <summary>Type of the position: null, "TRACK", "OK", "CUSTOM", "wait", 
+    /// or anything else as "HELP"</summary>
     public string Type;
 
+    /// <summary>Used for internal purposes</summary>
     public bool IsOfficial;
 
+    /// <summary>Custom user message associated with the point</summary>
     public string UsrMsg;
 
+    /// <summary>UTC timestamp of the point</summary>
     public DateTime Ts;
 
+    /// <summary>Age of the point in seconds at the moment it's returned</summary>
     public int Age;
-
+    
+    /// <summary>Error currently associated with the tracker</summary>
     public string Error;
 
+    /// <summary>Previous point latitude</summary>
     public double PrevLat;
 
+    /// <summary>Previous point longitude</summary>
     public double PrevLon;
 
+    /// <summary>Previous point timestamp</summary>
     public DateTime PrevTs;
 
+    /// <summary>Previous age of the point in seconds at the moment it's returned</summary>
     public int PrevAge;
 
+    /// <summary>Used for internal purposes</summary>
     public bool IncrTest;
 
+    /// <summary>true when the tracker should be hidden, false otherwise</summary>
     public bool IsHidden;
 
     #region ShouldSerializeXXX methods
@@ -134,18 +152,35 @@ namespace FlyTrace.Service
   /// </summary>
   public struct GroupData
   {
+    /// <summary>
+    /// List of coorindates for the trackers. Can be smaller than actual amount of the 
+    /// trackers in case of an incremental update.
+    /// </summary>
     public List<CoordResponseItem> Trackers;
 
+    /// <summary>
+    /// The seed that has been passed to the call of <see cref="ServiceFacade.GetCoordinates"/> by the client.
+    /// </summary>
     public string Src;
 
+    /// <summary>
+    /// The seed that the client should maintain and pass to the next call 
+    /// of <see cref="ServiceFacade.GetCoordinates"/> for an incremental update.
+    /// </summary>
     public string Res;
 
-    public int Ver;
-
-    public bool IncrSurr;
-
+    /// <summary>
+    /// Threshold time for the group. Trackers with timestamps less than this should be hidden.
+    /// </summary>
     public DateTime? StartTs;
 
+    /// <summary>Used for internal purposes</summary>
+    public int Ver;
+
+    /// <summary>Used for internal purposes</summary>
+    public bool IncrSurr;
+
+    /// <summary>Used for internal purposes</summary>
     public long CallId;
 
     public override string ToString( )
@@ -219,6 +254,19 @@ namespace FlyTrace.Service
     public int CoordAccessCount;
 
     public int CurrentRevision;
+  }
+
+  public struct AdminTracker
+  {
+    public LocationLib.ForeignId ForeignId;
+
+    public LocationLib.TrackerState TrackerState;
+
+    public DateTime AccessTime;
+
+    public DateTime? RefreshTime;
+
+    public int? Revision;
   }
 
 }

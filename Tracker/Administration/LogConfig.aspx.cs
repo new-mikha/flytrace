@@ -26,9 +26,9 @@ using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Web.Security;
 
-namespace FlyTrace.Service.Administration
+namespace FlyTrace.Administration
 {
-  public partial class serviceLogConfig : System.Web.UI.Page
+  public partial class LogConfig : System.Web.UI.Page
   {
     protected void Page_Load( object sender, EventArgs e )
     {
@@ -39,7 +39,7 @@ namespace FlyTrace.Service.Administration
     {
       Response.Clear();
       FormsAuthentication.SignOut();
-      Response.Redirect( "../../default.aspx", true );
+      Response.Redirect( "../default.aspx", true );
     }
   }
 }

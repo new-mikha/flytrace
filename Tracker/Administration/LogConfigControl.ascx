@@ -18,7 +18,7 @@
   along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
 --%>
 
-<%@ Control Language="C#" AutoEventWireup="true" CodeBehind="LogConfig.ascx.cs" Inherits="FlyTrace.Service.Administration.LogConfig" %>
+<%@ Control Language="C#" AutoEventWireup="true" CodeBehind="LogConfigControl.ascx.cs" Inherits="FlyTrace.Service.Administration.LogConfigControl" %>
 <table>
     <tr>
         <td style="text-align: left">

@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace FlyTrace.Service.Administration {
+namespace FlyTrace.Administration {
     
     
     public partial class currentTrackers {

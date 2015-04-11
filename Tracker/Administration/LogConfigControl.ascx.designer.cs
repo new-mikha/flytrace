@@ -10,96 +10,123 @@
 namespace FlyTrace.Service.Administration {
     
     
-    public partial class currentTrackers {
+    public partial class LogConfigControl {
         
         /// <summary>
-        /// form1 control.
+        /// isConfiguredLabel control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.HtmlControls.HtmlForm form1;
+        protected global::System.Web.UI.WebControls.Label isConfiguredLabel;
         
         /// <summary>
-        /// scrollHiddenField control.
+        /// isNotConfiguredLabel control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.HiddenField scrollHiddenField;
+        protected global::System.Web.UI.WebControls.Label isNotConfiguredLabel;
         
         /// <summary>
-        /// statPanel control.
+        /// configFileNameLabel control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Panel statPanel;
+        protected global::System.Web.UI.WebControls.Label configFileNameLabel;
         
         /// <summary>
-        /// LoginName1 control.
+        /// shouldWatchLabel control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.LoginName LoginName1;
+        protected global::System.Web.UI.WebControls.Label shouldWatchLabel;
         
         /// <summary>
-        /// SignOutLinkButton control.
+        /// infoLabel control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.LinkButton SignOutLinkButton;
+        protected global::System.Web.UI.WebControls.Label infoLabel;
         
         /// <summary>
-        /// refreshButton control.
+        /// logConfigMultiView control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button refreshButton;
+        protected global::System.Web.UI.WebControls.MultiView logConfigMultiView;
         
         /// <summary>
-        /// idFilterTextBox control.
+        /// logConfigNormalView control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.TextBox idFilterTextBox;
+        protected global::System.Web.UI.WebControls.View logConfigNormalView;
         
         /// <summary>
-        /// applyFilterButton control.
+        /// logConfigTextBox control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Button applyFilterButton;
+        protected global::System.Web.UI.WebControls.TextBox logConfigTextBox;
         
         /// <summary>
-        /// errorLiteral control.
+        /// updateConfigButton control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.Literal errorLiteral;
+        protected global::System.Web.UI.WebControls.Button updateConfigButton;
         
         /// <summary>
-        /// trackersGridView control.
+        /// restoreDefaultConfigButton control.
         /// </summary>
         /// <remarks>
         /// Auto-generated field.
         /// To modify move field declaration from designer file to code-behind file.
         /// </remarks>
-        protected global::System.Web.UI.WebControls.GridView trackersGridView;
+        protected global::System.Web.UI.WebControls.Button restoreDefaultConfigButton;
+        
+        /// <summary>
+        /// logConfigErrorView control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.View logConfigErrorView;
+        
+        /// <summary>
+        /// logConfigErrorLabel control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label logConfigErrorLabel;
+        
+        /// <summary>
+        /// rereadExistingConfigButton control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Button rereadExistingConfigButton;
     }
 }

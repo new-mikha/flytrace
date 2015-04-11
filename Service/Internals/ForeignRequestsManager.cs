@@ -41,14 +41,44 @@ namespace FlyTrace.Service.Internals
   {
     private static readonly object initSync = new object( );
 
-    public static void Init( string revisionFilePath )
+    public static void Init( string dataFolderPath )
     {
       lock ( initSync )
       {
         if ( Singleton != null )
           throw new InvalidOperationException( typeof( ForeignRequestsManager ).Name + " is already initialized." );
 
-        Singleton = new ForeignRequestsManager( revisionFilePath );
+        {
+          string testFolderPath = System.IO.Path.Combine( dataFolderPath, "test" );
+          TestSource.Initialize( testFolderPath );
+        }
+
+        string appAuxLogFolder;
+        if ( Properties.Settings.Default.WriteSuccRequestFlagFile )
+        {
+          appAuxLogFolder = dataFolderPath;
+          Log.DebugFormat( "Use '{0}' as a path for succ flag files", appAuxLogFolder );
+        }
+        else
+        {
+          appAuxLogFolder = null;
+          Log.DebugFormat( "Succ flag files will not be created." );
+        }
+
+        LocationLib.ForeignAccess.ForeignAccessCentral.InitAux(
+          appAuxLogFolder,
+          Properties.Settings.Default.SpotConsequentRequestsErrorCountThresold,
+          Properties.Settings.Default.SpotConsequentTimedOutRequestsThresold
+        );
+
+        AsyncResultNoResult.DefaultEndWaitTimeout = 60000; // There are no operations that should run longer.
+
+        {
+          string revisionFilePath = System.IO.Path.Combine( dataFolderPath, "revision.bin" );
+          Singleton = new ForeignRequestsManager( revisionFilePath );
+        }
+
+        InfoLog.InfoFormat( "Service started, current revision {0}.", Singleton.revisionPersister.ThreadUnsafeRevision );
       }
     }
 
@@ -59,9 +89,14 @@ namespace FlyTrace.Service.Internals
         if ( Singleton == null )
           throw new InvalidOperationException( typeof( ForeignRequestsManager ).Name + " is not initialized." );
 
-        Singleton.Stop( );
-
-        Singleton = null;
+        try
+        {
+          Singleton.Stop( );
+        }
+        finally
+        {
+          Singleton = null;
+        }
       }
     }
 
@@ -95,8 +130,6 @@ namespace FlyTrace.Service.Internals
         Log.Error( "Error on starting-up", exc );
         throw;
       }
-
-      InfoLog.Info( "Started." );
     }
 
     internal ReaderWriterLockSlimEx HolderRwLock
@@ -109,12 +142,12 @@ namespace FlyTrace.Service.Internals
       get { return this.scheduler.Trackers; }
     }
 
-    internal DataSet GetStatistics( )
+    internal DataSet GetCallStatistics( )
     {
       return this.statistics.GetReport( );
     }
 
-    internal void Stop( )
+    private void Stop( )
     {
       this.isStoppingWorkerThread = true;
 
@@ -126,22 +159,22 @@ namespace FlyTrace.Service.Internals
       if ( this.refreshThread.Join( 30000 ) )
       {
         // Log it as error to make sure it's logged
-        InfoLog.InfoFormat( "Worker thread stopped, closing revision {0}.", closingRevision );
+        InfoLog.InfoFormat( "Service stopped, closing revision {0}.", closingRevision );
       }
       else
       {
-        Log.Error( "Can't stop the worker thread" );
+        Log.Error( "Can't stop the service" );
       }
     }
 
-    private readonly ILog Log = LogManager.GetLogger( "TDM" );
+    private static readonly ILog Log = LogManager.GetLogger( "TDM" );
 
     /// <summary>
     /// Supposed to be always in at least for INFO level, i.e. don't use it too often. E.g. start/stop messages could go there.
     /// </summary>
-    private readonly ILog InfoLog = LogManager.GetLogger( "InfoLog" );
+    private static readonly ILog InfoLog = LogManager.GetLogger( "InfoLog" );
 
-    private readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
+    private static readonly ILog IncrLog = LogManager.GetLogger( "TDM.IncrUpd" );
 
     internal AdminAlerts AdminAlerts = new AdminAlerts( );
 
@@ -165,7 +198,7 @@ namespace FlyTrace.Service.Internals
         if ( this.revisionPersister.Init( revisionFilePath, out initWarnings ) )
         {
           // Log it as an error (while it's actually not) to make sure it's logged:
-          IncrLog.InfoFormat(
+          IncrLog.DebugFormat(
             "Revgen restored from '{0}' successfuly: current value is {1}",
             revisionFilePath,
             this.revisionPersister.ThreadUnsafeRevision
@@ -257,7 +290,7 @@ namespace FlyTrace.Service.Internals
 
       this.refreshThreadEvent.Close( ); // that's unmanaged resource, so closing that
 
-      Log.Info( "Finishing worker thread..." );
+      Log.Debug( "Finishing worker thread..." );
     }
 
     private volatile bool isStoppingWorkerThread;
@@ -552,20 +585,26 @@ namespace FlyTrace.Service.Internals
       }
     }
 
-    internal List<TrackerState> GetAdminTrackers( )
+    internal List<AdminTracker> GetAdminTrackers( )
     {
-      List<TrackerStateHolder> trackers;
       this.scheduler.HolderRwLock.AttemptEnterReadLock( );
       try
       {
-        return 
+        return
           this
           .scheduler
           .Trackers
           .Values
           .Select(
-            holder => 
-              (TrackerState) holder.Snapshot
+            holder =>
+              new AdminTracker
+              {
+                ForeignId = holder.ForeignId,
+                TrackerState = holder.Snapshot,
+                AccessTime = DateTime.FromFileTime( Interlocked.Read( ref holder.ThreadDesynchronizedAccessTimestamp ) ).ToUniversalTime( ),
+                RefreshTime = holder.RefreshTime,
+                Revision = holder.Snapshot == null ? null : holder.Snapshot.DataRevision
+              }
           )
           .ToList( );
       }

@@ -31,48 +31,48 @@ using System.Web.Security;
 using System.Threading;
 using FlyTrace.LocationLib.Data;
 
-namespace FlyTrace.Service.Administration
+namespace FlyTrace.Administration
 {
-  [DebuggerDisplay( "{RefreshTime} - {ForeignId}" )]
-  public class TrackerAdminView
-  {
-    public string ForeignId { get; set; }
-
-    public DateTime CurrentTs { get; set; }
-
-    //    public string CurrentTsStr { get; set; }
-
-    public string CurrentCoord { get; set; }
-
-    public DateTime PrevTs { get; set; }
-
-    //  public string PrevTsStr { get; set; }
-
-    public string PrevCoord { get; set; }
-
-    public string Error { get; set; }
-
-    //public string ErrorTag { get; set; }
-
-    public DateTime AccessTime { get; set; }
-
-    //public string AccessTimeStr { get; set; }
-
-    public DateTime CreateTime { get; set; }
-
-    //public string CreateTimeStr { get; set; }
-
-    public DateTime RefreshTime { get; set; }
-
-    //public string RefreshTimeStr { get; set; }
-
-    public int? Revision { get; set; }
-
-    public string Tag { get; set; }
-  }
-
   public partial class currentTrackers : System.Web.UI.Page
   {
+    [DebuggerDisplay( "{RefreshTime} - {SpotId}" )]
+    public class TrackerDisplayItem
+    {
+      public string SpotId { get; set; }
+
+      public DateTime CurrentTs { get; set; }
+
+      public string CurrentTsStr { get; set; }
+
+      public string CurrentCoord { get; set; }
+
+      public DateTime PrevTs { get; set; }
+
+      public string PrevTsStr { get; set; }
+
+      public string PrevCoord { get; set; }
+
+      public string Error { get; set; }
+
+      public string ErrorTag { get; set; }
+
+      public DateTime AccessTime { get; set; }
+
+      public string AccessTimeStr { get; set; }
+
+      public DateTime CreateTime { get; set; }
+
+      public string CreateTimeStr { get; set; }
+
+      public DateTime RefreshTime { get; set; }
+
+      public string RefreshTimeStr { get; set; }
+
+      public int? Revision { get; set; }
+
+      public string Tag { get; set; }
+    }
+
     protected void Page_Load( object sender, EventArgs e )
     {
       if ( !Page.IsPostBack )
@@ -80,7 +80,7 @@ namespace FlyTrace.Service.Administration
         BindDataSource( );
       }
 
-      DataSet statistics = ServiceFacade.GetStatistics( );
+      DataSet statistics = Service.ServiceFacade.GetAdminCallStatistics( );
       if ( statistics == null )
         this.statPanel.Visible = false;
       else
@@ -108,77 +108,69 @@ namespace FlyTrace.Service.Administration
 
     private void BindDataSource( )
     {
+      List<Service.AdminTracker> trackers = Service.ServiceFacade.GetAdminTrackers( );
 
+      List<TrackerDisplayItem> list = new List<TrackerDisplayItem>( trackers.Count );
 
-      List<TrackerAdminView> list = new List<TrackerAdminView>( trackers.Count );
-
-      foreach ( TrackerStateHolder holder in trackers )
+      foreach ( Service.AdminTracker tracker in trackers )
       {
-        TrackerAdminView item = new TrackerAdminView( );
-        item.ForeignId = holder.ForeignId.Id;
+        TrackerDisplayItem item = new TrackerDisplayItem( );
 
-        DateTime accessTime =
-          DateTime.FromFileTime( Interlocked.Read( ref holder.ThreadDesynchronizedAccessTimestamp ) ).ToUniversalTime( );
+        item.SpotId = tracker.ForeignId.Id;
 
-        item.AccessTime = accessTime;
+        item.AccessTime = tracker.AccessTime;
+        item.AccessTimeStr =
+          tracker.AccessTime.ToString( "u" ) + "<br />" +
+          LocationLib.Tools.GetAgeStr( tracker.AccessTime, true );
 
-        // No need to lock on TrackerDataManager.snapshotAccessSync since it doesn't matter if one of the snapshots is
-        // updated during the cycle. MemoryBarrier for atomic read of a single Snapshot below is enough, it makes sure
-        // that Snapshot value (which is not volatile) is read once only:
-        RevisedTrackerState tracker = holder.Snapshot;
-        Thread.MemoryBarrier( );
-
-        if ( tracker != null )
+        if ( tracker.RefreshTime.HasValue )
         {
-          item.Revision = tracker.DataRevision;
-          item.CreateTime = tracker.CreateTime;
-          item.RefreshTime = holder.RefreshTime.GetValueOrDefault( );
-          item.Tag = tracker.Tag;
-
-          if ( tracker.Position != null )
-          {
-            item.CurrPoint = tracker.Position.CurrPoint;
-            item.PrevPoint = tracker.Position.PreviousPoint;
-          }
-
-          if ( tracker.Error != null )
-          {
-            item.Error = tracker.Error.ToString( );
-          }
+          item.RefreshTime = tracker.RefreshTime.Value;
+          item.RefreshTimeStr =
+            item.RefreshTime.ToString( "u" ) + "<br />" +
+            LocationLib.Tools.GetAgeStr( item.RefreshTime, true );
         }
 
+        LocationLib.TrackerState trackerState = tracker.TrackerState;
+        if ( trackerState != null )
+        {
+          item.Revision = tracker.Revision;
+
+          item.CreateTime = trackerState.CreateTime;
+          item.CreateTimeStr =
+            item.CreateTime.ToString( "u" ) + "<br />" +
+            LocationLib.Tools.GetAgeStr( item.CreateTime, true );
+
+          if ( trackerState.Position != null )
+          {
+            item.Tag = trackerState.Tag;
+
+            {
+              TrackPointData currPoint = trackerState.Position.CurrPoint;
+              item.CurrentTs = currPoint.ForeignTime;
+              item.CurrentCoord = string.Format( "{0}, {1}<br/>{2}", currPoint.Latitude, currPoint.Longitude, LocationLib.Tools.GetAgeStr( currPoint.ForeignTime, true ) );
+              item.CurrentTsStr = string.Format( "{0}", currPoint.ForeignTime.ToString( "u" ) );
+            }
+
+            {
+              TrackPointData prevPoint = trackerState.Position.PreviousPoint;
+              if ( prevPoint != null )
+              {
+                item.PrevTs = prevPoint.ForeignTime;
+                item.PrevCoord = string.Format( "{0}, {1}<br/>{2}", prevPoint.Latitude, prevPoint.Longitude, LocationLib.Tools.GetAgeStr( prevPoint.ForeignTime, true ) );
+                item.PrevTsStr = string.Format( "{0}", prevPoint.ForeignTime.ToString( "u" ) );
+              }
+            }
+          }
+
+          if ( trackerState.Error != null )
+          {
+            item.Error = trackerState.Error.ToString( );
+            item.ErrorTag = trackerState.Tag;
+          }
+        }
         list.Add( item );
       }
-      
-      
-      item.AccessTimeStr = accessTime.ToString( "u" ) + "<br />" + LocationLib.Tools.GetAgeStr( accessTime, true );
-
-      item.CreateTimeStr =
-        item.CreateTime.ToString( "u" ) + "<br />" +
-        LocationLib.Tools.GetAgeStr( item.CreateTime, true );
-
-      item.RefreshTimeStr =
-        item.RefreshTime.ToString( "u" ) + "<br />" +
-        LocationLib.Tools.GetAgeStr( item.RefreshTime, true );
-
-      item.CurrentTs = currPoint.ForeignTime;
-      item.CurrentCoord = string.Format( "{0}, {1}<br/>{2}", currPoint.Latitude, currPoint.Longitude, LocationLib.Tools.GetAgeStr( currPoint.ForeignTime, true ) );
-      item.CurrentTsStr = string.Format( "{0}", currPoint.ForeignTime.ToString( "u" ) );
-
-      {
-        TrackPointData prevPoint = tracker.Position.PreviousPoint;
-        if ( prevPoint != null )
-        {
-          item.PrevTs = prevPoint.ForeignTime;
-          item.PrevCoord = string.Format( "{0}, {1}<br/>{2}", prevPoint.Latitude, prevPoint.Longitude, LocationLib.Tools.GetAgeStr( prevPoint.ForeignTime, true ) );
-          item.PrevTsStr = string.Format( "{0}", prevPoint.ForeignTime.ToString( "u" ) );
-        }
-      }
-
-      item.ErrorTag = tracker.Tag;
-
-
-      // 
 
       IEnumerable<TrackerDisplayItem> sortedList = Sort( list );
       this.spotIds = sortedList.Select( i => i.SpotId ).ToArray( );

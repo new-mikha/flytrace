@@ -19,11 +19,12 @@
   along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
 -->
 <log4net>
-  <appender name="UiNormalRollingFile" type="log4net.Appender.RollingFileAppender">
+  <appender name="NormalRollingFile" type="log4net.Appender.RollingFileAppender">
     <file value="${log_folder}\normal.log" />
     <appendToFile value="false" />
+    <rollingStyle value="once"/>
     <preserveLogFileNameExtension value="true" />
-    <maximumFileSize value="1024KB" />
+    <maximumFileSize value="200KB" />
     <maxSizeRollBackups value="1000" />
     <countDirection value="1" />
 
@@ -32,14 +33,9 @@
     </layout>
   </appender>
 
-
-  <appender name="UiFailuresRollingFile" type="log4net.Appender.RollingFileAppender">
+  <appender name="ErrorsRollingFile" type="log4net.Appender.FileAppender">
     <file value="${log_folder}\errors.log" />
-    <appendToFile value="false" />
-    <preserveLogFileNameExtension value="true" />
-    <maximumFileSize value="1024KB" />
-    <maxSizeRollBackups value="1000" />
-    <countDirection value="1" />
+    <appendToFile value="true" />
 
     <filter type="log4net.Filter.LevelRangeFilter">
       <levelMin value="ERROR" />
@@ -50,9 +46,37 @@
     </layout>
   </appender>
 
+  <appender name="SmtpAppender" type="log4net.Appender.SmtpAppender">
+    <to value="foo@bar.com" />
+    <from value="admin@flytrace.com" />
+    <subject value="FlyTrace-log" />
+    <smtpHost value="127.0.0.1" />
+    <bufferSize value="512" />
+    <lossy value="false" />
+    <filter type="log4net.Filter.LevelRangeFilter">
+      <levelMin value="WARN" />
+    </filter>
+    <evaluator type="log4net.Core.TimeEvaluator">
+      <interval value="1800"/>
+    </evaluator>
+    <layout type="log4net.Layout.PatternLayout">
+      <conversionPattern value="%date{dd MMM HH:mm:ss} [%thread] [%level] [%logger] %message%newline" />
+    </layout>
+  </appender>
+
   <root>
-    <level value="INFO" />
-    <appender-ref ref="UiNormalRollingFile" />
-    <appender-ref ref="UiFailuresRollingFile" />
+    <level value="WARN" />
+    <appender-ref ref="NormalRollingFile" />
+    <appender-ref ref="ErrorsRollingFile" />
+    <appender-ref ref="SmtpAppender" />
   </root>
+
+  <logger name="TDM.LocReq.ErrorHandling">
+    <!-- Set level to INFO so info messages from here always logged. It shouldn't happen too often -->
+    <level value="INFO" />
+  </logger>
+
+  <logger name="InfoLog">
+    <level value="INFO" />
+  </logger>
 </log4net>

@@ -19,17 +19,17 @@
 --%>
 
 <%@ Page Language="C#" AutoEventWireup="true" CodeBehind="currentTrackers.aspx.cs"
-    Inherits="FlyTrace.Service.Administration.currentTrackers" %>
+    Inherits="FlyTrace.Administration.currentTrackers" Theme="Default" %>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
-<script type="text/javascript" src="jquery-1.7.1.min.js"></script>
-<script type="text/javascript" src="tools.js"></script>
+<script type="text/javascript" src="../Scripts/jquery-1.7.1.min.js"></script>
+<script type="text/javascript" src="../Scripts/tools.js"></script>
+<script type="text/javascript" src="../Scripts/maintainScrollPosition.js"></script>
 <script type="text/javascript">
     setScrollHiddenInputId('<%= scrollHiddenField.ClientID %>');
 </script>
 <head runat="server">
-    <link href="../../App_Themes/Default/site2.css" type="text/css" rel="stylesheet" />
     <title>Current Trackers State - FlyTrace</title>
 </head>
 <body>
@@ -52,12 +52,12 @@
                     <table style="width: 100%;" class="UserInfo">
                         <tr>
                             <td>
-                                <a href="../../default.aspx">FlyTrace</a>&nbsp;&gt;&nbsp;Current Trackers State
+                                <a href="../default.aspx">FlyTrace</a>&nbsp;&gt;&nbsp;Current Trackers State
                             </td>
                             <td style="text-align: right">
                                 <b>
                                     <asp:LoginName ID="LoginName1" runat="Server"></asp:LoginName>
-                                </b>&nbsp;-&nbsp;<a href="../../profile.aspx">Settings</a>&nbsp;-&nbsp;<asp:LinkButton
+                                </b>&nbsp;-&nbsp;<a href="../profile.aspx">Settings</a>&nbsp;-&nbsp;<asp:LinkButton
                                     ID="SignOutLinkButton" runat="server" OnClick="SignOutLinkButton_Click">Sign out</asp:LinkButton>
                             </td>
                         </tr>

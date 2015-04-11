@@ -18,15 +18,14 @@
   along with Flytrace.  If not, see <http://www.gnu.org/licenses/>.
 --%>
 
-<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="serviceLogConfig.aspx.cs"
-    Inherits="FlyTrace.Service.Administration.serviceLogConfig" ValidateRequest="false" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="LogConfig.aspx.cs" Inherits="FlyTrace.Administration.LogConfig"
+    Theme="Default" ValidateRequest="false" %>
 
-<%@ Register TagPrefix="flyTrace" TagName="LogConfig" Src="~/Administration/LogConfig.ascx" %>
+<%@ Register TagPrefix="flyTrace" TagName="LogConfigControl" Src="LogConfigControl.ascx" %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
-<head id="Head1" runat="server">
-    <link href="../../App_Themes/Default/site2.css" type="text/css" rel="stylesheet" />
-    <title>Service Log Config - FlyTrace</title>
+<head runat="server">
+    <title>UI Log Config - FlyTrace</title>
 </head>
 <body>
     <form id="form1" runat="server">
@@ -37,13 +36,14 @@
                     <table style="width: 100%;" class="UserInfo">
                         <tr>
                             <td>
-                                <a href="../../default.aspx">FlyTrace</a>&nbsp;&gt;&nbsp;Manage Service Logs Configuration
+                                <a href="../default.aspx">FlyTrace</a>&nbsp;&gt;&nbsp;Manage User Interface Logs
+                                Configuration
                             </td>
                             <td style="text-align: right">
                                 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                                 <b>
                                     <asp:LoginName ID="LoginName1" runat="Server"></asp:LoginName>
-                                </b>&nbsp;-&nbsp;<a href="../../profile.aspx">Settings</a>&nbsp;-&nbsp;<asp:LinkButton
+                                </b>&nbsp;-&nbsp;<a href="../profile.aspx">Settings</a>&nbsp;-&nbsp;<asp:LinkButton
                                     ID="SignOutLinkButton" runat="server" OnClick="SignOutLinkButton_Click">Sign out</asp:LinkButton>
                             </td>
                         </tr>
@@ -52,11 +52,11 @@
             </tr>
             <tr>
                 <td>
-                    <div style="width: 100%; text-align: center; background-color: #66FF33">
+                    <div style="width: 100%; text-align: center; background-color: #FFFF00">
                         <h3>
-                            Service Log Config</h3>
+                            Log Config</h3>
                     </div>
-                    <flyTrace:LogConfig runat="server" />
+                    <flyTrace:LogConfigControl runat="server" />
                 </td>
             </tr>
         </table>

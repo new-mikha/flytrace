@@ -35,7 +35,7 @@ using log4net.Repository.Hierarchy;
 
 namespace FlyTrace.Service.Administration
 {
-  public partial class LogConfig : System.Web.UI.UserControl
+  public partial class LogConfigControl : System.Web.UI.UserControl
   {
     protected void Page_Load( object sender, EventArgs e )
     {

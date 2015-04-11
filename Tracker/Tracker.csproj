@@ -59,6 +59,7 @@
     <Reference Include="System.Web.Extensions.Design, Version=3.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Web.Services" />
@@ -70,7 +71,13 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Administration\currentTrackers.aspx" />
-    <Content Include="Administration\uiLogConfig.aspx" />
+    <Content Include="Administration\LogConfigControl.ascx" />
+    <Content Include="Administration\LogConfig.aspx" />
+    <Content Include="Administration\TestControl.aspx" />
+    <Content Include="App_Data\test\Anna.xml" />
+    <Content Include="App_Data\test\Maria.xml" />
+    <Content Include="App_Data\test\Readme.txt" />
+    <Content Include="App_Data\test\_empty.xml" />
     <Content Include="App_Themes\Default\dot.png" />
     <Content Include="App_Themes\Default\finish-custom.png" />
     <Content Include="App_Themes\Default\site2.css" />
@@ -82,8 +89,10 @@
     <Content Include="EmailTemplates\resetPassword.txt" />
     <Content Include="EmailTemplates\restorePassword.txt" />
     <Content Include="Administration\manageUsers.aspx" />
-    <None Include="ui.log4net.config.default" />
-    <None Include="ui.log4net.config" />
+    <None Include="log4net.config.default" />
+    <None Include="log4net.config">
+      <SubType>Designer</SubType>
+    </None>
     <Content Include="help\commonhelp.aspx" />
     <Content Include="help\getting-started.png" />
     <Content Include="help\infoWindow.png" />
@@ -130,12 +139,26 @@
     <Compile Include="Administration\currentTrackers.aspx.designer.cs">
       <DependentUpon>currentTrackers.aspx</DependentUpon>
     </Compile>
-    <Compile Include="Administration\uiLogConfig.aspx.cs">
-      <DependentUpon>uiLogConfig.aspx</DependentUpon>
+    <Compile Include="Administration\LogConfigControl.ascx.cs">
+      <DependentUpon>LogConfigControl.ascx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
     </Compile>
-    <Compile Include="Administration\uiLogConfig.aspx.designer.cs">
-      <DependentUpon>uiLogConfig.aspx</DependentUpon>
+    <Compile Include="Administration\LogConfigControl.ascx.designer.cs">
+      <DependentUpon>LogConfigControl.ascx</DependentUpon>
+    </Compile>
+    <Compile Include="Administration\LogConfig.aspx.cs">
+      <DependentUpon>LogConfig.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Administration\LogConfig.aspx.designer.cs">
+      <DependentUpon>LogConfig.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Administration\TestControl.aspx.cs">
+      <DependentUpon>TestControl.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Administration\TestControl.aspx.designer.cs">
+      <DependentUpon>TestControl.aspx</DependentUpon>
     </Compile>
     <Compile Include="App_GlobalResources\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -226,6 +249,12 @@
       <DependentUpon>default.aspx</DependentUpon>
     </Compile>
     <Compile Include="Tools\CodeExpressionBuilder.cs" />
+    <Compile Include="Tools\SystemEventsHiddenForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Tools\SystemEventsHiddenForm.Designer.cs">
+      <DependentUpon>SystemEventsHiddenForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="TrackerDataSet.cs">
       <DependentUpon>TrackerDataSet.xsd</DependentUpon>
       <SubType>Component</SubType>
@@ -389,8 +418,11 @@
       <Name>Service</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <Folder Include="App_Data\" />
+    <EmbeddedResource Include="Tools\SystemEventsHiddenForm.resx">
+      <DependentUpon>SystemEventsHiddenForm.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />

@@ -54,7 +54,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Test
 
     public override TimeSpan SameFeedHitInterval
     {
-      get { return TimeSpan.Zero; }
+      get { return TimeSpan.FromSeconds( 30 ); }
     }
 
     public override void RequestFinished( LocationRequest locReq, bool isTimedOut )

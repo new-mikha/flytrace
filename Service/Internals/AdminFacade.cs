@@ -29,7 +29,7 @@ namespace FlyTrace.Service.Internals
 {
   internal static class AdminFacade
   {
-    public static AdminStat GetAdminStat( )
+    public static AdminStat GetStatBrief( )
     {
       AdminStat result;
       result.ForeignSourcesStat = new ForeignSourceStat[ForeignAccessCentral.LocationRequestFactories.Count];
@@ -63,6 +63,16 @@ namespace FlyTrace.Service.Internals
       result.StartTime = ForeignRequestsManager.Singleton.AdminAlerts.StartTime;
 
       return result;
+    }
+
+    public static System.Data.DataSet GetCallStatistics( )
+    {
+      return ForeignRequestsManager.Singleton.GetCallStatistics( );
+    }
+
+    public static List<AdminTracker> GetAdminTrackers( )
+    {
+      return ForeignRequestsManager.Singleton.GetAdminTrackers( );
     }
   }
 }

@@ -88,24 +88,9 @@ namespace FlyTrace
 
     protected void ShowServiceStatus( )
     {
-
-      try
-      { // that's a service feauture, so don't stop if it fails:
-        using ( Mutex serviceMutex = Mutex.OpenExisting( "FlyTraceService" ) )
-        {
-        }
-      }
-      catch
-      {
-        this.serviceStatShortStatus.Visible = true;
-        this.serviceStatShortStatus.Text = "Seems that the service is not running";
-        this.serviceStatShortStatus.ForeColor = warnColor;
-        return;
-      }
-
       try
       {
-        Service.AdminStat adminStat = Service.ServiceFacade.GetAdminStat( );
+        Service.AdminStat adminStat = Service.ServiceFacade.GetAdminStatBrief( );
 
         ServiceStatToDisplayMode( adminStat.ForeignSourcesStat );
 
@@ -126,7 +111,7 @@ namespace FlyTrace
 
     private void ShowAdminStatMessages( Service.AdminMessage[] adminMessages )
     {
-      foreach ( Service.AdminFacade.AdminMessage adminMessage in adminMessages )
+      foreach ( Service.AdminMessage adminMessage in adminMessages )
       {
         AddAdminMessageRow( adminMessage.Key, adminMessage.Message );
       }
@@ -159,7 +144,7 @@ namespace FlyTrace
 
     private void ServiceStatToDisplayMode( Service.ForeignSourceStat[] foreignSourcesStat )
     {
-      foreach ( Service.AdminFacade.ForeignSourceStat stat in foreignSourcesStat )
+      foreach ( Service.ForeignSourceStat stat in foreignSourcesStat )
       {
         List<string> lines = new List<string>( );
         lines.Add( stat.Name );

@@ -1,4 +1,4 @@
-﻿namespace FlyTrace.Service.Internals.Tools
+﻿namespace FlyTrace.Tools
 {
   partial class SystemEventsHiddenForm
   {

@@ -115,6 +115,11 @@ namespace FlyTrace.LocationLib
       return result;
     }
 
+    /// <summary>
+    /// Need this rahter than just XmlConfiguratorAttribute, because this method sets up
+    /// environment variables that can be in use by the config file.
+    /// </summary>
+    /// <param name="appRootFolder"></param>
     public static void ConfigureLog4Net( string appRootFolder )
     {
       string errorToLog = null;
@@ -148,7 +153,7 @@ namespace FlyTrace.LocationLib
           {
             string configFilePath = ConfigurationManager.AppSettings["LogConfig"];
             if ( string.IsNullOrEmpty( configFilePath ) )
-            { // try to fall back to normal web.config:
+            { // try to fall back to the normal web.config:
               log4net.Config.XmlConfigurator.Configure( );
             }
             else
