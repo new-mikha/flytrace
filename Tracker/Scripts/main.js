@@ -62,6 +62,11 @@ function initialize() {
             return query_string;
         } ();
 
+        if (_shouldLog)
+            $('#logDiv').show();
+        else
+            $('#logDiv').hide();
+
         _autoUpdateEnabled = !(queryString.useautoupdate == "0" || queryString.useautoupdate == "false");
 
         if (_groupId == 132 ||
@@ -241,16 +246,30 @@ var _allTracksRequested = false;
 
 var _reloaded;
 
+var _testDlbFlag = false;
+var _testDlb = 0;
+
 function onAllTracksButtonPressed() {
+    _testDlbFlag = true;
+
     if (!_tracksEnabled) {
         alert('Tracks disabled for this group.');
+        log('Tracks disabled for this group.');
     } else if (!_showTracksButton.getEnabled()) {
         alert('No coordinates received yet for pilots in the group, so no tracks to show.');
+        log('No coordinates received yet for pilots in the group, so no tracks to show.');
     } else {
-        if (_allTracksRequested)
+        if (_allTracksRequested) {
             hideAllTracks();
-        else
+
+            if (_shouldLog)
+                log('Hiding all tracks...');
+        } else {
             showAllTracks();
+
+            if (_shouldLog)
+                log('Showing all tracks...');
+        }
     }
 }
 
@@ -582,6 +601,15 @@ function setupMarkerAndLabel(netTrackerData) {
 
 function clock() {
     try {
+        if (_testDlbFlag && _shouldLog) {
+            _testDlb++;
+            if (_testDlb == 10)
+                sendLog();
+
+            if (_testDlb == 30)
+                sendLog();
+        }
+
         var d = new Date();
         var secondsPassed;
         var secondsLeft;
@@ -2192,6 +2220,11 @@ function findElementByClass(node, lookupClass) {
     }
 
     return null;
+}
+
+function sendLog() {
+    var logElement = document.getElementById('logDiv');
+    FlyTrace.Service.TrackerService.TestCheck(logElement.innerHTML);
 }
 
 function positionContent() {

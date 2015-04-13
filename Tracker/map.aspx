@@ -124,7 +124,7 @@
     </script>
     <script type="text/javascript" src="Scripts/date.format.js">
     </script>
-    <script type="text/javascript" src="Scripts/main.js?ver=65">
+    <script type="text/javascript" src="Scripts/main.js?ver=68">
     </script>
 </head>
 <body onload="initialize()">
@@ -162,16 +162,15 @@
                     <input type="button" value="Show Map" onclick="togglePanels();" />
                 </div>
                 <p>
-                Coordinates format:
-                <select id="coordFormatSelect" onchange="javascript:changeCoordsFormat(this.value)"
-                    id="coordFormatTopDropDownList">
-                    <option value="deg">DD.DDDDDD&#176;</option>
-                    <option selected="selected" value="degmin">DD&#176;MM.MMM'</option>
-                    <option value="degminsec">DD&#176;MM'SS.S&quot;</option>
-                </select>
-                <br />
-                The same map with the format above pre-selected: <a id='preFormatLink' href=''>
-                    link</a>
+                    Coordinates format:
+                    <select id="coordFormatSelect" onchange="javascript:changeCoordsFormat(this.value)"
+                        id="coordFormatTopDropDownList">
+                        <option value="deg">DD.DDDDDD&#176;</option>
+                        <option selected="selected" value="degmin">DD&#176;MM.MMM'</option>
+                        <option value="degminsec">DD&#176;MM'SS.S&quot;</option>
+                    </select>
+                    <br />
+                    The same map with the format above pre-selected: <a id='preFormatLink' href=''>link</a>
                 </p>
                 <table id='listTable' border="0">
                     <tr>
@@ -223,7 +222,9 @@
                 </div>
                 <input type="button" value='Show All Tracks' onclick='showAllTracks()' />
                 <input type="button" value='Hide All Tracks' onclick='hideAllTracks()' />
-                <div id='logDiv'>
+                <div style="display: none;" id="logDiv">
+                    <br />
+                    <input type="button" value='Send log to site admin' onclick='sendLog()' />
                 </div>
             </div>
         </div>
