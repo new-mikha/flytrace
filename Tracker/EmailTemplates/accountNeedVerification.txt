@@ -3,7 +3,7 @@
 Click on the link below to activate your account:
 <%VerificationUrl%>
 
-If you have any questions or trouble logging on please contact a site administrator: <%AdminEmail%>
+If you have any questions or trouble logging on please contact the site administrator: <%AdminEmail%>
 
 Thank you!
 

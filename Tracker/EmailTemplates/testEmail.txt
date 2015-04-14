@@ -2,7 +2,7 @@
 
 This is a test email sent to you from your profile at FlyTrace.com.
 
-If you have any questions or trouble logging on please contact a site administrator: <%AdminEmail%>
+If you have any questions or trouble logging on please contact the site administrator: <%AdminEmail%>
 
 Thank you!
 
