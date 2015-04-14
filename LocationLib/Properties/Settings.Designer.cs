@@ -68,5 +68,15 @@ namespace FlyTrace.LocationLib.Properties {
                 return ((string)(this["SPOT_RequestUrlTemplate"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://api.findmespot.com/spot-main-web/consumer/rest-api/2.0/public/feed/{0}/me" +
+            "ssage.xml?start={1}")]
+        public string SPOT_RequestUrlTemplateWithPage {
+            get {
+                return ((string)(this["SPOT_RequestUrlTemplateWithPage"]));
+            }
+        }
     }
 }

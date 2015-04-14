@@ -94,14 +94,25 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         throw new InvalidOperationException( "Cannot call BeginRequest twice on the same instance" );
       }
 
-      string url =
-        string.Format(
-          Properties.Settings.Default.SPOT_RequestUrlTemplate,
-          this.trackerForeignId
-        );
+      string url;
 
-      if ( Page > 0 )
-        url = string.Format( "{0}?start={1}", url, Page * 50 + 1 );
+      if ( Page == 0 )
+      {
+        url =
+          string.Format(
+            Properties.Settings.Default.SPOT_RequestUrlTemplate,
+            this.trackerForeignId
+          );
+      }
+      else
+      {
+        url =
+          string.Format(
+            Properties.Settings.Default.SPOT_RequestUrlTemplateWithPage,
+            this.trackerForeignId,
+            Page * 50 + 1 
+          );
+      }
 
       this.webRequest = WebRequest.Create( url );
 
