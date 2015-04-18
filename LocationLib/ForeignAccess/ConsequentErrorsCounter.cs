@@ -34,13 +34,18 @@ namespace FlyTrace.LocationLib.ForeignAccess
 
     public readonly ThresholdCounter TimedOutRequestsCounter;
 
+    // Sometimes a foreign server can return an unexpected error status:
+    public readonly ThresholdCounter UnexpectedForeignErrorsCounter;
+
     public ConsequentErrorsCounter(
       int requestsErrorsThresold,
-      int timedOutRequestsThresold
-      )
+      int timedOutRequestsThresold,
+      int unexpectedForeignErrorsThresold
+    )
     {
       RequestsErrorsCounter = new ThresholdCounter( requestsErrorsThresold );
       TimedOutRequestsCounter = new ThresholdCounter( timedOutRequestsThresold );
+      UnexpectedForeignErrorsCounter = new ThresholdCounter( unexpectedForeignErrorsThresold );
     }
   }
 }

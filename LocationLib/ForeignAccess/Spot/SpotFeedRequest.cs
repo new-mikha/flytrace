@@ -51,10 +51,13 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     public readonly int Page;
 
-    public SpotFeedRequest( string trackerForeignId, int page, long callId )
+    private readonly ThresholdCounter unexpectedForeignErrorsCounter;
+
+    public SpotFeedRequest( string trackerForeignId, int page, long callId, ThresholdCounter unexpectedForeignErrorsCounter )
     {
       this.trackerForeignId = trackerForeignId;
       this.callId = callId;
+      this.unexpectedForeignErrorsCounter = unexpectedForeignErrorsCounter;
       Page = page;
     }
 
@@ -110,7 +113,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           string.Format(
             Properties.Settings.Default.SPOT_RequestUrlTemplateWithPage,
             this.trackerForeignId,
-            Page * 50 + 1 
+            Page * 50 + 1
           );
       }
 
@@ -706,6 +709,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           // either we have userMessage or not, create a result:
           result = new Data.TrackPointData( locationType, lat.Value, lon.Value, ts.Value, userMessage );
 
+          if ( this.unexpectedForeignErrorsCounter != null )
+            this.unexpectedForeignErrorsCounter.Reset( );
+
           break;
         }
 
@@ -757,7 +763,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       try
       {
         string errorDescr;
-        
+
         string passwordRequiredMsg = "Feed Password required";
 
         if ( !xmlReader.ReadToDescendant( "text" ) )
@@ -769,6 +775,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         if ( errorDescr.Contains( noDataMsg ) )
         {
+          if ( this.unexpectedForeignErrorsCounter != null )
+            this.unexpectedForeignErrorsCounter.Reset( );
+
           Log.InfoFormat( "No data message for {0}: {1}", this.trackerForeignId, errorDescr );
           // do nothing, the well-formed XML without data will be processed as ResponseHadNoData later.
         }
@@ -776,6 +785,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
                   errorDescr.Contains( feedNotActiveMsg ) ||
                   errorDescr.Contains( passwordRequiredMsg ) )
         {
+          if ( this.unexpectedForeignErrorsCounter != null )
+            this.unexpectedForeignErrorsCounter.Reset( );
           Log.InfoFormat( "Consider {0} as a \"bad tracker\": {1}", this.trackerForeignId, errorDescr );
           isBadTrackerId = true;
         }
@@ -785,11 +796,24 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
           // Don't really know what to do in this case, assume that the tracker id is OK and it's just NO DATA.
           // But log it as error
-          Log.ErrorFormat( "Unknown error message for call to {0}, {1}, lrid {2}: {3}",
-            this.trackerForeignId,
-            Page,
-            this.callId,
-            errorDescr );
+
+          string msg =
+            string.Format( "Unknown error message for call to {0}, {1}, lrid {2}: {3}",
+              this.trackerForeignId,
+              Page,
+              this.callId,
+              errorDescr );
+
+
+          bool shouldReportAsError = true;
+          if ( this.unexpectedForeignErrorsCounter != null )
+            this.unexpectedForeignErrorsCounter.Increment( out shouldReportAsError );
+
+          if ( shouldReportAsError )
+            Log.Error( msg );
+          else
+            Log.Info( msg );
+
         }
       }
       catch ( Exception exc )

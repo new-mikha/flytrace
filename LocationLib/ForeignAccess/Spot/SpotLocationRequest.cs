@@ -100,7 +100,16 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       Lrid = asyncChainedState.Id;
 
-      this.currentRequest = new SpotFeedRequest( this.Id, 0, asyncChainedState.Id );
+      this.currentRequest =
+        new SpotFeedRequest( 
+          this.Id, 
+          0, 
+          asyncChainedState.Id, 
+          this.consequentErrorsCounter == null 
+            ? null 
+            : this.consequentErrorsCounter.UnexpectedForeignErrorsCounter 
+        );
+
       Log.InfoFormat( "Created request for {0}, lrid {1}", this.Id, asyncChainedState.Id );
 
       this.currentRequest.BeginRequest( SpotFeedRequestCallback, asyncChainedState );
@@ -174,7 +183,10 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
               new SpotFeedRequest(
                 this.Id,
                 this.currentRequest.Page + 1,
-                asyncChainedState.Id
+                asyncChainedState.Id,
+                this.consequentErrorsCounter == null
+                  ? null
+                  : this.consequentErrorsCounter.UnexpectedForeignErrorsCounter 
               );
 
             // If isAborted but we're here then "bad" (timed out?) request was finished and closed.

@@ -68,7 +68,8 @@ namespace FlyTrace.Service.Internals
         LocationLib.ForeignAccess.ForeignAccessCentral.InitAux(
           appAuxLogFolder,
           Properties.Settings.Default.SpotConsequentRequestsErrorCountThresold,
-          Properties.Settings.Default.SpotConsequentTimedOutRequestsThresold
+          Properties.Settings.Default.SpotConsequentTimedOutRequestsThresold,
+          Properties.Settings.Default.SpotUnexpectedForeignErrorsThresold
         );
 
         AsyncResultNoResult.DefaultEndWaitTimeout = 60000; // There are no operations that should run longer.

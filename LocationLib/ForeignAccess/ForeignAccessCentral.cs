@@ -22,7 +22,8 @@ namespace FlyTrace.LocationLib.ForeignAccess
     public static void InitAux(
       string logFolder,
       int spotConsequentRequestsErrorCountThresold,
-      int spotConsequentTimedOutRequestsThresold
+      int spotConsequentTimedOutRequestsThresold,
+      int spotUnexpectedForeignErrorsThresold
     )
     {
       LogFolder = logFolder;
@@ -30,7 +31,8 @@ namespace FlyTrace.LocationLib.ForeignAccess
       SpotConsequentErrorsCounter =
         new ConsequentErrorsCounter(
           spotConsequentRequestsErrorCountThresold,
-          spotConsequentTimedOutRequestsThresold
+          spotConsequentTimedOutRequestsThresold,
+          spotUnexpectedForeignErrorsThresold
         );
     }
 

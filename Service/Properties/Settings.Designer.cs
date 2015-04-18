@@ -121,5 +121,14 @@ namespace FlyTrace.Service.Properties {
                 return ((double)(this["IncrDebugRatio"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("5")]
+        public int SpotUnexpectedForeignErrorsThresold {
+            get {
+                return ((int)(this["SpotUnexpectedForeignErrorsThresold"]));
+            }
+        }
     }
 }

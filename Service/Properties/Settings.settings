@@ -35,5 +35,8 @@
     <Setting Name="IncrDebugRatio" Type="System.Double" Scope="Application">
       <Value Profile="(Default)">1</Value>
     </Setting>
+    <Setting Name="SpotUnexpectedForeignErrorsThresold" Type="System.Int32" Scope="Application">
+      <Value Profile="(Default)">5</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
