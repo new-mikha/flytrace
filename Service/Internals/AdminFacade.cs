@@ -56,7 +56,7 @@ namespace FlyTrace.Service.Internals
         )
         .ToArray( );
 
-      result.CurrentRevision = 0; // TODO: replace with new rev.persister result
+      result.CurrentRevision = ForeignRequestsManager.Singleton.CurrentRevision;
 
       result.CoordAccessCount = ForeignRequestsManager.Singleton.AdminAlerts.CoordAccessCount;
 

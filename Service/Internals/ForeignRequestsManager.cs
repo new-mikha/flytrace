@@ -615,6 +615,15 @@ namespace FlyTrace.Service.Internals
       }
     }
 
+    public int CurrentRevision
+    {
+      get
+      {
+        return this.revisionPersister.ThreadUnsafeRevision;
+      }
+    }
+
     #endregion
+
   }
 }
