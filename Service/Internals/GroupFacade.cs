@@ -265,6 +265,12 @@ namespace FlyTrace.Service.Internals
 
     internal static bool TryGetFromCache( int groupId, out GroupDef groupDef )
     {
+      if ( !Properties.Settings.Default.GroupDefCacheEnabled )
+      {
+        groupDef = default( GroupDef );
+        return false;
+      }
+
       RwLock.EnterReadLock( );
       try
       {
@@ -278,6 +284,11 @@ namespace FlyTrace.Service.Internals
 
     private static void SetInCache( int groupId, GroupDef groupDef )
     {
+      if ( !Properties.Settings.Default.GroupDefCacheEnabled )
+      {
+        return;
+      }
+
       RwLock.EnterWriteLock( );
       try
       {
@@ -291,6 +302,9 @@ namespace FlyTrace.Service.Internals
 
     internal static void ResetCache( )
     {
+      // For data integrity safety, do NOT use check for the GroupDefCacheEnabled value here,
+      // just always clear the cache if asked for.
+
       RwLock.EnterWriteLock( );
       try
       {

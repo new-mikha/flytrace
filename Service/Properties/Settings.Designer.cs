@@ -130,5 +130,14 @@ namespace FlyTrace.Service.Properties {
                 return ((int)(this["SpotUnexpectedForeignErrorsThresold"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool GroupDefCacheEnabled {
+            get {
+                return ((bool)(this["GroupDefCacheEnabled"]));
+            }
+        }
     }
 }

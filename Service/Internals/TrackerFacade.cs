@@ -35,6 +35,12 @@ namespace FlyTrace.Service.Internals
 
     public static GroupData GetCoordinates( int group, string srcSeed )
     {
+      if ( Log.IsDebugEnabled )
+      {
+        Log.DebugFormat( "GetCoordinates call start for {0} ({1})", group, Properties.Settings.Default.GroupDefCacheEnabled );
+        System.Threading.Thread.MemoryBarrier( );
+      }
+
       var coordinatesService = new Subservices.CoordinatesService( group, srcSeed );
 
       IAsyncResult ar = coordinatesService.BeginGetCoordinates( null, null );
@@ -51,7 +57,15 @@ namespace FlyTrace.Service.Internals
         return default( GroupData );
       }
 
-      return coordinatesService.EndGetCoordinates( ar );
+      GroupData result = coordinatesService.EndGetCoordinates( ar );
+
+      if ( Log.IsDebugEnabled )
+      {
+        System.Threading.Thread.MemoryBarrier( );
+        Log.DebugFormat( "GetCoordinates call end for {0}", group );
+      }
+
+      return result;
     }
 
     public static List<TrackResponseItem> GetTracks( int group, TrackRequest trackRequest )
