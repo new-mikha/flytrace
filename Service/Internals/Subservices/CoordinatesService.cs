@@ -263,15 +263,15 @@ namespace FlyTrace.Service.Internals.Subservices
       {
         double incrDebugRatio = Settings.Default.IncrDebugRatio;
 
-        if (incrDebugRatio > 0.0)
+        if ( incrDebugRatio > 0.0 )
         {
-          if (incrDebugRatio >= 1.0)
+          if ( incrDebugRatio >= 1.0 )
             isDebugFullGroup = true;
           else
           {
-            lock (debugRnd)
+            lock ( debugRnd )
             {
-              isDebugFullGroup = debugRnd.NextDouble() <= incrDebugRatio;
+              isDebugFullGroup = debugRnd.NextDouble( ) <= incrDebugRatio;
             }
           }
         }
@@ -396,8 +396,10 @@ namespace FlyTrace.Service.Internals.Subservices
         #endregion
       }
 
-      // Update statistics for the group: number of calls, latest coords
-      UpdateStatFields( dtNewestForeignTime, newestLat, newestLon );
+      ThreadPool.QueueUserWorkItem(
+        unused =>
+          UpdateStatFields( dtNewestForeignTime, newestLat, newestLon )
+      );
 
       return resultTrackers;
     }
@@ -499,7 +501,7 @@ namespace FlyTrace.Service.Internals.Subservices
       sqlConn.Open( );
       try
       {
-        // Can't wrap sqlCmd into using because it's asynchronous
+        // Can't wrap sqlCmd into 'using' because it's asynchronous
         SqlCommand sqlCmd = new SqlCommand( sql, sqlConn );
 
         // Use parameters rather than format params into SQL statement string to allow SQL Server cache 
@@ -519,6 +521,11 @@ namespace FlyTrace.Service.Internals.Subservices
           sqlCmd.Parameters["@NewestLon"].Value = newestLon;
         }
 
+        // The whole UpdateStatFields is supposed to be called from the thread pool,
+        // but better do async call to SqlCommand too to save threads. It's just for
+        // the sake of the perfectionism really, but anyway the async call has been
+        // here historically for a while before moving the call to the thread pool, 
+        // so let's keep it:
         sqlCmd.BeginExecuteNonQuery( UpdateNewestCoordCallback, sqlCmd );
       }
       catch
@@ -605,7 +612,7 @@ namespace FlyTrace.Service.Internals.Subservices
             result.IsHidden = true;
           }
         }
-        
+
         if ( snapshot.Error != null )
         {
           result.Error = snapshot.Error.Message;
