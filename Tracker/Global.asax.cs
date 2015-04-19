@@ -512,7 +512,7 @@ namespace FlyTrace
 
       try
       {
-        Service.ServiceFacade.ResetCache( );
+        Service.ServiceFacade.ResetTrackersCache( );
         timeLog.InfoFormat( "Cache has been cleared after system time adjusted" );
       }
       catch ( Exception exc )

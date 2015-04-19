@@ -88,7 +88,7 @@ namespace FlyTrace.Service.Internals.Subservices
       }
     }
 
-    protected override GroupData GetResult( GroupConfig groupConfig )
+    protected override GroupData GetResult( GroupDef groupConfig )
     {
       List<TrackerName> trackerNames = groupConfig.TrackerNames;
 
@@ -154,7 +154,7 @@ namespace FlyTrace.Service.Internals.Subservices
 
     private GroupData BuildGroupData(
       List<CoordResponseItem> resultTrackers,
-      GroupConfig groupConfig,
+      GroupDef groupConfig,
       bool isFullGroup,
       bool isDebugFullGroup,
       int nextThresholdRevision,
@@ -289,7 +289,7 @@ namespace FlyTrace.Service.Internals.Subservices
     (
       RevisedTrackerState[] snapshots,
       List<TrackerName> trackerNames,
-      GroupConfig groupConfig,
+      GroupDef groupConfig,
       bool isFullGroup,
       bool isDebugFullGroup,
       out int? thresholdRevision,

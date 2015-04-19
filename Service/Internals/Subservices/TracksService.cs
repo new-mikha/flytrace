@@ -101,7 +101,7 @@ namespace FlyTrace.Service.Internals.Subservices
       }
     }
 
-    protected override List<TrackResponseItem> GetResult( GroupConfig groupConfig )
+    protected override List<TrackResponseItem> GetResult( GroupDef groupConfig )
     {
       // this not called very often if compared with GetOccrdinates, so should be ok to
       // use Linq

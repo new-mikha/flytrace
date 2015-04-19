@@ -53,7 +53,7 @@ namespace FlyTrace.Service.Internals.Subservices
       return asyncChainedState.FinalAsyncResult;
     }
 
-    protected abstract T GetResult( GroupConfig groupConfig );
+    protected abstract T GetResult( GroupDef groupConfig );
 
     private void OnEndGettingGroupTrackerIds( IAsyncResult ar )
     {
@@ -70,7 +70,7 @@ namespace FlyTrace.Service.Internals.Subservices
 
         asyncChainedState.CheckSynchronousFlag( ar.CompletedSynchronously );
 
-        GroupConfig groupConfig = this.groupFacade.EndGetGroupTrackerIds( ar );
+        GroupDef groupConfig = this.groupFacade.EndGetGroupTrackerIds( ar );
 
         if ( Log.IsDebugEnabled )
           Log.DebugFormat( "Got {0} tracker(s) for call id {1}, group {2}",
@@ -98,7 +98,7 @@ namespace FlyTrace.Service.Internals.Subservices
     /// <param name="trackerNames"></param>
     /// <param name="groupConfig"></param>
     /// <returns></returns>
-    protected RevisedTrackerState[] GetSnapshots( List<TrackerName> trackerNames, GroupConfig groupConfig )
+    protected RevisedTrackerState[] GetSnapshots( List<TrackerName> trackerNames, GroupDef groupConfig )
     {
       if ( Log.IsDebugEnabled )
       {

@@ -514,6 +514,7 @@ namespace FlyTrace
     protected void gridReadonlyCheck_Changing( object sender, SqlDataSourceCommandEventArgs e )
     {
       CheckReadOnly( );
+      Service.ServiceFacade.ResetGroupsDefCache( );
     }
 
     private void CheckReadOnly( )
@@ -631,6 +632,8 @@ namespace FlyTrace
         {
           Global.UserMessagesSettingIsNew = false;
         }
+
+        Service.ServiceFacade.ResetGroupsDefCache( );
       }
       catch ( Exception exc )
       {
@@ -653,6 +656,8 @@ namespace FlyTrace
       try
       {
         this.groupAdapter.DeleteById( GroupId );
+
+        Service.ServiceFacade.ResetGroupsDefCache( );
 
         Response.Redirect( "~/default.aspx", true );
       }

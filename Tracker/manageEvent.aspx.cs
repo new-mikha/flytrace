@@ -494,6 +494,8 @@ namespace FlyTrace
       TrackerDataSetTableAdapters.EventTableAdapter adapter = new TrackerDataSetTableAdapters.EventTableAdapter( );
       adapter.UpdateEventStartTs( EventId, utcThreshold );
 
+      Service.ServiceFacade.ResetGroupsDefCache( );
+
       // this.eventRow accessed in Page_PreRender, so set it to the correct value:
       this.eventRow.StartTs = utcThreshold;
       this.eventRow.AcceptChanges( );
@@ -503,6 +505,8 @@ namespace FlyTrace
     {
       TrackerDataSetTableAdapters.EventTableAdapter adapter = new TrackerDataSetTableAdapters.EventTableAdapter( );
       adapter.UpdateEventStartTs( EventId, null );
+
+      Service.ServiceFacade.ResetGroupsDefCache( );
 
       // this.eventRow accessed in Page_PreRender, so set it to NULL here too:
       this.eventRow.SetStartTsNull( );

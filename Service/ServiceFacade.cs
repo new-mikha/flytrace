@@ -91,10 +91,19 @@ namespace FlyTrace.Service
     }
 
     /// <summary>
+    /// Resets cache of group definitions (names/ids of trackers in the group, group data like "show messages")
+    /// Should be called after a group (just any group) is changed in DB
+    /// </summary>
+    public static void ResetGroupsDefCache( )
+    {
+      Internals.GroupFacade.ResetCache( );
+    }
+
+    /// <summary>
     /// Resets trackers cache, so the service enters the state like it's just initialised.
     /// Required to be called when a system time has changed (the service doesn't check it itself)
     /// </summary>
-    public static void ResetCache( )
+    public static void ResetTrackersCache( )
     {
       Internals.ForeignRequestsManager.Singleton.ClearTrackers( );
     }

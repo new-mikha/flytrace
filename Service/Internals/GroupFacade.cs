@@ -39,7 +39,7 @@ namespace FlyTrace.Service.Internals
     public ForeignId ForeignId;
   }
 
-  internal struct GroupConfig
+  internal struct GroupDef
   {
     public List<TrackerName> TrackerNames;
 
@@ -53,6 +53,8 @@ namespace FlyTrace.Service.Internals
   internal class GroupFacade
   {
     private static readonly ILog Log = LogManager.GetLogger( "GrpFcde" );
+
+    private int groupId;
 
     private SqlCommand sqlCmd;
 
@@ -71,28 +73,15 @@ namespace FlyTrace.Service.Internals
         return result;
       }
 
-      /* TODO
-       * Reading data from DB at every call to the web service is probably the narrowest bottleneck 
-       * in the process. Could be optimized along the following lines:
-       * - Cache data in the dictionary, where value is a something that have a list of 
-       *    trackers + some other params (see below)
-       * - There should be a separate thread responsible for filling the values of the dicitonary.
-       * - When a new group is asked for, add "empty" value to the dictionary (using lock, which means that 
-       *    the same lock is used for reading from the dictionary too. Although some no-locking technique 
-       *    could be used, but that looks redundant)
-       * - Wake up the retrieve thread
-       * - Wait for the thread to retrieve the data for all "dirty" or "emtpy" values. EventWaitHandle for every group 
-       *    could probably be used for that because it's a rare operation?
-       * - Data changes in the web UI should be detectable. For that, probably the whole class library should 
-       *    be moved into the main project, so the change event could be called directly when a group page is 
-       *    updated. Alterntatively WCF with some fast channel like tcp could be used)
-       * - If the data changed, a dictionary value should be marked as "dirty", and the retrieve thread should be kicked.
-       * - When a call to this class finds that the dictionary value is dirty, it should wait for for the 
-       *    retrieve thread.
-       * 
-       * ... but all of the above looks too dramatic to implement at the moment, so keeping it as TO DO and 
-       * just reading DB every time in the recommended asynchronous way.
-       */
+      {
+        GroupDef cachedResult;
+        if ( TryGetFromCache( group, out cachedResult ) )
+        {
+          AsyncResult<GroupDef> result = new AsyncResult<GroupDef>( callback, asyncState );
+          result.SetAsCompleted( cachedResult, true );
+          return result;
+        }
+      }
 
       // Ensure that this instance is not used already for some other call:
       int prevOp =
@@ -135,6 +124,7 @@ namespace FlyTrace.Service.Internals
         startTsPar.Direction = System.Data.ParameterDirection.Output;
 
         this.sqlCmd.Parameters[0].Value = group;
+        this.groupId = group;
 
         return this.sqlCmd.BeginExecuteReader( callback, asyncState );
       }
@@ -146,7 +136,7 @@ namespace FlyTrace.Service.Internals
       }
     }
 
-    public GroupConfig EndGetGroupTrackerIds( IAsyncResult asyncResult )
+    public GroupDef EndGetGroupTrackerIds( IAsyncResult asyncResult )
     {
       if ( asyncResult is AsyncResult<int> )
       { // it's a test group with faked locations taken from files
@@ -158,7 +148,12 @@ namespace FlyTrace.Service.Internals
         return GetTestGroup( );
       }
 
-      GroupConfig result;
+      if ( asyncResult is AsyncResult<GroupDef> )
+      { // result was cached, so now it is just a technical call to retrieve it:
+        return ( asyncResult as AsyncResult<GroupDef> ).EndInvoke( );
+      }
+
+      GroupDef result;
 
       int prevOp =
         Interlocked.CompareExchange(
@@ -232,12 +227,14 @@ namespace FlyTrace.Service.Internals
         this.sqlCmd.Connection.Close( );
       }
 
+      SetInCache( this.groupId, result );
+
       return result;
     }
 
-    private static GroupConfig GetTestGroup( )
+    private static GroupDef GetTestGroup( )
     {
-      GroupConfig result;
+      GroupDef result;
 
       string[] names = TestSource.Singleton.GetTestNames( );
 
@@ -252,7 +249,7 @@ namespace FlyTrace.Service.Internals
             ForeignId =
               new ForeignId(
                 ForeignId.TEST,
-                TestSource.TestIdPrefix + n 
+                TestSource.TestIdPrefix + n
               )
           }
         ).ToList( );
@@ -260,6 +257,49 @@ namespace FlyTrace.Service.Internals
       result.StartTs = null;
 
       return result;
+    }
+
+    private readonly static Dictionary<int, GroupDef> Cache = new Dictionary<int, GroupDef>( );
+
+    private readonly static ReaderWriterLockSlim RwLock = new ReaderWriterLockSlim( );
+
+    internal static bool TryGetFromCache( int groupId, out GroupDef groupDef )
+    {
+      RwLock.EnterReadLock( );
+      try
+      {
+        return Cache.TryGetValue( groupId, out groupDef );
+      }
+      finally
+      {
+        RwLock.ExitReadLock( );
+      }
+    }
+
+    private static void SetInCache( int groupId, GroupDef groupDef )
+    {
+      RwLock.EnterWriteLock( );
+      try
+      {
+        Cache[groupId] = groupDef;
+      }
+      finally
+      {
+        RwLock.ExitWriteLock( );
+      }
+    }
+
+    internal static void ResetCache( )
+    {
+      RwLock.EnterWriteLock( );
+      try
+      {
+        Cache.Clear( );
+      }
+      finally
+      {
+        RwLock.ExitWriteLock( );
+      }
     }
   }
 }

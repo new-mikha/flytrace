@@ -372,7 +372,19 @@
                             </td>
                         </tr>
                     </table>
-                    <asp:SqlDataSource ID="trackersDataSource" runat="server" ConnectionString="<%$ ConnectionStrings:TrackerConnectionString %>" SelectCommand="SELECT [Id], [Name], [TrackerForeignId] FROM [GroupTracker] WHERE ([GroupId] = @GroupId)" InsertCommand="EXEC AddTrackerToGroup @GroupId, @Name, @TrackerForeignId" UpdateCommand="EXEC UpdateTrackerInGroup @Id, @Name" DeleteCommand="EXEC DeleteTrackerFromGroup @Id" OnInserted="trackersDataSource_Inserted" OnUpdated="trackersDataSource_Updated" OnDeleting="gridReadonlyCheck_Changing" OnInserting="gridReadonlyCheck_Changing" OnUpdating="gridReadonlyCheck_Changing">
+                    <asp:SqlDataSource ID="trackersDataSource" 
+                        runat="server" 
+                        ConnectionString="<%$ ConnectionStrings:TrackerConnectionString %>" 
+                        SelectCommand="SELECT [Id], [Name], [TrackerForeignId] FROM [GroupTracker] WHERE ([GroupId] = @GroupId)" 
+                        InsertCommand="EXEC AddTrackerToGroup @GroupId, @Name, @TrackerForeignId" 
+                        UpdateCommand="EXEC UpdateTrackerInGroup @Id, @Name" 
+                        DeleteCommand="EXEC DeleteTrackerFromGroup @Id" 
+                        OnInserting="gridReadonlyCheck_Changing" 
+                        OnInserted="trackersDataSource_Inserted" 
+                        OnUpdating="gridReadonlyCheck_Changing"
+                        OnUpdated="trackersDataSource_Updated" 
+                        OnDeleting="gridReadonlyCheck_Changing"
+                        >
                         <SelectParameters>
                             <flytrace_tools:EvalParameter Name="GroupId" Expression="GroupId" />
                         </SelectParameters>
