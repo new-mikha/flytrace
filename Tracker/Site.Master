@@ -101,6 +101,13 @@
                             </table>
                         </LayoutTemplate>
                     </asp:Login>
+                    <span style="color: #FF9933;">
+                        <h3 style="margin-bottom: 0px; padding-bottom: 0px">
+                            See also: <span style="padding-left: 0.5em"><a href='http://www.flytrace.com/leonardo/index.php'
+                                target='_blank'>Leonardo</a> to analyze saved GPS tracks, and <a href='http://gts.flytrace.com/track/Track?account=flytrace'>
+                                    OpenGTS (beta)</a> for phone-based tracking</span>
+                        </h3>
+                    </span>
                 </div>
                 <asp:ContentPlaceHolder ID="AnonymousContentPlaceHolder" runat="server">
                 </asp:ContentPlaceHolder>
@@ -131,21 +138,19 @@
             <asp:ContentPlaceHolder ID="CommonContentPlaceHolder" runat="server">
             </asp:ContentPlaceHolder>
         </div>
-        <div class="UserInfo2" style="text-align: right">
-            <span style="padding-left: 2em"><a href="privacy-policy.htm">Privacy Policy</a></span>
-            <span style="padding-left: 2em"><a href="https://github.com/new-mikha/flytrace">Source</a></span>
-            <span style="padding-left: 2em">Contact: <a href='mailto: <%= InfoEmail %> '>
-                <%= InfoEmail %></a></span>
+        <div class="UserInfo2" style="text-align: left;">
+            <span style="color: #FF9933;">
+                See also <a href='http://www.flytrace.com/leonardo/index.php' target='_blank'>Leonardo</a>
+                to analyze saved GPS tracks,
+                and <a href='http://gts.flytrace.com/track/Track?account=flytrace'> OpenGTS (beta)</a> for 
+                phone-based tracking
+            </span>
+            <span style="float: right;">
+                <a href="privacy-policy.htm">Privacy Policy</a>
+                <span style="padding-left: 2em"><a href="https://github.com/new-mikha/flytrace">Source</a></span>
+                <span style="padding-left: 2em">Contact: <a href='mailto: <%= InfoEmail %> '><%= InfoEmail %></a></span> 
+             </span>
         </div>
-        <%--        <asp:LoginView ID="LoginView1" runat="server">
-            <LoggedInTemplate>
-                <div class="UserInfo2" style="text-align: right">
-                    Contact: <a href='mailto: <%= InfoEmail %> '>
-                        <%= InfoEmail %></a>
-                </div>
-            </LoggedInTemplate>
-        </asp:LoginView>
-        --%>
     </div>
     </form>
 </body>

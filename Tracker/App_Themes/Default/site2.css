@@ -93,6 +93,13 @@
     color: #FFFFFF;
 }
 
+.NewStuff A:link,
+.NewStuff A:visited
+{
+    color: #FFFFFF;
+}
+
+
 .VisualGroupTitle
 {
     background-color: #80BBBA;
