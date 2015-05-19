@@ -79,6 +79,10 @@
     <Content Include="Administration\LogConfigControl.ascx" />
     <Content Include="Administration\LogConfig.aspx" />
     <Content Include="Administration\TestControl.aspx" />
+    <Content Include="App_Data\Flytrace.mdf" />
+    <Content Include="App_Data\Flytrace_log.ldf">
+      <DependentUpon>Flytrace.mdf</DependentUpon>
+    </Content>
     <Content Include="App_Data\test\Anna.xml" />
     <Content Include="App_Data\test\Maria.xml" />
     <Content Include="App_Data\test\Readme.txt" />
@@ -135,6 +139,7 @@
       <SubType>Designer</SubType>
     </Content>
     <Content Include="Web.sitemap" />
+    <None Include="Web.connectionStrings.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Administration\currentTrackers.aspx.cs">
