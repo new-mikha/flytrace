@@ -113,7 +113,7 @@
     <PostBuildEvent>copy $(SolutionDir)\LocationLib\bin\$(ConfigurationName)\Web.LocationLib.dll.config $(TargetDir)
 if %25errorlevel%25 neq 0 exit 1
 
-$(MSBuildBinPath)\msbuild.exe "$(SolutionDir)ApplicationSettingsExtract.targets" "/p:InputFile=$(TargetPath).config" "/p:OutputFile=$(TargetDir)Web.$(TargetFileName).config" /p:SectionName=FlyTrace.Service.Properties.Settings
+"$(MSBuildBinPath)\msbuild.exe" "$(SolutionDir)ApplicationSettingsExtract.targets" "/p:InputFile=$(TargetPath).config" "/p:OutputFile=$(TargetDir)Web.$(TargetFileName).config" /p:SectionName=FlyTrace.Service.Properties.Settings
 if %25errorlevel%25 neq 0 exit 2</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
