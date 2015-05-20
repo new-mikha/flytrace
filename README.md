@@ -3,12 +3,9 @@ Flytrace, online viewer for SPOT trackers
 
 Main installation: http://www.flytrace.com/tracker
 
-Our hosting supports just .NET Framework 3.5, so 4.x is not 
+Our hosting supports .NET Framework 3.5 only, so 4.x is not 
 there yet. Prerequisites for building & running:
-- Visual Studio 2010, Service Pack 1 (could be higher, but 
-  for the moment commits are accepted for VS 2010 only)
-- IIS 7 or higher.
-- MS SQL Server 2005 or higher (could be Express)
+- Visual Studio 2013 with Update 4, any edition.
 
 More info on setting up, building & debugging the project
 see here:    
