@@ -231,7 +231,7 @@
     </div>
     <asp:ScriptManager ID="scriptManager1" runat="server">
         <Services>
-            <asp:ServiceReference Path="/Tracker/Service/TrackerService.asmx" />
+            <asp:ServiceReference Path="~/Service/TrackerService.asmx" />
         </Services>
     </asp:ScriptManager>
     </form>
