@@ -60,7 +60,7 @@ function initialize() {
                 }
             }
             return query_string;
-        } ();
+        }();
 
         if (_shouldLog)
             $('#logDiv').show();
@@ -906,6 +906,7 @@ function processResult(result, isIncremental) {
     }
 
     if (result.Trackers != null) {
+        var addedRow = false;
         for (var iResult = 0; iResult < result.Trackers.length; iResult++) {
             var netTrackerData = result.Trackers[iResult];
 
@@ -957,8 +958,9 @@ function processResult(result, isIncremental) {
                     trackerHolder.marker = null;
                 }
 
-                trackerHolder.StatusControlsSet = addTrackerToTable();
+                trackerHolder.StatusControlsSet = addTrackerToTable(trackerHolder);
                 _trackerHolders.push(trackerHolder);
+                addedRow = true;
 
                 SetStatusControlInnerHtml(trackerHolder.StatusControlsSet.NameCtl, netTrackerData.Name);
             } else if (!isMarkerDisplayble(netTrackerData)) {
@@ -1055,6 +1057,9 @@ function processResult(result, isIncremental) {
 
             syncTrackLine(trackerHolder, trackPointsToAdd);
         }
+        if (addedRow) {
+            sortTable();
+        }
     }
 
     // If not incremental, now remove trackers that are not in the response:
@@ -1079,7 +1084,7 @@ function processResult(result, isIncremental) {
 
                 hideMarker(_trackerHolders[iTrackerHolder]);
 
-                removeTrackerFromTable(_trackerHolders[iTrackerHolder].StatusControlsSet);
+                $(_trackerHolders[iTrackerHolder].StatusControlsSet.Row).remove();
                 _trackerHolders.splice(iTrackerHolder, 1);
             }
         }
@@ -1125,6 +1130,39 @@ function processResult(result, isIncremental) {
     } else if (result.Res != "NIL") {
         _currentSeed = result.Res;
     }
+}
+
+function sortTable() {
+    var $tbody = $('#listTable tbody');
+    var rows = $('#listTable tbody').find('tr');
+
+    rows.sort(function (a, b) {
+        if (a.trackerHolder == null &&
+            b.trackerHolder == null)
+            return 0;
+
+        if (a.trackerHolder == null)
+            return -1;
+
+        if (b.trackerHolder == null)
+            return 1;
+
+        var order = 1;
+        var aVal = a.trackerHolder.Name.toUpperCase();
+        var bVal = b.trackerHolder.Name.toUpperCase();
+
+        if (aVal < bVal)
+            return -1 * order;
+
+        if (aVal == bVal)
+            return 0;
+
+        return 1 * order;
+    });
+
+    $.each(rows, function (index, row) {
+        $tbody.append(row);
+    });
 }
 
 var _shouldAutoFitOnTimer = false;
@@ -2125,19 +2163,6 @@ function FindTrackerHolder(trackerName) {
     return null;
 }
 
-function removeTrackerFromTable(statusControlsSet) {
-    var tbl = document.getElementById('listTable');
-    tbl.deleteRow(statusControlsSet.iRow);
-
-    // rows shifted up, change indexes of the rows below:
-    for (var iTrackerHolder = 0; iTrackerHolder < _trackerHolders.length; iTrackerHolder++) {
-        if (_trackerHolders[iTrackerHolder].StatusControlsSet.iRow > statusControlsSet.iRow) {
-
-            _trackerHolders[iTrackerHolder].StatusControlsSet.iRow--;
-        }
-    }
-}
-
 function fitAllTrackers(showAlertForNoCoords) {
     try {
         if (_trackerHolders == null || _trackerHolders.length == 0) {
@@ -2184,22 +2209,23 @@ function togglePanels() {
     positionContent();
 }
 
-function addTrackerToTable() {
-    var tbl = document.getElementById('listTable');
-    var newNode = tbl.rows[1].cloneNode(true);
+function addTrackerToTable(trackerHolder) {
+    var $tbody = $('#listTable tbody');
+    var templateRow = $tbody.find('tr').first()[0];
+    var newRow = templateRow.cloneNode(true);
 
     var statusControlsSet = new Object();
-    statusControlsSet.NameCtl = findElementByClass(newNode, "TrackerNameCtl");
-    statusControlsSet.StatusCtl = findElementByClass(newNode, "TrackerStatusCtl");
-    statusControlsSet.CoordsCtl = findElementByClass(newNode, "TrackerCoordsCtl");
-    statusControlsSet.AgeCtl = findElementByClass(newNode, "TrackerAgeCtl");
-    statusControlsSet.TimestampCtl = findElementByClass(newNode, "TrackerTimestampCtl");
-    statusControlsSet.ErrorCtl = findElementByClass(newNode, "TrackerErrorCtl");
-    statusControlsSet.iRow = tbl.rows.length;
-    statusControlsSet.Row = newNode;
+    statusControlsSet.NameCtl = findElementByClass(newRow, "TrackerNameCtl");
+    statusControlsSet.StatusCtl = findElementByClass(newRow, "TrackerStatusCtl");
+    statusControlsSet.CoordsCtl = findElementByClass(newRow, "TrackerCoordsCtl");
+    statusControlsSet.AgeCtl = findElementByClass(newRow, "TrackerAgeCtl");
+    statusControlsSet.TimestampCtl = findElementByClass(newRow, "TrackerTimestampCtl");
+    statusControlsSet.ErrorCtl = findElementByClass(newRow, "TrackerErrorCtl");
+    statusControlsSet.Row = newRow;
 
-    tbl.appendChild(newNode);
-    newNode.style.display = "";
+    $tbody.append(newRow);
+    newRow.style.display = "";
+    newRow.trackerHolder = trackerHolder;
 
     return statusControlsSet;
 }
