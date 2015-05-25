@@ -2177,7 +2177,9 @@ function fitAllTrackers(showAlertForNoCoords) {
         for (var iTrackerHolder = 0; iTrackerHolder < _trackerHolders.length; iTrackerHolder++) {
             var trackerHolder = _trackerHolders[iTrackerHolder];
             if (isHavingCoordinates(trackerHolder.NetTrackerData) &&
-                trackerHolder.marker != null) {
+                trackerHolder.marker != null &&
+                trackerHolder.NetTrackerData.Lat > -999 &&
+                trackerHolder.NetTrackerData.Lon > -999) {
                 if (bounds == null) {
                     bounds = new google.maps.LatLngBounds(trackerHolder.marker.getPosition());
                 } else {
