@@ -41,9 +41,11 @@ function scrollPosition()
 }
 
 // on load of the page, load the previous scroll position
-$(document).ready(function () { loadScrollPosition(); });
+$(document).ready(function () {
+    $(window).scroll(function () { storeScrollPosition(); });
+    loadScrollPosition();
+});
 // on scroll of the page, update the input field
-$(window).scroll(function () { storeScrollPosition(); });
 
 
 function setScrollHiddenInputId(inputId)

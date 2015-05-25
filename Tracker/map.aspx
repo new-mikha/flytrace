@@ -117,7 +117,7 @@
         var _reloadLonId = '<%= reloadLon.ClientID %>';
         var _reloadZoomId = '<%= reloadZoom.ClientID %>';
     </script>
-    <script type="text/javascript" src="Scripts/jquery-1.7.1.min.js"></script>
+    <script type="text/javascript" src="Scripts/jquery-1.11.3.min.js"></script>
     <script type="text/javascript" src="Scripts/labelMapControl.js?ver=3">
     </script>
     <script type="text/javascript" src="Scripts/buttonMapControl.js?ver=3">

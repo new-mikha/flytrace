@@ -125,10 +125,10 @@
     <Content Include="map.aspx" />
     <Content Include="register.aspx" />
     <Content Include="Scripts\buttonMapControl.js" />
+    <Content Include="Scripts\jquery-1.11.3.min.js" />
     <Content Include="Scripts\main.js" />
     <Content Include="Scripts\labelMapControl.js" />
     <Content Include="Scripts\date.format.js" />
-    <Content Include="Scripts\jquery-1.7.1.min.js" />
     <Content Include="Scripts\tools.js" />
     <Content Include="default.aspx" />
     <Content Include="Service\TrackerService.asmx" />
@@ -456,7 +456,7 @@
           <AutoAssignPort>True</AutoAssignPort>
           <DevelopmentServerPort>52966</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>http://localhost:52966/</IISUrl>
+          <IISUrl>http://localhost:52967/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
