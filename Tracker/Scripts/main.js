@@ -226,13 +226,22 @@ function setPreFormatLink() {
 
 
 function showLogos() {
-    if (_logoSource == "" ||
-        screen.width < 500 ||
-        screen.height < 500) return;
+    if (_logoSource == "" && _smallLogoSource == "" ) return;
+
+    var logoToUse;
+
+    if (_logoSource == "")
+        logoToUse = _smallLogoSource;
+    else if (_smallLogoSource == "")
+        logoToUse = _logoSource;
+    else if (screen.width < 500 || screen.height < 500)
+        logoToUse = _smallLogoSource;
+    else
+        logoToUse = _logoSource;
 
     var homeControlDiv = document.createElement('div');
     homeControlDiv.style.padding = '5px';
-    homeControlDiv.innerHTML = "<a href='http://www.advridermag.com.au/forum' target='flytrace_advridermag'><img src='" + _logoSource + "'/></a>";
+    homeControlDiv.innerHTML = "<a href='http://www.advridermag.com.au' target='flytrace_advridermag'><img src='" + logoToUse + "'/></a>";
 
     homeControlDiv.index = 1;
     _map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(homeControlDiv);

@@ -69,25 +69,38 @@
         }
     </style>
     <% 
-        string logoPath = System.IO.Path.Combine(HttpRuntime.AppDomainAppPath, "add/logo1.png");
+        {
+            string logoPath = System.IO.Path.Combine( HttpRuntime.AppDomainAppPath, "add/logo1.png" );
 
-        Response.Write(
-            string.Format(
-                "\n\n<script type=\"text/javascript\">\nvar _logoSource='{0}';\n</script>\n",
-                (OwnerId == AdvRiderUserId && System.IO.File.Exists(logoPath))
-                ? "add/logo1.png"
-                : ""));
+            Response.Write(
+                string.Format(
+                    "\n\n<script type=\"text/javascript\">\nvar _logoSource='{0}';\n</script>\n",
+                    ( OwnerId == AdvRiderUserId && System.IO.File.Exists( logoPath ) )
+                    ? "add/logo1.png"
+                    : "" ) );
+        }
 
+        {
+            string smallLogoPath = System.IO.Path.Combine( HttpRuntime.AppDomainAppPath, "add/logo1-small.png" );
+
+            Response.Write(
+                string.Format(
+                    "\n\n<script type=\"text/javascript\">\nvar _smallLogoSource='{0}';\n</script>\n",
+                    ( OwnerId == AdvRiderUserId && System.IO.File.Exists( smallLogoPath ) )
+                    ? "add/logo1-small.png"
+                    : "" ) );
+        }
+                
     %>
     <% 
         bool sensor;
-        if (!bool.TryParse(this.Request.Params["sensor"], out sensor))
+        if ( !bool.TryParse( this.Request.Params["sensor"], out sensor ) )
         {
             sensor = true;
         }
 
         bool shouldLog;
-        if (!bool.TryParse(this.Request.Params["log"], out shouldLog))
+        if ( !bool.TryParse( this.Request.Params["log"], out shouldLog ) )
         {
             shouldLog = false;
         }
@@ -95,24 +108,24 @@
         Response.Write(
             string.Format(
                 "<script type=\"text/javascript\" src=\"http://maps.googleapis.com/maps/api/js?key=AIzaSyBQjcGGONlL8Ppv0qFJTBiJeqZSMrwaH8g&sensor={0}\">\n</script>",
-                sensor ? "true" : "false"));
+                sensor ? "true" : "false" ) );
 
         Response.Write(
             string.Format(
                 "\n\n<script type=\"text/javascript\">\nvar _useLocationSensor={0};\n</script>\n",
-                sensor ? "true" : "false"));
+                sensor ? "true" : "false" ) );
 
-        Response.Write("\n<script type=\"text/javascript\">");
-        Response.Write(string.Format("var _groupId = {0}\n", GroupId));
-        Response.Write(string.Format("var _shouldLog = {0}", shouldLog ? "true" : "false")); // without that it's written like "True"/"False" and probably could even be loc.problems.
-        Response.Write("</script>\n");
+        Response.Write( "\n<script type=\"text/javascript\">" );
+        Response.Write( string.Format( "var _groupId = {0}\n", GroupId ) );
+        Response.Write( string.Format( "var _shouldLog = {0}", shouldLog ? "true" : "false" ) ); // without that it's written like "True"/"False" and probably could even be loc.problems.
+        Response.Write( "</script>\n" );
 
-        if (MapCenterLat.HasValue && MapCenterLon.HasValue)
+        if ( MapCenterLat.HasValue && MapCenterLon.HasValue )
         {
-            Response.Write("\n<script type=\"text/javascript\">");
-            Response.Write(string.Format("var _mapCenterLat = {0}\n", MapCenterLat.Value));
-            Response.Write(string.Format("var _mapCenterLon = {0}\n", MapCenterLon.Value));
-            Response.Write("</script>\n");
+            Response.Write( "\n<script type=\"text/javascript\">" );
+            Response.Write( string.Format( "var _mapCenterLat = {0}\n", MapCenterLat.Value ) );
+            Response.Write( string.Format( "var _mapCenterLon = {0}\n", MapCenterLon.Value ) );
+            Response.Write( "</script>\n" );
         }
     %>
     <script type="text/javascript">
@@ -127,7 +140,7 @@
     </script>
     <script type="text/javascript" src="Scripts/date.format.js">
     </script>
-    <script type="text/javascript" src="Scripts/main.js?ver=70">
+    <script type="text/javascript" src="Scripts/main.js?ver=73">
     </script>
 </head>
 <body onload="initialize()">
