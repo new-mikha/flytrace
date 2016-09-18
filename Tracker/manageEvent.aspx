@@ -24,8 +24,12 @@
 <%@ PreviousPageType VirtualPath="~/default.aspx" %>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
-<script type="text/javascript" src="Scripts/jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/react/15.3.1/react.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/react/15.3.1/react-dom.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.6.16/browser.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
 <script type="text/javascript" src="Scripts/maintainScrollPosition.js"></script>
+<script type="text/javascript" src="Scripts/manageEvent.js"></script>
 <script type="text/javascript">
     setScrollHiddenInputId('<%= scrollHiddenField.ClientID %>');
 </script>
@@ -297,6 +301,8 @@
                                     <br />
                                     <br />
                                     <input id="btnClear" type="button" value="Clear Task" onclick="return btnClear_onclick()" />
+                                    
+                                    <div id="react_waypoints"></div>
                                     <table id="sdfsdf" style="width: 100%">
                                         <tr>
                                             <td>
