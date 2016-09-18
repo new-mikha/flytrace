@@ -21,3 +21,7 @@ Site update scripts/Full.zip
 *no_scc*
 Tracker/Web.LocationLib.dll.config
 Tracker/Web.Service.dll.config
+node_modules
+.babelrc
+/.vs
+.idea
