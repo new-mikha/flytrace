@@ -1,2 +1,2 @@
-cd Scripts
-watchify -d -t babelify manageEvent.source.jsx -o manageEvent.js -v
+cd
+watchify -d -t babelify jsx\manageEvent.jsx -o Scripts\manageEvent.js -v
