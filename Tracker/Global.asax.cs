@@ -30,6 +30,7 @@ using System.IO;
 using System.Diagnostics;
 using log4net;
 using System.Threading;
+using System.Web.Http;
 
 namespace FlyTrace
 {
@@ -446,6 +447,8 @@ namespace FlyTrace
 
       try
       {
+        GlobalConfiguration.Configure(WebApiConfig.Register);
+
         LocationLib.Tools.DefaultCulture = DefaultCulture;
         LocationLib.Tools.ConfigureThreadCulture( );
 

@@ -19,13 +19,8 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Web;
-using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Web.Security;
-using System.Xml;
-using System.Globalization;
 using System.Data;
 
 namespace FlyTrace
@@ -34,20 +29,12 @@ namespace FlyTrace
   {
     protected string UpdateEventMsg = "";
     protected string LoadWaypointsMsg = "";
-    protected string TaskSaveInfo;
-    protected string TaskSaveError;
 
-    protected int AllEventWptsCount
-    { // Can be changed by LoadAllWaypoints so keep it like this, not as just a class field.
-      get { return this.allEventWaypoints.Count; }
-    }
+    protected int AllEventWptsCount => _allEventWaypoints.Count;
 
-    private TrackerDataSet.EventRow eventRow;
+    private TrackerDataSet.EventRow _eventRow;
 
-    protected string EventName
-    {
-      get { return this.eventRow.Name; }
-    }
+    protected string EventName => _eventRow.Name;
 
     // need to be a public property because accessed by EvalParameter - it can't 
     // access non-public stuff, and requires a property rather than a field.
@@ -55,153 +42,128 @@ namespace FlyTrace
 
     public bool IsEventDefault { get; private set; }
 
-    TrackerDataSet.TaskDataTable taskTable;
+    private TrackerDataSet.WaypointDataTable _allEventWaypoints;
 
-    TrackerDataSetTableAdapters.TaskTableAdapter taskAdapter =
-      new FlyTrace.TrackerDataSetTableAdapters.TaskTableAdapter( );
+    private int _assignedGroupsCount;
 
-    private TrackerDataSet.WaypointDataTable allEventWaypoints;
-
-    private int assignedGroupsCount;
-
-    private Dictionary<string, string> defaultRadius = new Dictionary<string, string>( );
-
-    protected void taskPanel_Init( object sender, EventArgs e )
-    {
-      // save default values of radius text boxes (don't know how to get it otherwise)
-      for ( int iWp = 0; iWp < MaxNumberOfTaskWaypoints; iWp++ )
-      {
-        string tbName = "tbRadius" + iWp.ToString( );
-        TextBox radiusTextBox = ( TextBox ) this.taskPanel.FindControl( tbName );
-        this.defaultRadius[tbName] = radiusTextBox.Text;
-      }
-    }
-
-    protected void Page_PreInit( object sender, EventArgs e )
+    protected void Page_PreInit(object sender, EventArgs e)
     {
       string strEventId = Request.QueryString["event"];
       int eventId;
 
-      if ( strEventId != null && int.TryParse( strEventId, out eventId ) )
+      if (strEventId != null && int.TryParse(strEventId, out eventId))
       {
         // To make sure that there is no hacking, check that the event 
         // belongs to the current user before setting this.EventId property:
-        if ( Global.IsAuthenticated )
+        if (Global.IsAuthenticated)
         {
-          TrackerDataSetTableAdapters.EventTableAdapter eventAdapter = new FlyTrace.TrackerDataSetTableAdapters.EventTableAdapter( );
-          TrackerDataSet.EventDataTable eventTable = eventAdapter.GetDataByEventId( eventId );
-          if ( eventTable.Count > 0 )
+          TrackerDataSetTableAdapters.EventTableAdapter eventAdapter = new TrackerDataSetTableAdapters.EventTableAdapter();
+          TrackerDataSet.EventDataTable eventTable = eventAdapter.GetDataByEventId(eventId);
+          if (eventTable.Count > 0)
           {
-            if ( Global.UserId == eventTable[0].UserId )
+            if (Global.UserId == eventTable[0].UserId)
             {
-              this.eventRow = eventTable[0];
-              EventId = this.eventRow.Id;
-              IsEventDefault = this.eventRow.IsDefault;
+              _eventRow = eventTable[0];
+              EventId = _eventRow.Id;
+              IsEventDefault = _eventRow.IsDefault;
             }
           }
         }
       }
 
-      if ( EventId == 0 )
+      if (EventId == 0)
       {
-        Response.Redirect( "~/default.aspx", true );
+        Response.Redirect("~/default.aspx", true);
       }
-      else if ( Global.IsSimpleEventsModel && !this.eventRow.IsDefault )
+      else if (Global.IsSimpleEventsModel && !_eventRow.IsDefault)
       {
-        Response.Redirect( "~/default.aspx", true );
+        Response.Redirect("~/default.aspx", true);
       }
       else
       {
-        LoadAllWaypoints( );
+        LoadAllWaypoints();
 
-        TrackerDataSetTableAdapters.GroupTableAdapter groupTableAdapter = new TrackerDataSetTableAdapters.GroupTableAdapter( );
-        this.assignedGroupsCount =
-          groupTableAdapter.GetAssignedGroupsCount( Global.UserId, EventId ).Value;
+        TrackerDataSetTableAdapters.GroupTableAdapter groupTableAdapter = new TrackerDataSetTableAdapters.GroupTableAdapter();
+        _assignedGroupsCount =
+          groupTableAdapter.GetAssignedGroupsCount(Global.UserId, EventId) ?? 0;
 
-        if ( !IsPostBack )
+        if (!IsPostBack)
         {
-          SetAssignedGroupsReadView( );
-          SetNoGroupWarningVisibility( );
+          SetAssignedGroupsReadView();
+          SetNoGroupWarningVisibility();
         }
       }
     }
 
-    protected void Page_Load( object sender, EventArgs e )
+    protected void Page_Load(object sender, EventArgs e)
     {
-      if ( this.fileUpload.HasFile )
+      if (fileUpload.HasFile)
       {
         try
         {
-          int updatedRecord = Tools.WaypointsLoader.LoadWaypoints( EventId, this.fileUpload, true );
-          if ( updatedRecord == 0 )
+          int updatedRecord = Tools.WaypointsLoader.LoadWaypoints(EventId, fileUpload, true);
+          if (updatedRecord == 0)
           {
             LoadWaypointsMsg = "No waypoints found in the uploaded file.";
           }
-          LoadAllWaypoints( ); // we need to update this.allEventWaypoints
-          SetNoGroupWarningVisibility( );
+          LoadAllWaypoints(); // we need to update this.allEventWaypoints
+          SetNoGroupWarningVisibility();
         }
-        catch ( Exception exc )
+        catch (Exception exc)
         {
           LoadWaypointsMsg = "Error in processing the uploaded file:<br />" + exc.Message;
         }
       }
     }
 
-    private void LoadAllWaypoints( )
+    private void LoadAllWaypoints()
     {
       TrackerDataSetTableAdapters.WaypointTableAdapter waypointsAdapter =
-        new FlyTrace.TrackerDataSetTableAdapters.WaypointTableAdapter( );
+        new TrackerDataSetTableAdapters.WaypointTableAdapter();
 
-      this.allEventWaypoints = waypointsAdapter.GetDataByEventId( EventId );
+      _allEventWaypoints = waypointsAdapter.GetDataByEventId(EventId);
     }
 
-    private void SetNoGroupWarningVisibility( )
+    private void SetNoGroupWarningVisibility()
     {
-      this.noGroupWarningPanel.Visible =
+      noGroupWarningPanel.Visible =
         AllEventWptsCount > 0 &&
-        this.assignedGroupsCount == 0;
+        _assignedGroupsCount == 0;
     }
 
-    private void SetAssignedGroupsReadView( )
+    private void SetAssignedGroupsReadView()
     {
-      if ( this.assignedGroupsCount == 0 )
-      {
-        this.assignedTaskMultiView.SetActiveView( this.assignedTaskEmptyView );
-      }
-      else
-      {
-        this.assignedTaskMultiView.SetActiveView( this.assignedTaskReadView );
-      }
+      assignedTaskMultiView.SetActiveView(
+        _assignedGroupsCount == 0
+        ? assignedTaskEmptyView
+        : assignedTaskReadView);
     }
 
-    private const int MaxNumberOfTaskWaypoints = 9;
-
-    protected void SignOutLinkButton_Click( object sender, EventArgs e )
+    protected void SignOutLinkButton_Click(object sender, EventArgs e)
     {
-      Response.Clear( );
-      FormsAuthentication.SignOut( );
-      Response.Redirect( "~/default.aspx", true );
+      Response.Clear();
+      FormsAuthentication.SignOut();
+      Response.Redirect("~/default.aspx", true);
     }
 
-    protected void eventHeaderDataSource_Updated( object sender, SqlDataSourceStatusEventArgs e )
+    protected void eventHeaderDataSource_Updated(object sender, SqlDataSourceStatusEventArgs e)
     {
-      if ( e.Exception != null )
+      if (e.Exception != null)
       {
-        string msg;
-        if ( Global.IsSqlDuplicateError( e.Exception ) )
-          msg = string.Format( "Event '{0}' already exists", e.Command.Parameters["@Name"].Value );
-        else
-          msg = e.Exception.Message;
+        string msg = Global.IsSqlDuplicateError(e.Exception)
+          ? $"Event '{e.Command.Parameters["@Name"].Value}' already exists"
+          : e.Exception.Message;
+
         e.ExceptionHandled = true;
         UpdateEventMsg = msg;
       }
     }
 
-    protected void eventHeaderDataSource_Deleted( object sender, SqlDataSourceStatusEventArgs e )
+    protected void eventHeaderDataSource_Deleted(object sender, SqlDataSourceStatusEventArgs e)
     {
-      if ( e.Exception == null )
+      if (e.Exception == null)
       {
-        Response.Redirect( "~/default.aspx", true );
+        Response.Redirect("~/default.aspx", true);
       }
       else
       {
@@ -210,9 +172,9 @@ namespace FlyTrace
       }
     }
 
-    protected void eventHeaderGridView_RowUpdated( object sender, GridViewUpdatedEventArgs e )
+    protected void eventHeaderGridView_RowUpdated(object sender, GridViewUpdatedEventArgs e)
     {
-      if ( !string.IsNullOrEmpty( UpdateEventMsg ) )
+      if (!string.IsNullOrEmpty(UpdateEventMsg))
       {
         e.KeepInEditMode = true;
       }
@@ -225,352 +187,186 @@ namespace FlyTrace
          * Page_PreInit to Page_PreRender, because we need to get the ID as eary as possible,
          * e.g. to prevent update with wrong ID.
          */
-        this.eventRow.Name = e.NewValues["Name"] as string;
-        this.eventRow.AcceptChanges( ); // DB record has already been updated, so we don't need this record as 'Changed'
+        _eventRow.Name = e.NewValues["Name"] as string;
+        _eventRow.AcceptChanges(); // DB record has already been updated, so we don't need this record as 'Changed'
       }
     }
 
-    protected void saveBtn_Click( object sender, EventArgs e )
+    protected void showHideGroupsButton_Click(object sender, EventArgs e)
     {
-      try
-      {
-        this.taskTable = this.taskAdapter.GetDataByEventId( EventId );
-
-        foreach ( DataRow row in this.taskTable.Rows )
-        {
-          row.Delete( );
-        }
-
-        for ( int iWp = 0; iWp < MaxNumberOfTaskWaypoints; iWp++ )
-        {
-          AddTaskPoint( iWp );
-        }
-
-        this.taskAdapter.Update( this.taskTable );
-
-        TaskSaveInfo = "Done, task saved.<br />";
-      }
-      catch ( Exception exc )
-      {
-        TaskSaveError = "TASK NOT SAVED: " + exc.Message + "<br />";
-      }
+      groupsPanelMultiView.SetActiveView(
+        groupsPanelMultiView.GetActiveView() == defaultGroupPanelView
+        ? expandedGroupPanelView
+        : defaultGroupPanelView
+      );
     }
 
-    private void AddTaskPoint( int iWp )
+    protected void defaultButton_Click(object sender, EventArgs e)
     {
-      try
+      if (defaultEventControlsMultiView.GetActiveView() == defaultEventReadView)
       {
-        DropDownList ddlWp = ( DropDownList ) this.taskPanel.FindControl( "ddlWp" + iWp.ToString( ) );
-        TextBox radiusTextBox = ( TextBox ) this.taskPanel.FindControl( "tbRadius" + iWp.ToString( ) );
+        defaultEventControlsMultiView.SetActiveView(defaultEventEditView);
+        defaultCheckBox.Checked = IsEventDefault;
 
-        if ( string.IsNullOrEmpty( ddlWp.SelectedValue ) )
-          return;
-
-        int waypointId = int.Parse( ddlWp.SelectedValue );
-
-        int radius = 0;
-        if ( radiusTextBox.Text == "" || !int.TryParse( radiusTextBox.Text, out radius ) || radius < 0 )
-        {
-          throw new ApplicationException(
-            string.Format(
-              "Radius is invalid, it should be non-negative integer value.", iWp ) );
-        }
-
-        this.taskTable.AddTaskRow( waypointId, radius, iWp );
-      }
-      catch ( Exception exc )
-      {
-        throw new ApplicationException(
-          string.Format( "Problem with TP #{0}: {1}", iWp, exc.Message ),
-          exc );
-      }
-    }
-
-    private void ShowWaypoint( int iWp, DataRow[] sortedByWptOrder )
-    {
-      DropDownList waypointDdl = ( DropDownList ) this.taskPanel.FindControl( "ddlWp" + iWp.ToString( ) );
-
-      string tbName = "tbRadius" + iWp.ToString( );
-      TextBox radiusTextBox = ( TextBox ) this.taskPanel.FindControl( tbName );
-      if ( sortedByWptOrder.Length <= iWp )
-      {
-        radiusTextBox.Text = this.defaultRadius[tbName];
-        return;
-      }
-
-      TrackerDataSet.TaskRow taskRow = ( TrackerDataSet.TaskRow ) sortedByWptOrder[iWp];
-      waypointDdl.SelectedValue = taskRow.WaypointId.ToString( );
-      radiusTextBox.Text = taskRow.Radius.ToString( );
-    }
-
-    protected void showHideGroupsButton_Click( object sender, EventArgs e )
-    {
-      if ( this.groupsPanelMultiView.GetActiveView( ) == this.defaultGroupPanelView )
-      {
-        this.groupsPanelMultiView.SetActiveView( this.expandedGroupPanelView );
+        SetAssignedGroupsReadView();
       }
       else
       {
-        this.groupsPanelMultiView.SetActiveView( this.defaultGroupPanelView );
-      }
-    }
-
-    protected void defaultButton_Click( object sender, EventArgs e )
-    {
-      if ( this.defaultEventControlsMultiView.GetActiveView( ) == this.defaultEventReadView )
-      {
-        this.defaultEventControlsMultiView.SetActiveView( this.defaultEventEditView );
-        this.defaultCheckBox.Checked = IsEventDefault;
-
-        SetAssignedGroupsReadView( );
-      }
-      else
-      {
-        if ( sender == this.defaultSaveButton )
+        if (sender == defaultSaveButton)
         {
           // We can't just set this.eventRow.IsDefault and call adapter.Update, because there is more 
           // complicated DB logic in setting this value, which is done in SetEventDefaultFlag. Sp
           // call that stored proc here:
-          bool? isDefaultValue = this.defaultCheckBox.Checked ? true : false;
-          TrackerDataSetTableAdapters.ProcsAdapter procAdapters = new FlyTrace.TrackerDataSetTableAdapters.ProcsAdapter( );
+          bool isDefaultValue = defaultCheckBox.Checked;
+          TrackerDataSetTableAdapters.ProcsAdapter procAdapters = new TrackerDataSetTableAdapters.ProcsAdapter();
 
-          if ( this.defaultCheckBox.Checked )
-            procAdapters.SetEventAsDefault( EventId );
+          if (defaultCheckBox.Checked)
+            procAdapters.SetEventAsDefault(EventId);
           else
-            procAdapters.SetEventAsNonDefault( EventId );
+            procAdapters.SetEventAsNonDefault(EventId);
 
           // We need to update this.IsEventDefault that is used in the markup
-          IsEventDefault = isDefaultValue.Value;
+          IsEventDefault = isDefaultValue;
         }
 
         // If "groups assignment" was in edit mode, cancel any changes and return it to the read mode:
-        this.defaultEventControlsMultiView.SetActiveView( this.defaultEventReadView );
+        defaultEventControlsMultiView.SetActiveView(defaultEventReadView);
       }
     }
 
-    protected void assignGroupsButton_Click( object sender, EventArgs e )
+    protected void assignGroupsButton_Click(object sender, EventArgs e)
     {
-      if ( groupsPanelMultiView.GetActiveView( ) == this.defaultGroupPanelView )
+      if (groupsPanelMultiView.GetActiveView() == defaultGroupPanelView)
       {
-        this.groupsPanelMultiView.SetActiveView( this.expandedGroupPanelView );
+        groupsPanelMultiView.SetActiveView(expandedGroupPanelView);
       }
 
-      if ( this.assignedTaskMultiView.GetActiveView( ) != this.assignedTaskEditView )
+      if (assignedTaskMultiView.GetActiveView() != assignedTaskEditView)
       {
-        this.assignedTaskMultiView.SetActiveView( this.assignedTaskEditView );
+        assignedTaskMultiView.SetActiveView(assignedTaskEditView);
 
         // If "default Event controls" was in edit mode, cancel any changes and return it to the read mode:
-        this.defaultEventControlsMultiView.SetActiveView( this.defaultEventReadView );
+        defaultEventControlsMultiView.SetActiveView(defaultEventReadView);
       }
       else
       {
         bool isChanged = false;
-        if ( sender == this.assignGroupsSaveButton )
+        if (sender == assignGroupsSaveButton)
         {
-          TrackerDataSetTableAdapters.GroupTableAdapter groupTableAdapter = new TrackerDataSetTableAdapters.GroupTableAdapter( );
-          TrackerDataSet.GroupDataTable userGroups = groupTableAdapter.GetDataByUserId( Global.UserId );
+          TrackerDataSetTableAdapters.GroupTableAdapter groupTableAdapter = new TrackerDataSetTableAdapters.GroupTableAdapter();
+          TrackerDataSet.GroupDataTable userGroups = groupTableAdapter.GetDataByUserId(Global.UserId);
 
           int tempAssignedGroupsCount = 0;
-          foreach ( ListItem li in this.assignedGroupsCheckBoxList.Items )
+          foreach (ListItem li in assignedGroupsCheckBoxList.Items)
           {
-            int groupId = int.Parse( li.Value );
-            TrackerDataSet.GroupRow groupRow = userGroups.FindById( groupId );
+            int groupId = int.Parse(li.Value);
+            TrackerDataSet.GroupRow groupRow = userGroups.FindById(groupId);
 
             // Note that the content of assignedGroupsCheckBoxList came from the ViewState, and the group 
             // can be actually deleted by that time (or replaced in ViewState by another user's group). So check 
             // if it's valid group to prevent NullReferenceExcpetion:
-            if ( groupRow == null )
+            if (groupRow == null)
               continue;
 
-            if ( li.Selected )
+            if (li.Selected)
             {
               tempAssignedGroupsCount++;
-              if ( groupRow.IsEventIdNull( ) ||
-                   groupRow.EventId != EventId )
+              if (groupRow.IsEventIdNull() ||
+                   groupRow.EventId != EventId)
                 groupRow.EventId = EventId;
             }
             else
             {
-              if ( !groupRow.IsEventIdNull( ) &&
-                   groupRow.EventId == EventId )
+              if (!groupRow.IsEventIdNull() &&
+                   groupRow.EventId == EventId)
               {
-                groupRow.SetEventIdNull( );
+                groupRow.SetEventIdNull();
               }
             }
           }
 
-          int updatedRecords = groupTableAdapter.Update( userGroups );
-          this.assignedGroupsCount = tempAssignedGroupsCount;
+          int updatedRecords = groupTableAdapter.Update(userGroups);
+          _assignedGroupsCount = tempAssignedGroupsCount;
           isChanged = updatedRecords > 0;
-          if ( isChanged )
+          if (isChanged)
           {
-            TrackerDataSetTableAdapters.ProcsAdapter procsAdapter = new FlyTrace.TrackerDataSetTableAdapters.ProcsAdapter( );
-            procsAdapter.SetEventAsDefault( EventId );
+            TrackerDataSetTableAdapters.ProcsAdapter procsAdapter = new TrackerDataSetTableAdapters.ProcsAdapter();
+            procsAdapter.SetEventAsDefault(EventId);
 
             // We just set event as default in the DB - now we need to update this.IsEventDefault that is used in the markup
             IsEventDefault = true;
           }
         }
 
-        SetAssignedGroupsReadView( );
-        SetNoGroupWarningVisibility( );
-        if ( isChanged )
+        SetAssignedGroupsReadView();
+        SetNoGroupWarningVisibility();
+        if (isChanged)
         {
-          this.assignedGroupsGridView.DataBind( );
+          assignedGroupsGridView.DataBind();
         }
       }
     }
 
-    protected void assignedGroupsCheckBoxList_DataBound( object sender, EventArgs e )
+    protected void assignedGroupsCheckBoxList_DataBound(object sender, EventArgs e)
     {
-      TrackerDataSetTableAdapters.GroupTableAdapter groupTableAdapter = new TrackerDataSetTableAdapters.GroupTableAdapter( );
-      TrackerDataSet.GroupDataTable assignedGroups = groupTableAdapter.GetAssignedGroups( Global.UserId, EventId );
+      TrackerDataSetTableAdapters.GroupTableAdapter groupTableAdapter = new TrackerDataSetTableAdapters.GroupTableAdapter();
+      TrackerDataSet.GroupDataTable assignedGroups = groupTableAdapter.GetAssignedGroups(Global.UserId, EventId);
 
-      foreach ( ListItem li in this.assignedGroupsCheckBoxList.Items )
+      foreach (ListItem li in assignedGroupsCheckBoxList.Items)
       {
-        int groupId = int.Parse( li.Value );
-        li.Selected = assignedGroups.FindById( groupId ) != null;
+        int groupId = int.Parse(li.Value);
+        li.Selected = assignedGroups.FindById(groupId) != null;
       }
     }
 
-    protected void assignedGroupsGridView_DataBound( object sender, EventArgs e )
+    protected void assignedGroupsGridView_DataBound(object sender, EventArgs e)
     {
-      assignedGroupsGridView.AllowSorting = this.assignedGroupsGridView.Rows.Count > 1;
+      assignedGroupsGridView.AllowSorting = assignedGroupsGridView.Rows.Count > 1;
     }
 
-    protected string OldPointsCleanUpAge
+    protected string StartTsMillisecondsString
     {
       get
       {
-        if ( this.eventRow.IsStartTsNull( ) )
-          return "(none)";
+        if (_eventRow.IsStartTsNull())
+          return "null";
 
-        return FlyTrace.LocationLib.Tools.GetAgeStr( this.eventRow.StartTs, false );
+          DateTime epochStart = new DateTime(1970, 1, 1);
+          TimeSpan ts = new TimeSpan(_eventRow.StartTs.Ticks - epochStart.Ticks);
+
+        return ts.TotalMilliseconds.ToString("F0");
       }
     }
 
-    protected string OldPointsCleanUpUtcTs
+    protected void Page_PreRender(object sender, EventArgs e)
     {
-      get
-      {
-        if ( this.eventRow.IsStartTsNull( ) )
-          return "(any time)";
+      string waypointsJsArr =
+        string.Join(
+          ", ",
+          _allEventWaypoints
+          .Select(row => $"{{id: {row.Id}, name: '{row.Name}'}}")
+        );
+      Page.ClientScript.RegisterArrayDeclaration("_allWaypoints", waypointsJsArr);
 
-        return this.eventRow.StartTs.ToString( Resources.Resources.AgeFormat ) + " UTC";
-      }
-    }
+      var taskAdapter = new TrackerDataSetTableAdapters.TaskTableAdapter();
+      TrackerDataSet.TaskDataTable taskTable = taskAdapter.GetDataByEventId(EventId);
 
-    protected string OldPointsCleanUpLocalTs
-    {
-      get
-      {
-        return this.eventRow.StartTs.ToLocalTime( ).ToString( Resources.Resources.AgeFormat ) + " local time";
-      }
-    }
+      string taskPointsArr =
+        string.Join(
+          ", ",
+          taskTable
+          .Select(row => $"{{id: {row.WaypointId}, radius: '{row.Radius}'}}")
+        );
+      Page.ClientScript.RegisterArrayDeclaration("_taskWaypoints", taskPointsArr);
 
-    protected void clearOldPointsButton_Click( object sender, EventArgs e )
-    {
-      int hrsBack = 0;
-
-      {
-        string suffix = "_hr";
-        Control ctrl = ( Control ) sender;
-
-        if ( ctrl.ID.EndsWith( suffix ) )
-        {
-          string noSuffix = ctrl.ID.Remove( ctrl.ID.Length - suffix.Length );
-          int iUnderscore = noSuffix.LastIndexOf( '_' );
-          if ( iUnderscore < 0 )
-            throw new ApplicationException( "Unexpected sender control name " + ctrl.ID );
-          {
-            string hrsString = noSuffix.Substring( iUnderscore + 1 );
-            hrsBack = int.Parse( hrsString );
-          }
-        }
-      }
-
-      DateTime utcThreshold = DateTime.UtcNow.AddHours( -hrsBack );
-
-      TrackerDataSetTableAdapters.EventTableAdapter adapter = new TrackerDataSetTableAdapters.EventTableAdapter( );
-      adapter.UpdateEventStartTs( EventId, utcThreshold );
-
-      Service.ServiceFacade.ResetGroupsDefCache( );
-
-      // this.eventRow accessed in Page_PreRender, so set it to the correct value:
-      this.eventRow.StartTs = utcThreshold;
-      this.eventRow.AcceptChanges( );
-    }
-
-    protected void restoreOldPointsPanel_Click( object sender, EventArgs e )
-    {
-      TrackerDataSetTableAdapters.EventTableAdapter adapter = new TrackerDataSetTableAdapters.EventTableAdapter( );
-      adapter.UpdateEventStartTs( EventId, null );
-
-      Service.ServiceFacade.ResetGroupsDefCache( );
-
-      // this.eventRow accessed in Page_PreRender, so set it to NULL here too:
-      this.eventRow.SetStartTsNull( );
-      this.eventRow.AcceptChanges( );
-    }
-
-    protected void advancedCleanUpShowHideLinkButton_Click( object sender, EventArgs e )
-    {
-      if ( this.advancedCleanUpPanel.Visible )
-      {
-        this.advancedCleanUpShowHideLinkButton.Text = Resources.Resources.ShowAdvPointsCleanUp;
-        this.advancedCleanUpPanel.Visible = false;
-      }
-      else
-      {
-        this.advancedCleanUpShowHideLinkButton.Text = Resources.Resources.HideAdvPointsCleanUp;
-        this.advancedCleanUpPanel.Visible = true;
-      }
-    }
-
-    protected void Page_PreRender( object sender, EventArgs e )
-    {
       // The code below can't be in Page_Load because uploadBtn_Click is fired after that, and 
       // we need all the just inserted wpts when we fill comboboxes and decide whether to show taskPanel or not.
       // At the same time, we can't do that in uploadBtn_Click because we need the same stuff every time page loads.
       // So do it here, after all other events has fired.
 
-      if ( string.IsNullOrEmpty( TaskSaveError ) )
-      {
-        this.loadWaypointsPanel.Visible = noWaypointsInfoPanel.Visible = AllEventWptsCount == 0;
-        this.taskPanel.Visible = !this.loadWaypointsPanel.Visible;
-
-        DropDownList[] waypointsDdls = new DropDownList[] {
-            ddlWp0, ddlWp1,  ddlWp2,  ddlWp3,  ddlWp4,  ddlWp5,  ddlWp6,  ddlWp7,  ddlWp8 };
-
-        DataRow[] sortedWaypoints = this.allEventWaypoints.Select( "", "Name" );
-
-        foreach ( DropDownList ddl in waypointsDdls )
-        {
-          ddl.Items.Clear( );
-          ddl.Items.Add( "" );
-
-          foreach ( TrackerDataSet.WaypointRow row in sortedWaypoints )
-          {
-            ListItem li = new ListItem( row.Name, row.Id.ToString( ) );
-            ddl.Items.Add( li );
-          }
-        }
-
-        if ( this.taskTable == null )
-        {
-          this.taskTable = this.taskAdapter.GetDataByEventId( EventId );
-        }
-
-        DataRow[] sortedByWptOrder = this.taskTable.Select( "", "WptOrder" );
-        for ( int iWp = 0; iWp < MaxNumberOfTaskWaypoints; iWp++ )
-        {
-          ShowWaypoint( iWp, sortedByWptOrder );
-        }
-      }
-
-      this.clearOldPointsInfoPanel.Visible =
-        this.restoreOldPointsPanel.Visible =
-        !this.eventRow.IsStartTsNull( );
+      loadWaypointsPanel.Visible = noWaypointsInfoPanel.Visible = AllEventWptsCount == 0;
+      taskPanel.Visible = !loadWaypointsPanel.Visible;
     }
+
   }
 }

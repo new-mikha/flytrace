@@ -23,19 +23,19 @@ namespace FlyTrace
 {
 
 
-    public partial class TrackerDataSet
+  public partial class TrackerDataSet
+  {
+    public partial class WaypointDataTable
     {
-        public partial class WaypointDataTable
-        {
-            /// <summary>
-            /// Leaves only Name column as a key
-            /// </summary>
-            public void SetNameKeyOnly()
-            {
-                DataColumn[] nameKey = new DataColumn[] { NameColumn };
-                PrimaryKey = nameKey;
-            }
-        }
+      /// <summary>
+      /// Leaves only Name column as a key
+      /// </summary>
+      public void SetNameKeyOnly()
+      {
+        DataColumn[] nameKey = new DataColumn[] { NameColumn };
+        PrimaryKey = nameKey;
+      }
     }
+  }
 
 }

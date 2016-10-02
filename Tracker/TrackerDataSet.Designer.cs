@@ -5105,12 +5105,13 @@ WHERE        (g.Id = @GroupId)";
             this._commandCollection = new global::System.Data.SqlClient.SqlCommand[2];
             this._commandCollection[0] = new global::System.Data.SqlClient.SqlCommand();
             this._commandCollection[0].Connection = this.Connection;
-            this._commandCollection[0].CommandText = "SELECT Id, WaypointId, Radius, WptOrder FROM dbo.Task";
+            this._commandCollection[0].CommandText = "SELECT Id, WaypointId, Radius, WptOrder\r\nFROM  Task\r\nORDER BY WptOrder";
             this._commandCollection[0].CommandType = global::System.Data.CommandType.Text;
             this._commandCollection[1] = new global::System.Data.SqlClient.SqlCommand();
             this._commandCollection[1].Connection = this.Connection;
-            this._commandCollection[1].CommandText = "SELECT T.Id, T.WaypointId, T.Radius, T.WptOrder \r\nFROM dbo.Task T\r\nJOIN dbo.Waypo" +
-                "int W ON T.WaypointId = W.Id\r\nWHERE W.EventId = @EventId";
+            this._commandCollection[1].CommandText = "SELECT T.Id, T.WaypointId, T.Radius, T.WptOrder\r\nFROM  Task AS T INNER JOIN\r\n    " +
+                "     Waypoint AS W ON T.WaypointId = W.Id\r\nWHERE (W.EventId = @EventId)\r\nORDER B" +
+                "Y T.WptOrder";
             this._commandCollection[1].CommandType = global::System.Data.CommandType.Text;
             this._commandCollection[1].Parameters.Add(new global::System.Data.SqlClient.SqlParameter("@EventId", global::System.Data.SqlDbType.Int, 4, global::System.Data.ParameterDirection.Input, 0, 0, "EventId", global::System.Data.DataRowVersion.Current, false, null, "", "", ""));
         }
