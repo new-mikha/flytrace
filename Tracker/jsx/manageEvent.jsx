@@ -349,7 +349,7 @@ var WaypointsTable = React.createClass({
         $.each(this.keyedTaskWaypoints, function (index, taskWpt) {
             let label;
             if (index === (this.keyedTaskWaypoints.length - 1)) {
-                label = index === 0 ? 'Set start first' : 'Add new';
+                label = index === 0 ? 'Set start first' : 'Add new ->';
             } else if (index === 0) {
                 label = 'Start';
             } else {
