@@ -191,7 +191,7 @@ var SaveButton = React.createClass({
 
         $.ajax({
             dataType: 'json',
-            url: '/api/Waypoints/' + eventId,
+            url: _baseUrl + 'api/Waypoints/' + eventId,
             method: 'PUT',
             data: JSON.stringify(result),
             contentType: 'application/json',
@@ -450,7 +450,7 @@ var RemoveOldPointsButton = React.createClass({
 
         $.ajax({
             dataType: 'json',
-            url: '/api/Waypoints/HideOldPoints/' + eventId + '/' + (this.props.hours ? this.props.hours : 0),
+            url: _baseUrl + 'api/Waypoints/HideOldPoints/' + eventId + '/' + (this.props.hours ? this.props.hours : 0),
             method: 'POST',
             success: function (data) {
                 this.props.onDone(data);
@@ -548,7 +548,7 @@ var RestoreAllPointsButton = React.createClass({
 
         $.ajax({
             dataType: 'json',
-            url: '/api/Waypoints/RestoreOldPoints/' + getParameterByName('event'),
+            url: _baseUrl + 'api/Waypoints/RestoreOldPoints/' + getParameterByName('event'),
             method: 'POST',
             success: function () {
                 this.props.onRemoved();
@@ -648,7 +648,11 @@ var OldTaskCleanUpControls = React.createClass({
     },
 });
 
+var _baseUrl;
+
 $(document).ready(function () {
+    _baseUrl = new RegExp(/^.*\//).exec(window.location.href);
+
     {
         let waypoints = document.getElementById('react-waypoints');
         if (waypoints) {
