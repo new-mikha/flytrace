@@ -24,6 +24,5 @@ Tracker/Web.Service.dll.config
 node_modules
 .babelrc
 /.vs
-.idea
 *.js.map
 packages/*
