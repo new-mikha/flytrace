@@ -4,7 +4,6 @@
     <list default="true" id="f9824d65-8e75-460c-a18f-2a09827e847a" name="Default" comment="">
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/App_Data/Flytrace.mdf" afterPath="$PROJECT_DIR$/App_Data/Flytrace.mdf" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/App_Data/Flytrace_log.ldf" afterPath="$PROJECT_DIR$/App_Data/Flytrace_log.ldf" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Scripts/manageEvent.js" afterPath="$PROJECT_DIR$/Scripts/manageEvent.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/jsx/manageEvent.jsx" afterPath="$PROJECT_DIR$/jsx/manageEvent.jsx" />
     </list>
@@ -51,10 +50,10 @@
       <file leaf-file-name="manageEvent.jsx" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/jsx/manageEvent.jsx">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="196">
-              <caret line="452" column="30" selection-start-line="452" selection-start-column="30" selection-end-line="452" selection-end-column="30" />
+            <state relative-caret-position="1085">
+              <caret line="58" column="0" selection-start-line="58" selection-start-column="0" selection-end-line="58" selection-end-column="0" />
               <folding>
-                <element signature="e#17666#21059#0" expanded="false" />
+                <element signature="e#17637#21030#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -676,16 +675,16 @@
       <workItem from="1475319384632" duration="1128000" />
       <workItem from="1475320540901" duration="18127000" />
       <workItem from="1475393143000" duration="3514000" />
-      <workItem from="1475406588315" duration="775000" />
+      <workItem from="1475406588315" duration="2296000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="95307000" />
+    <option name="totallyTimeSpent" value="96828000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
-    <editor active="false" />
+    <frame x="-8" y="-8" width="1936" height="1056" extended-state="7" />
+    <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -694,7 +693,7 @@
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32967034" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="true" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.37919825" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.37919825" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32907993" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -1040,10 +1039,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/jsx/manageEvent.jsx">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="196">
-          <caret line="452" column="30" selection-start-line="452" selection-start-column="30" selection-end-line="452" selection-end-column="30" />
+        <state relative-caret-position="1085">
+          <caret line="58" column="0" selection-start-line="58" selection-start-column="0" selection-end-line="58" selection-end-column="0" />
           <folding>
-            <element signature="e#17666#21059#0" expanded="false" />
+            <element signature="e#17637#21030#0" expanded="false" />
           </folding>
         </state>
       </provider>

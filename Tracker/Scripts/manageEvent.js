@@ -254,8 +254,6 @@ var RadiusBox = React.createClass({
 
         this.setState({ radius: value });
 
-        console.log(value);
-
         if (this.props.onChange) this.props.onChange(value);
     },
 
@@ -910,29 +908,31 @@ var OldTaskCleanUpControls = React.createClass({
 
 var _baseUrl;
 
-$(document).ready(function () {
-    _baseUrl = new RegExp(/^.*\//).exec(window.location.href);
+if (typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
+    $(document).ready(function () {
+        _baseUrl = new RegExp(/^.*\//).exec(window.location.href);
 
-    {
-        var waypoints = document.getElementById('react-waypoints');
-        if (waypoints) {
-            ReactDOM.render(React.createElement(
-                "div",
-                { className: "task" },
-                React.createElement(WaypointsTable, { allWaypoints: _allWaypoints,
-                    taskWaypoints: _taskWaypoints
-                })
-            ), waypoints);
+        {
+            var waypoints = document.getElementById('react-waypoints');
+            if (waypoints) {
+                ReactDOM.render(React.createElement(
+                    "div",
+                    { className: "task" },
+                    React.createElement(WaypointsTable, { allWaypoints: _allWaypoints,
+                        taskWaypoints: _taskWaypoints
+                    })
+                ), waypoints);
+            }
         }
-    }
 
-    {
-        var old_task_clean_up_controls = document.getElementById('react-old-task-clean-up-controls');
-        if (old_task_clean_up_controls) {
-            ReactDOM.render(React.createElement(OldTaskCleanUpControls, { initialStartTs: _initialStartTs }), old_task_clean_up_controls);
+        {
+            var old_task_clean_up_controls = document.getElementById('react-old-task-clean-up-controls');
+            if (old_task_clean_up_controls) {
+                ReactDOM.render(React.createElement(OldTaskCleanUpControls, { initialStartTs: _initialStartTs }), old_task_clean_up_controls);
+            }
         }
-    }
-});
+    });
+}
 
 },{"react":179,"react-addons-css-transition-group":30,"react-dom":31}],3:[function(require,module,exports){
 'use strict';

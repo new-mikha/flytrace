@@ -57,8 +57,6 @@ var RadiusBox = React.createClass({
 
         this.setState({radius: value});
 
-        console.log(value);
-
         if (this.props.onChange)
             this.props.onChange(value);
     },
@@ -650,30 +648,32 @@ var OldTaskCleanUpControls = React.createClass({
 
 var _baseUrl;
 
-$(document).ready(function () {
-    _baseUrl = new RegExp(/^.*\//).exec(window.location.href);
+if(typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
+    $(document).ready(function () {
+        _baseUrl = new RegExp(/^.*\//).exec(window.location.href);
 
-    {
-        let waypoints = document.getElementById('react-waypoints');
-        if (waypoints) {
-            ReactDOM.render(
-                <div className="task">
-                    <WaypointsTable allWaypoints={_allWaypoints}
-                                    taskWaypoints={_taskWaypoints}
-                    />
-                </div>,
-                waypoints
-            );
+        {
+            let waypoints = document.getElementById('react-waypoints');
+            if (waypoints) {
+                ReactDOM.render(
+                    <div className="task">
+                        <WaypointsTable allWaypoints={_allWaypoints}
+                                        taskWaypoints={_taskWaypoints}
+                        />
+                    </div>,
+                    waypoints
+                );
+            }
         }
-    }
 
-    {
-        let old_task_clean_up_controls = document.getElementById('react-old-task-clean-up-controls');
-        if (old_task_clean_up_controls) {
-            ReactDOM.render(
-                <OldTaskCleanUpControls initialStartTs={_initialStartTs}/>,
-                old_task_clean_up_controls
-            );
+        {
+            let old_task_clean_up_controls = document.getElementById('react-old-task-clean-up-controls');
+            if (old_task_clean_up_controls) {
+                ReactDOM.render(
+                    <OldTaskCleanUpControls initialStartTs={_initialStartTs}/>,
+                    old_task_clean_up_controls
+                );
+            }
         }
-    }
-});
+    });
+}

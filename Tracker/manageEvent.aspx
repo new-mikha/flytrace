@@ -35,7 +35,6 @@
 --%>
 
 <script type="text/javascript" src="Scripts/maintainScrollPosition.js"></script>
-<script type="text/javascript" src="Scripts/manageEvent.js"></script>
 <script type="text/javascript">
     setScrollHiddenInputId('<%= scrollHiddenField.ClientID %>');
 </script>
@@ -59,6 +58,18 @@
         %>
     </title>
     
+	
+<script type="text/javascript">
+	var _ie8_or_less = false;
+</script>
+	
+<%--Comment below is not a real one but rather an "IE conditional comment", 
+	DO NOT CHANGE OR REMOVE IT, THE CODE INSIDE ACTUALLY WORKS IN IE 8 OR LESS --%>
+<!--[if lte IE 8]>
+<script type="text/javascript">
+	_ie8_or_less = true;
+</script>
+<![endif]-->
     
 </head>
 <body>
@@ -258,7 +269,8 @@
                                         new waypoints, edit etc)...</a>
                                         <br />
                                         <hr />
-                                        <div id="react-waypoints"></div>
+                                        <div id="react-waypoints"><i>Loading task, please wait...</i>
+										</div>
                                     </asp:Panel>
                                 </td>
                             </tr>
@@ -275,7 +287,7 @@
                             </tr>
                             <tr>
                                 <td style="text-align: justify;">
-                                    <div id="react-old-task-clean-up-controls"></div>
+                                    <div id="react-old-task-clean-up-controls"><i>Loading content, please wait...</i></div>
                                 </td>
                             </tr>
                         </table>
@@ -438,4 +450,11 @@
         </div>
     </form>
 </body>
+<script type="text/javascript">
+	if(_ie8_or_less) {
+		document.getElementById('react-waypoints').innerHTML = "<b>Can't load task - Internet Explorer 8 or less is not supported</b>";
+		document.getElementById('react-old-task-clean-up-controls').innerHTML = "<b>Can't load contents - Internet Explorer 8 or less is not supported</b>";
+	}
+</script>
+<script type="text/javascript" src="Scripts/manageEvent.js"></script>
 </html>
