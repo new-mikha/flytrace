@@ -544,6 +544,11 @@ namespace FlyTrace
 
     protected void Application_BeginRequest( object sender, EventArgs e )
     {
+      // location/authorisation elements in web.config specify that default.aspx should be allowed for anonymous 
+      // access, however when just "www.flytrace.com" is typed in address bar, it assumes it as secured page and
+      // offers login page. To prevent that, redirect from empty path to the specific page:
+      if (Request.AppRelativeCurrentExecutionFilePath == "~/")
+        HttpContext.Current.Response.Redirect("~/default.aspx");
     }
 
     protected void Application_AuthenticateRequest( object sender, EventArgs e )
