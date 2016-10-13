@@ -158,6 +158,7 @@
     <None Include="Web.connectionStrings.config" />
     <None Include="Web.LocationLib.dll.config" />
     <None Include="Web.Service.dll.config" />
+    <None Include="Web.smtp.config" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Administration\currentTrackers.aspx.cs">
