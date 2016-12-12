@@ -314,8 +314,6 @@ namespace FlyTrace.Service.Internals.RequestsSchedule
 
     private void AbortRequest( object state )
     {
-      LocationLib.Tools.ConfigureThreadCulture( );
-
       long? lrid = null;
       try
       {

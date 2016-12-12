@@ -47,8 +47,6 @@ namespace FlyTrace.Service.Internals.Subservices
       out long callId
     )
     {
-      LocationLib.Tools.ConfigureThreadCulture( );
-
       try
       {
         callId = CallId; // TODO: remove callId out param after removing ITrackerService interface

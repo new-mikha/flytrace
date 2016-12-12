@@ -146,8 +146,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private void SpotFeedRequestCallback( IAsyncResult ar )
     {
-      Tools.ConfigureThreadCulture( );
-
       Thread.MemoryBarrier( );
 
       var asyncChainedState = ( AsyncChainedState<TrackerState> ) ar.AsyncState;

@@ -31,27 +31,6 @@ namespace FlyTrace.LocationLib
 {
   public static class Tools
   {
-    /// <summary>
-    /// Historically our hosting located in France hence without special care for the culture
-    /// errors can look like "La reference d'objet n'est pas definie a une instance d'un objet". 
-    /// This field is initially set to the system culture, but the caller can (and does) set it 
-    /// to some English culture.
-    /// </summary>
-    public static CultureInfo DefaultCulture = CultureInfo.GetCultureInfo( "en-AU" );
-
-    public static void ConfigureThreadCulture( )
-    {
-      try
-      {
-        Thread.CurrentThread.CurrentCulture = DefaultCulture;
-        Thread.CurrentThread.CurrentUICulture = DefaultCulture;
-      }
-      catch ( Exception exc )
-      {
-        LogManager.GetLogger( typeof( Tools ) ).Error( "Can't set culture to the thread", exc );
-      }
-    }
-
     public static string GetAgeStr( DateTime dateTime, bool withSec )
     {
       double unusedTotalDays;

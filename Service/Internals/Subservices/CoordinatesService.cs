@@ -42,8 +42,6 @@ namespace FlyTrace.Service.Internals.Subservices
 
     public IAsyncResult BeginGetCoordinates( AsyncCallback callback, object state )
     {
-      LocationLib.Tools.ConfigureThreadCulture( );
-
       IncrementCallCount( );
       try
       {

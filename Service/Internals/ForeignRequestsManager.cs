@@ -253,8 +253,6 @@ namespace FlyTrace.Service.Internals
 
     private void RefreshThreadWorker( )
     {
-      LocationLib.Tools.ConfigureThreadCulture( );
-
       // It's OK to use "new" everywhere in this method and in methods it 
       // calls, because it's doesn't hit too often.
       // LINQ and enumerators are safe here for the same reason.
@@ -387,8 +385,6 @@ namespace FlyTrace.Service.Internals
 
     private void OnEndReadLocation( IAsyncResult ar )
     {
-      LocationLib.Tools.ConfigureThreadCulture( );
-
       RevisedTrackerState newTrackerState = null;
       ForeignId foreignId = default( ForeignId );
       long? lrid = null;
@@ -542,7 +538,6 @@ namespace FlyTrace.Service.Internals
 
     private void Log4NetBufferingAppendersFlushWorker( object state )
     {
-      LocationLib.Tools.ConfigureThreadCulture( );
       ILog log = LogManager.GetLogger( "LogFlush" );
 
       string errName = "";

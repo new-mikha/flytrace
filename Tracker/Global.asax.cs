@@ -452,9 +452,6 @@ namespace FlyTrace
         CultureInfo.DefaultThreadCurrentCulture = DefaultCulture;
         CultureInfo.DefaultThreadCurrentUICulture = DefaultCulture;
 
-        LocationLib.Tools.DefaultCulture = DefaultCulture;
-        LocationLib.Tools.ConfigureThreadCulture( );
-
         string dataFolderPath = System.Web.Hosting.HostingEnvironment.MapPath( @"~/App_Data/" );
         Service.ServiceFacade.Init( dataFolderPath );
 
@@ -472,11 +469,9 @@ namespace FlyTrace
 
     public static void DelayAction( int milliseconds, Action action )
     {
-      // ReSharper disable once ObjectCreationAsStatement
       new Timer(
         unused =>
         {
-          LocationLib.Tools.ConfigureThreadCulture( );
           action( );
         },
         null,
