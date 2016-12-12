@@ -449,6 +449,9 @@ namespace FlyTrace
       {
         GlobalConfiguration.Configure(WebApiConfig.Register);
 
+        CultureInfo.DefaultThreadCurrentCulture = DefaultCulture;
+        CultureInfo.DefaultThreadCurrentUICulture = DefaultCulture;
+
         LocationLib.Tools.DefaultCulture = DefaultCulture;
         LocationLib.Tools.ConfigureThreadCulture( );
 
