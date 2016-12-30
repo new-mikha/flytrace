@@ -335,6 +335,8 @@ namespace FlyTrace.Service.Internals
       }
       catch
       {
+        this.statistics.AddRequestErrorEvent(trackerStateHolder.ForeignId.Type);
+
         trackerStateHolder.CurrentRequest = null; // no-good => no CurrentRequest, no setting ScheduledTime to null.
         throw;
       }
@@ -475,9 +477,12 @@ namespace FlyTrace.Service.Internals
 
         if ( isFullRequestRoundtrip )
           this.statistics.AddRequestEndEvent( foreignId );
+        else
+          this.statistics.AddRequestErrorEvent( foreignId.Type );
       }
       catch ( Exception exc )
       {
+        this.statistics.AddRequestErrorEvent( foreignId.Type );
         Log.ErrorFormat( "Can't end read location for lrid {0}, {1}: {2}", lrid, foreignId, exc );
       }
       finally

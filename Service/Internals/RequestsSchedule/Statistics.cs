@@ -134,12 +134,17 @@ namespace FlyTrace.Service.Internals.RequestsSchedule
       }
     }
 
+    private readonly EventQueue<int> requestSuccessesEvents = new EventQueue<int>();
+
     internal void AddRequestEndEvent( ForeignId foreignId )
     {
       try
       {
         lock ( this.sync )
         {
+          // recording just the fact if the event here, hence 0 as parameter:
+          this.requestSuccessesEvents.AddEvent(foreignId.Type, 0);
+
           this.callGapsByForeignTypeTimer.Reset( foreignId.Type );
 
           {
@@ -175,6 +180,25 @@ namespace FlyTrace.Service.Internals.RequestsSchedule
         Log.Error( exc );
       }
     }
+
+    private readonly EventQueue<int> requestErrorsEvents = new EventQueue<int>();
+
+    public void AddRequestErrorEvent(string foreignType)
+    {
+      try
+      {
+        lock (this.sync)
+        {
+          // recording just the fact if the event here, hence 0 as parameter:
+          this.requestErrorsEvents.AddEvent(foreignType, 0);
+        }
+      }
+      catch (Exception exc)
+      {
+        Log.Error(exc);
+      }
+    }
+
 
     /// <summary>
     /// Returns dataset where each table corresponds to a foreign type (and has the same name 
@@ -326,8 +350,35 @@ namespace FlyTrace.Service.Internals.RequestsSchedule
       AddStatRow(
         result,
         "Timed-out p/minute",
-        span => this.timedOutEvents.GetEventsPerMinute( foreignType, span ),
+        span => this.timedOutEvents.GetEventsPerMinute(foreignType, span),
         "{0:F1}"
+      );
+
+      AddStatRow(
+        result,
+        "Total requests",
+        span => this.requestErrorsEvents.GetCount(foreignType, span) + 
+          this.requestSuccessesEvents.GetCount(foreignType, span)
+      );
+
+      AddStatRow(
+        result,
+        "Failed requests",
+        span => this.requestErrorsEvents.GetCount(foreignType, span)
+      );
+
+      AddStatRow(
+        result,
+        "Failed/total requests",
+        span =>
+        {
+          double succRequests = this.requestSuccessesEvents.GetCount(foreignType, span);
+          double failedRequests = this.requestErrorsEvents.GetCount(foreignType, span);
+          // could be NaN or Infinity, which is ok:
+          return failedRequests / (failedRequests + succRequests);
+        }
+        ,
+        "{0:P0}"
       );
 
       return result;

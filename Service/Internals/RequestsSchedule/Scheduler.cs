@@ -322,9 +322,10 @@ namespace FlyTrace.Service.Internals.RequestsSchedule
         LocationRequest.ErrorHandlingLog.InfoFormat( "Starting AbortRequest for lrid {0}...", lrid );
 
         Statistics.AddTimedOutEvent( locReq.ForeignId.Type );
+        Statistics.AddRequestErrorEvent( locReq.ForeignId.Type );
 
-        // SafelyAbortRequest can hang up, that happened before. Looks like nothing can be done with that, 
-        // but at least it should be detected. For that, use QueuedAborts and check it periodically.
+        // SafelyAbortRequest can hang up, this happened before. Looks like nothing can be done with that, 
+        // but at least it should be detected. For this, use QueuedAborts and check it periodically.
         AbortStat abortStat;
         lock ( this.queuedAborts )
         {
