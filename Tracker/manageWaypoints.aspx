@@ -129,7 +129,7 @@
                         </tr>
                         <tr>
                             <td>
-                                This should be a Google Earth (*.KML) or SeeYou (*.CUP) file.<br />
+                                This should be either a *.GPX, Google Earth (*.KML) or SeeYou (*.CUP) file.<br />
                                 Same as uploading waypoints to vario before a comp:<br />
                                 <asp:FileUpload ID="fileUpload" runat="server" onchange="document.getElementById('uploadLbl').style.display = ''; __doPostBack('fileUpload','');" />
                                 <p id="uploadLbl" class="InfoMessage" style="display: none">
