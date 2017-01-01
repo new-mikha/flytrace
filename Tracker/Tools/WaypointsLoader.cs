@@ -108,14 +108,18 @@ namespace FlyTrace.Tools
 
             // "JONNY",JONNY,,3318.830S,14750.088E,227.0m,1,,,,"field next to Burrawang Rd"
 
-            if ( elements.Length != 11 )
+            if ( elements.Length < 11 )
             {
               throw new ApplicationException( "Unexpected number of elements" );
             }
 
-            string name = elements[0].Trim( '"' );
-
-            string description = elements[10].Trim( '"' ); ;
+            string id = elements[1].Trim('"').Trim();
+            string description = elements[0].Trim('"').Trim();
+            if (id == "")
+            {
+              id = description;
+            }
+            
             double lat = GetCupCoord( elements[3], 'S', 'N', 90 );
             double lon = GetCupCoord( elements[4], 'W', 'E', 180 );
 
@@ -131,7 +135,7 @@ namespace FlyTrace.Tools
             double alt = GetCupAlt( elements[5] );
 
             TrackerDataSet.WaypointRow row =
-              result.AddWaypointRow( eventId, name, lat, lon, alt, description == null ? "" : description );
+              result.AddWaypointRow( eventId, id, lat, lon, alt, description );
 
             if ( string.IsNullOrEmpty( description ) )
             {
