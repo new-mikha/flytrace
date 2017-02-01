@@ -1,4 +1,22 @@
-﻿function getParameterByName(name) {
+﻿function setCookie(c_name, c_value) {
+    var exdate = new Date();
+    exdate.setDate(exdate.getDate() + 30 * 4);
+    document.cookie = c_name + '=' + encodeURIComponent(c_value) + ';expires=' + exdate.toUTCString();
+}
+
+function getCookie(c_name) {
+    var i, x, y, ARRcookies = document.cookie.split(";");
+    for (i = 0; i < ARRcookies.length; i++) {
+        x = ARRcookies[i].substr(0, ARRcookies[i].indexOf("="));
+        y = ARRcookies[i].substr(ARRcookies[i].indexOf("=") + 1);
+        x = x.replace(/^\s+|\s+$/g, "");
+        if (x == c_name) {
+            return decodeURIComponent(y);
+        }
+    }
+}
+
+function getParameterByName(name) {
     name = name.replace(/[\[\]]/g, "\\$&");
     var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
         results = regex.exec(window.location.href);
@@ -7,16 +25,22 @@
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
-function showAjaxError(message, err, xhr) {
+function getAjaxErrorMessage(message, err, xhr, divider) {
+    let result = message;
+
     if (err)
-        message += '\r\n' + err.toString();
+        result += divider + err.toString();
 
     if (xhr &&
         xhr.responseJSON &&
         xhr.responseJSON.ExceptionMessage)
-        message += '\r\n' + xhr.responseJSON.ExceptionMessage;
+        result += divider + xhr.responseJSON.ExceptionMessage;
 
-    alert(message);
+    return result;
+}
+
+function showAjaxError(message, err, xhr) {
+    alert(getAjaxErrorMessage(message, err, xhr, '\r\n'));
 }
 
 
@@ -648,32 +672,65 @@ var OldTaskCleanUpControls = React.createClass({
 
 var _baseUrl;
 
-if(typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
+if (typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
     $(document).ready(function () {
-        _baseUrl = new RegExp(/^.*\//).exec(window.location.href);
 
-        {
-            let waypoints = document.getElementById('react-waypoints');
-            if (waypoints) {
-                ReactDOM.render(
-                    <div className="task">
-                        <WaypointsTable allWaypoints={_allWaypoints}
-                                        taskWaypoints={_taskWaypoints}
-                        />
-                    </div>,
-                    waypoints
-                );
-            }
+        let eventId = getParameterByName('event');
+
+        function checkIfCachedPage() {
+            let cacheTrackCookieName = 'flytrace_event_cache_track_' + eventId;
+            let cacheTrackCookieValue = getCookie(cacheTrackCookieName);
+
+            let looksLikeCache = cacheTrackCookieValue !== "0";
+            setCookie(cacheTrackCookieName, "1");
+
+            console.log('looksLikeCache: ' + looksLikeCache);
+
+            return looksLikeCache;
         }
 
-        {
-            let old_task_clean_up_controls = document.getElementById('react-old-task-clean-up-controls');
-            if (old_task_clean_up_controls) {
-                ReactDOM.render(
-                    <OldTaskCleanUpControls initialStartTs={_initialStartTs}/>,
-                    old_task_clean_up_controls
-                );
-            }
+        _baseUrl = new RegExp(/^.*\//).exec(window.location.href);
+
+        let waypointsElement = document.getElementById('react-waypoints');
+        let oldTaskCleanupControlsElement = document.getElementById('react-old-task-clean-up-controls');
+
+        function waypointsBundleReady(waypointsBundle) {
+            ReactDOM.render(
+                <div className="task">
+                    <WaypointsTable allWaypoints={waypointsBundle.eventWaypoints}
+                                    taskWaypoints={waypointsBundle.taskWaypoints}
+                    />
+                </div>,
+                waypointsElement
+            );
+
+            ReactDOM.render(
+                <OldTaskCleanUpControls initialStartTs={waypointsBundle.startTsMilliseconds}/>,
+                oldTaskCleanupControlsElement
+            );
+        }
+
+        if (!checkIfCachedPage()) {
+            waypointsBundleReady({
+                eventWaypoints: _eventWaypoints,
+                taskWaypoints: _taskWaypoints,
+                startTsMilliseconds: _startTsMilliseconds
+            });
+
+        } else {
+            $.ajax({
+                dataType: 'json',
+                url: _baseUrl + 'api/Waypoints/' + eventId + '?cacheBuster=' + (new Date().getMilliseconds()),
+                method: 'GET',
+                contentType: 'application/json',
+                success: function (data) {
+                    waypointsBundleReady(data);
+                },
+                error: function (xhr, status, err) {
+                    waypointsElement.innerHTML = "Error occurred, please try to reload the page. <br />" +
+                        getAjaxErrorMessage(xhr, status, err, '<br />');
+                }
+            });
         }
     });
 }

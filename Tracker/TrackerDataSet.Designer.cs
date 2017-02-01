@@ -5158,7 +5158,7 @@ WHERE        (g.Id = @GroupId)";
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "4.0.0.0")]
         [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.TableAdapter")]
         [global::System.ComponentModel.DataObjectMethodAttribute(global::System.ComponentModel.DataObjectMethodType.Select, false)]
-        public virtual TrackerDataSet.TaskDataTable GetDataByEventId(int EventId) {
+        public virtual TrackerDataSet.TaskDataTable GetOrderedWaypointsByEventId(int EventId) {
             this.Adapter.SelectCommand = this.CommandCollection[1];
             this.Adapter.SelectCommand.Parameters[0].Value = ((int)(EventId));
             TrackerDataSet.TaskDataTable dataTable = new TrackerDataSet.TaskDataTable();

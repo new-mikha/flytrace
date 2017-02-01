@@ -21,7 +21,9 @@
 using System;
 using System.Web.UI.WebControls;
 using System.Web.Security;
-using System.Data;
+using System.Linq;
+using System.Web;
+using FlyTrace.Tools;
 
 namespace FlyTrace
 {
@@ -30,7 +32,7 @@ namespace FlyTrace
     protected string UpdateEventMsg = "";
     protected string LoadWaypointsMsg = "";
 
-    protected int AllEventWptsCount => _allEventWaypoints.Count;
+    protected int AllEventWptsCount => _waypointsBundle?.EventWaypoints?.Length ?? 0;
 
     private TrackerDataSet.EventRow _eventRow;
 
@@ -42,7 +44,7 @@ namespace FlyTrace
 
     public bool IsEventDefault { get; private set; }
 
-    private TrackerDataSet.WaypointDataTable _allEventWaypoints;
+    private WaypointsProvider.WaypointsBundle _waypointsBundle;
 
     private int _assignedGroupsCount;
 
@@ -101,12 +103,12 @@ namespace FlyTrace
       {
         try
         {
-          int updatedRecord = Tools.WaypointsLoader.LoadWaypoints(EventId, fileUpload, true);
+          int updatedRecord = WaypointsLoader.LoadWaypoints(EventId, fileUpload, true);
           if (updatedRecord == 0)
           {
             LoadWaypointsMsg = "No waypoints found in the uploaded file.";
           }
-          LoadAllWaypoints(); // we need to update this.allEventWaypoints
+          LoadAllWaypoints(); // we need to update eventsBundle after file load
           SetNoGroupWarningVisibility();
         }
         catch (Exception exc)
@@ -114,14 +116,14 @@ namespace FlyTrace
           LoadWaypointsMsg = "Error in processing the uploaded file:<br />" + exc.Message;
         }
       }
+
+      Page.Response.Cookies.Add(new HttpCookie("flytrace_event_cache_track_" + EventId, "0"));
     }
 
     private void LoadAllWaypoints()
     {
-      TrackerDataSetTableAdapters.WaypointTableAdapter waypointsAdapter =
-        new TrackerDataSetTableAdapters.WaypointTableAdapter();
-
-      _allEventWaypoints = waypointsAdapter.GetDataByEventId(EventId);
+      var waypointsProvider = new WaypointsProvider();
+      _waypointsBundle = waypointsProvider.GetWaypointsBundle(EventId);
     }
 
     private void SetNoGroupWarningVisibility()
@@ -324,40 +326,37 @@ namespace FlyTrace
       assignedGroupsGridView.AllowSorting = assignedGroupsGridView.Rows.Count > 1;
     }
 
-    protected string StartTsMillisecondsString
+    protected string StartTsMillisecodsString
     {
       get
       {
-        if (_eventRow.IsStartTsNull())
+        if (_waypointsBundle.StartTsMilliseconds == null)
           return "null";
 
-          DateTime epochStart = new DateTime(1970, 1, 1);
-          TimeSpan ts = new TimeSpan(_eventRow.StartTs.Ticks - epochStart.Ticks);
-
-        return ts.TotalMilliseconds.ToString("F0");
+        return _waypointsBundle.StartTsMilliseconds.Value.ToString();
       }
     }
 
     protected void Page_PreRender(object sender, EventArgs e)
     {
-      string waypointsJsArr =
+      string eventWaypointsJsArr =
         string.Join(
           ", ",
-          _allEventWaypoints
-          .Select(row => $"{{id: {row.Id}, name: '{row.Name}'}}")
+          _waypointsBundle
+          .EventWaypoints
+          .Select(wpt => $"{{id: {wpt.Id}, name: '{wpt.Name}'}}")
         );
-      Page.ClientScript.RegisterArrayDeclaration("_allWaypoints", waypointsJsArr);
+      Page.ClientScript.RegisterArrayDeclaration("_eventWaypoints", eventWaypointsJsArr);
 
-      var taskAdapter = new TrackerDataSetTableAdapters.TaskTableAdapter();
-      TrackerDataSet.TaskDataTable taskTable = taskAdapter.GetDataByEventId(EventId);
 
-      string taskPointsArr =
+      string taskWaypointsJsArr =
         string.Join(
           ", ",
-          taskTable
-          .Select(row => $"{{id: {row.WaypointId}, radius: '{row.Radius}'}}")
+          _waypointsBundle
+          .TaskWaypoints
+          .Select(wpt => $"{{id: {wpt.Id}, radius: '{wpt.Radius}'}}")
         );
-      Page.ClientScript.RegisterArrayDeclaration("_taskWaypoints", taskPointsArr);
+      Page.ClientScript.RegisterArrayDeclaration("_taskWaypoints", taskWaypointsJsArr);
 
       // The code below can't be in Page_Load because uploadBtn_Click is fired after that, and 
       // we need all the just inserted wpts when we fill comboboxes and decide whether to show taskPanel or not.

@@ -286,6 +286,7 @@
     <Compile Include="Tools\SystemEventsHiddenForm.Designer.cs">
       <DependentUpon>SystemEventsHiddenForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Tools\WaypointsProvider.cs" />
     <Compile Include="TrackerDataSet.cs">
       <DependentUpon>TrackerDataSet.xsd</DependentUpon>
     </Compile>

@@ -28,9 +28,12 @@ using System.Configuration;
 using System.Globalization;
 using System.IO;
 using System.Diagnostics;
+using System.Net.Http.Formatting;
 using log4net;
 using System.Threading;
 using System.Web.Http;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace FlyTrace
 {
@@ -455,6 +458,8 @@ namespace FlyTrace
         string dataFolderPath = System.Web.Hosting.HostingEnvironment.MapPath( @"~/App_Data/" );
         Service.ServiceFacade.Init( dataFolderPath );
 
+        SetupJsonFormatting();
+
         // SystemEvents needs message pump, so start it
         new Thread( RunMessagePump ).Start( );
 
@@ -465,6 +470,20 @@ namespace FlyTrace
         InfoLog.Error( "Cannot start the service", exc );
         throw;
       }
+    }
+
+    private static void SetupJsonFormatting()
+    {
+      JsonMediaTypeFormatter formatter = GlobalConfiguration.Configuration.Formatters.JsonFormatter;
+      formatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+      formatter.SerializerSettings.Formatting = Formatting.None;
+      formatter.UseDataContractJsonSerializer = false;
+
+      //var formatters = GlobalConfiguration.Configuration.Formatters;
+      //var jsonFormatter = formatters.JsonFormatter;
+      //var settings = jsonFormatter.SerializerSettings;
+      //settings.Formatting = Formatting.None;
+      //settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
     }
 
     public static void DelayAction( int milliseconds, Action action )

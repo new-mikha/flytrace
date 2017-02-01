@@ -338,7 +338,7 @@ ORDER BY WptOrder</CommandText>
               <Mapping SourceColumn="WptOrder" DataSetColumn="WptOrder" />
             </Mappings>
             <Sources>
-              <DbSource ConnectionRef="TrackerConnectionString (Web.config)" DbObjectName="Tracker.dbo.Task" DbObjectType="Table" FillMethodModifier="Public" FillMethodName="FillByEventId" GenerateMethods="Both" GenerateShortCommands="true" GeneratorGetMethodName="GetDataByEventId" GeneratorSourceName="FillByEventId" GetMethodModifier="Public" GetMethodName="GetDataByEventId" QueryType="Rowset" ScalarCallRetval="System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" UseOptimisticConcurrency="true" UserGetMethodName="GetDataByEventId" UserSourceName="FillByEventId">
+              <DbSource ConnectionRef="TrackerConnectionString (Web.config)" DbObjectName="Tracker.dbo.Task" DbObjectType="Table" FillMethodModifier="Public" FillMethodName="FillByEventId" GenerateMethods="Both" GenerateShortCommands="true" GeneratorGetMethodName="GetOrderedWaypointsByEventId" GeneratorSourceName="FillByEventId" GetMethodModifier="Public" GetMethodName="GetOrderedWaypointsByEventId" QueryType="Rowset" ScalarCallRetval="System.Object, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" UseOptimisticConcurrency="true" UserGetMethodName="GetOrderedWaypointsByEventId" UserSourceName="FillByEventId">
                 <SelectCommand>
                   <DbCommand CommandType="Text" ModifiedByUser="true">
                     <CommandText>SELECT T.Id, T.WaypointId, T.Radius, T.WptOrder
@@ -737,7 +737,7 @@ WHERE        (Id = @GroupId)</CommandText>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="GroupTracker" msprop:Generator_TableClassName="GroupTrackerDataTable" msprop:Generator_RowEvArgName="GroupTrackerRowChangeEvent" msprop:Generator_TableVarName="tableGroupTracker" msprop:Generator_TablePropName="GroupTracker" msprop:Generator_RowDeletingName="GroupTrackerRowDeleting" msprop:Generator_RowChangingName="GroupTrackerRowChanging" msprop:Generator_RowDeletedName="GroupTrackerRowDeleted" msprop:Generator_RowEvHandlerName="GroupTrackerRowChangeEventHandler" msprop:Generator_RowChangedName="GroupTrackerRowChanged" msprop:Generator_UserTableName="GroupTracker" msprop:Generator_RowClassName="GroupTrackerRow">
+        <xs:element name="GroupTracker" msprop:Generator_TableClassName="GroupTrackerDataTable" msprop:Generator_RowEvArgName="GroupTrackerRowChangeEvent" msprop:Generator_TableVarName="tableGroupTracker" msprop:Generator_TablePropName="GroupTracker" msprop:Generator_RowDeletingName="GroupTrackerRowDeleting" msprop:Generator_RowChangingName="GroupTrackerRowChanging" msprop:Generator_RowDeletedName="GroupTrackerRowDeleted" msprop:Generator_RowClassName="GroupTrackerRow" msprop:Generator_RowEvHandlerName="GroupTrackerRowChangeEventHandler" msprop:Generator_RowChangedName="GroupTrackerRowChanged" msprop:Generator_UserTableName="GroupTracker">
           <xs:complexType>
             <xs:sequence>
               <xs:element name="Id" msdata:ReadOnly="true" msdata:AutoIncrement="true" msdata:AutoIncrementSeed="-1" msdata:AutoIncrementStep="-1" msprop:Generator_ColumnVarNameInTable="columnId" msprop:Generator_ColumnPropNameInRow="Id" msprop:Generator_ColumnPropNameInTable="IdColumn" msprop:Generator_UserColumnName="Id" type="xs:int" />
@@ -759,7 +759,7 @@ WHERE        (Id = @GroupId)</CommandText>
             </xs:sequence>
           </xs:complexType>
         </xs:element>
-        <xs:element name="UserStat" msprop:Generator_TableClassName="UserStatDataTable" msprop:Generator_TableVarName="tableUserStat" msprop:Generator_RowChangedName="UserStatRowChanged" msprop:Generator_TablePropName="UserStat" msprop:Generator_RowDeletingName="UserStatRowDeleting" msprop:Generator_RowChangingName="UserStatRowChanging" msprop:Generator_RowEvHandlerName="UserStatRowChangeEventHandler" msprop:Generator_RowDeletedName="UserStatRowDeleted" msprop:Generator_RowClassName="UserStatRow" msprop:Generator_UserTableName="UserStat" msprop:Generator_RowEvArgName="UserStatRowChangeEvent">
+        <xs:element name="UserStat" msprop:Generator_TableClassName="UserStatDataTable" msprop:Generator_TableVarName="tableUserStat" msprop:Generator_TablePropName="UserStat" msprop:Generator_RowDeletingName="UserStatRowDeleting" msprop:Generator_RowChangingName="UserStatRowChanging" msprop:Generator_RowEvHandlerName="UserStatRowChangeEventHandler" msprop:Generator_RowDeletedName="UserStatRowDeleted" msprop:Generator_UserTableName="UserStat" msprop:Generator_RowChangedName="UserStatRowChanged" msprop:Generator_RowEvArgName="UserStatRowChangeEvent" msprop:Generator_RowClassName="UserStatRow">
           <xs:complexType>
             <xs:sequence>
               <xs:element name="UserName" msprop:Generator_ColumnVarNameInTable="columnUserName" msprop:Generator_ColumnPropNameInRow="UserName" msprop:Generator_ColumnPropNameInTable="UserNameColumn" msprop:Generator_UserColumnName="UserName">

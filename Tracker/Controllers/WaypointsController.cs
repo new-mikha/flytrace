@@ -1,28 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Web.Http;
+using FlyTrace.Tools;
+using FlyTrace.TrackerDataSetTableAdapters;
 
 namespace FlyTrace.Controllers
 {
   public class WaypointsController : ApiController
   {
-    public class TaskWaypoint
-    {
-      // ReSharper disable once InconsistentNaming
-      public int id;
 
-      // ReSharper disable once InconsistentNaming
-      public int radius;
+
+   
+
+    // GET api/<controller>/5
+    public WaypointsProvider.WaypointsBundle Get(int id)
+    {
+      var waypointsProvider = new WaypointsProvider();
+
+      return waypointsProvider.GetWaypointsBundle(id);
     }
 
-    public void Put(int id, [FromBody] IEnumerable<TaskWaypoint> task)
+    // PUT api/<controller>/5
+    public void Put(int id, [FromBody] IEnumerable<WaypointsProvider.TaskWaypoint> task)
     {
       var taskAdapter = new TrackerDataSetTableAdapters.TaskTableAdapter();
-      TrackerDataSet.TaskDataTable taskTable = taskAdapter.GetDataByEventId(id);
+      TrackerDataSet.TaskDataTable taskTable = taskAdapter.GetOrderedWaypointsByEventId(id);
 
       foreach (DataRow row in taskTable.Rows)
       {
@@ -32,9 +35,9 @@ namespace FlyTrace.Controllers
       if (task != null)
       {
         int iWp = 0;
-        foreach (TaskWaypoint waypoint in task)
+        foreach (WaypointsProvider.TaskWaypoint waypoint in task)
         {
-          taskTable.AddTaskRow(waypoint.id, waypoint.radius, iWp++);
+          taskTable.AddTaskRow(waypoint.Id, waypoint.Radius, iWp++);
         }
       }
 

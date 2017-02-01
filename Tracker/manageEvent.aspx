@@ -73,7 +73,7 @@
     
 </head>
 <body>
-    <% Response.Write(string.Format("<script  type='text/javascript'>_initialStartTs={0};</script>", StartTsMillisecondsString)); %>
+    <% Response.Write(string.Format("<script  type='text/javascript'>_startTsMilliseconds={0};</script>", StartTsMillisecodsString)); %>
     <form id="frmEvent" runat="server">
         <div align="left" style="width: 33em">
             <asp:HiddenField ID="scrollHiddenField" runat="server" />

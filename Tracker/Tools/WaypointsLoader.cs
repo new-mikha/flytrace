@@ -19,12 +19,9 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Web;
 using System.Web.UI.WebControls;
 using System.Xml;
 using System.Data;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -43,14 +40,14 @@ namespace FlyTrace.Tools
     /// from the uploaded file. Otherwise it's skipped.</param>
     public static int LoadWaypoints(int eventId, FileUpload fileUpload, bool replaceExistingWaypoints)
     {
-      int updatedRows = 0;
+      int updatedRows;
 
       if (!fileUpload.HasFile)
       {
         throw new ApplicationException("No file loaded.");
       }
 
-      string fileExtension = Path.GetExtension(fileUpload.FileName).ToLower();
+      string fileExtension = Path.GetExtension(fileUpload.FileName ?? "").ToLower();
 
       TrackerDataSetTableAdapters.WaypointTableAdapter adapter = new TrackerDataSetTableAdapters.WaypointTableAdapter();
       TrackerDataSet.WaypointDataTable existingData = adapter.GetDataByEventId(eventId);
@@ -324,8 +321,6 @@ namespace FlyTrace.Tools
 
     private static double GetCupAlt(string altStr)
     {
-      string originalAltStr = altStr;
-
       altStr = altStr.Trim();
 
       double factor;
@@ -340,7 +335,7 @@ namespace FlyTrace.Tools
       else
       {
         throw new ApplicationException(
-         string.Format("Elevation '{0}' doesn't end with a correct unit symbol ('m' or 'f')", altStr));
+          $"Elevation '{altStr}' doesn't end with a correct unit symbol ('m' or 'f')");
       }
 
       altStr = altStr.Remove(altStr.Length - 1, 1);
@@ -348,6 +343,7 @@ namespace FlyTrace.Tools
       return Global.ToDouble(altStr) * factor;
     }
 
+    // ReSharper disable once UnusedParameter.Local - looks like RS bug, maxDeg is used
     private static double GetCupCoord(string coordStr, char neg, char pos, int maxDeg)
     {
       string originalCoordStr = coordStr;
@@ -386,7 +382,7 @@ namespace FlyTrace.Tools
       double deg = Math.Floor(temp); // deg = 33.0
       if (deg > maxDeg)
         throw new ApplicationException(
-          string.Format("Invalid coordinate format in '{0}' (degrees value too large)", originalCoordStr));
+          $"Invalid coordinate format in '{originalCoordStr}' (degrees value too large)");
 
       double min = (temp - deg) * 100.0; // min = 18.0
       if ((min + minFractions) > 60)
