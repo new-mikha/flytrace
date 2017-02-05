@@ -14,8 +14,19 @@ namespace FlyTrace.Controllers
     /// If a user might change a page's underlying data after it's loaded (as it happens on this page), then 
     /// when the page is loaded from the cache it should re-request the data through ajax calls - because the
     /// cached data is not the one that the user has entered and then saved (through ajax put/post/etc calls)
-    /// using the page controls.
+    /// using the page controls. See also Remarks section for details about non-cached page alternatives.
     /// </summary>
+    /// <remarks>
+    /// As an alternative, a page might be returned with "no cache" headers (diff.browsers have different 
+    /// headers for that). But it doesn't work well with PostBack's. In this scenario a browser (most
+    /// typically IE although Chrome too sometimes) shows an error instead of the page content:
+    /// - open the page 
+    /// - do a PostBack, e.g.press a button on the page. Now it's a post-backed page, with hidden POST values.
+    /// - navigate to another page by clicking a link.
+    /// - navigate back - error pops up "the page is out of date", and manual page reload is required then.
+    /// If the page is cacheable, then browser restores the page is it was. And it's now JS job to get the right
+    /// data from the server.
+    /// </remarks>
     /// <param name="id">event id</param>
     /// <returns>All data required to refresh the page changeable state</returns>
     public WaypointsProvider.WaypointsBundle Get(int id) // GET api/<controller>/5
