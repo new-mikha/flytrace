@@ -117,11 +117,16 @@ namespace FlyTrace
         }
       }
 
+      // See WaypointsController.Get - there should be a way to find out if it's loaded from the server or
+      // cache. For that, a cookie is used which on server is always set to 0, but the page changes it to 1
+      // on load. If before the change it's already not zero, then it's a cached version, otherwise it came
+      // from the server:
       Page.Response.Cookies.Add(new HttpCookie("flytrace_event_cache_track_" + EventId, "0"));
     }
 
     private void LoadAllWaypoints()
     {
+      // the page is injected with the same data that WaypointsController.Get would return:
       var waypointsProvider = new WaypointsProvider();
       _waypointsBundle = waypointsProvider.GetWaypointsBundle(EventId);
     }
@@ -339,6 +344,10 @@ namespace FlyTrace
 
     protected void Page_PreRender(object sender, EventArgs e)
     {
+      // See also WaypointsController.Get. The data injected here might be cached by the browser, in this case 
+      // same data is requested from WaypointsController. But so far it's returned back as a part of the page,
+      // saving network roundtrips which (really) can be critical on low broken connections during a morning 
+      // briefing for the comp day in the middle of nowhere. 
       string eventWaypointsJsArr =
         string.Join(
           ", ",

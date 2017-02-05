@@ -678,6 +678,9 @@ if (typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
         let eventId = getParameterByName('event');
 
         function checkIfCachedPage() {
+            // To find out if the page is loaded from the server or cache, a cookie is used which on server is always
+            // set to 0, but the page changes it to 1 on load.  If before the change it's already not zero, then it's a
+            // cached version, otherwise it came from the server:
             let cacheTrackCookieName = 'flytrace_event_cache_track_' + eventId;
             let cacheTrackCookieValue = getCookie(cacheTrackCookieName);
 
@@ -711,6 +714,8 @@ if (typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
         }
 
         if (!checkIfCachedPage()) {
+            // It's not a cache (see also below).
+            // Then, just load the classes with the data that the page already has:
             waypointsBundleReady({
                 eventWaypoints: _eventWaypoints,
                 taskWaypoints: _taskWaypoints,
@@ -718,6 +723,10 @@ if (typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
             });
 
         } else {
+            // If a user might change a page's underlying data after it's loaded (as it happens on this page), then
+            // when the page is loaded from the cache it should re-request the data through ajax calls - because the
+            // cached data is not the one that the user has entered and then saved (through ajax put/post/etc calls)
+            // using the page controls.
             $.ajax({
                 dataType: 'json',
                 url: _baseUrl + 'api/Waypoints/' + eventId + '?cacheBuster=' + (new Date().getMilliseconds()),

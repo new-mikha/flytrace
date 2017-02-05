@@ -478,12 +478,6 @@ namespace FlyTrace
       formatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
       formatter.SerializerSettings.Formatting = Formatting.None;
       formatter.UseDataContractJsonSerializer = false;
-
-      //var formatters = GlobalConfiguration.Configuration.Formatters;
-      //var jsonFormatter = formatters.JsonFormatter;
-      //var settings = jsonFormatter.SerializerSettings;
-      //settings.Formatting = Formatting.None;
-      //settings.ContractResolver = new CamelCasePropertyNamesContractResolver();
     }
 
     public static void DelayAction( int milliseconds, Action action )

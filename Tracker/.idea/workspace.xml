@@ -2,15 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="f9824d65-8e75-460c-a18f-2a09827e847a" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/App_Data/Flytrace.mdf" afterPath="$PROJECT_DIR$/App_Data/Flytrace.mdf" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/App_Data/Flytrace_log.ldf" afterPath="$PROJECT_DIR$/App_Data/Flytrace_log.ldf" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Controllers/WaypointsController.cs" afterPath="$PROJECT_DIR$/Controllers/WaypointsController.cs" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Scripts/manageEvent.js" afterPath="$PROJECT_DIR$/Scripts/manageEvent.js" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Tools/WaypointsProvider.cs" afterPath="$PROJECT_DIR$/Tools/WaypointsProvider.cs" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/Global.asax.cs" afterPath="$PROJECT_DIR$/Global.asax.cs" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/jsx/manageEvent.jsx" afterPath="$PROJECT_DIR$/jsx/manageEvent.jsx" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/manageEvent.aspx" afterPath="$PROJECT_DIR$/manageEvent.aspx" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/manageEvent.aspx.cs" afterPath="$PROJECT_DIR$/manageEvent.aspx.cs" />
     </list>
     <ignored path="Tracker.iws" />
@@ -36,8 +30,8 @@
       <file leaf-file-name="manageEvent.jsx" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/jsx/manageEvent.jsx">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="226">
-              <caret line="714" column="30" lean-forward="false" selection-start-line="714" selection-start-column="16" selection-end-line="714" selection-end-column="30" />
+            <state relative-caret-position="32">
+              <caret line="717" column="82" lean-forward="false" selection-start-line="717" selection-start-column="82" selection-end-line="717" selection-end-column="82" />
               <folding />
             </state>
           </provider>
@@ -109,6 +103,7 @@
       <find>his.props.startTs</find>
       <find>initialStartTs</find>
       <find>startTs</find>
+      <find>restoreOldPoints</find>
     </findStrings>
     <replaceStrings>
       <replace>oldTaskCleanupControlsElement</replace>
@@ -715,12 +710,12 @@
       <workItem from="1480889752160" duration="6809000" />
       <workItem from="1485726848519" duration="1863000" />
       <workItem from="1486191495299" duration="3160000" />
-      <workItem from="1486195670249" duration="5936000" />
+      <workItem from="1486195670249" duration="7160000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="117728000" />
+    <option name="totallyTimeSpent" value="118952000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-13" y="-13" width="2586" height="1546" extended-state="6" />
@@ -736,7 +731,7 @@
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32967034" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3382467" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3382467" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Properties" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.28704423" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -1055,8 +1050,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/jsx/manageEvent.jsx">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="226">
-          <caret line="714" column="30" lean-forward="false" selection-start-line="714" selection-start-column="16" selection-end-line="714" selection-end-column="30" />
+        <state relative-caret-position="32">
+          <caret line="717" column="82" lean-forward="false" selection-start-line="717" selection-start-column="82" selection-end-line="717" selection-end-column="82" />
           <folding />
         </state>
       </provider>

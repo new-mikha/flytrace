@@ -10,11 +10,15 @@ namespace FlyTrace.Controllers
   public class WaypointsController : ApiController
   {
 
-
-   
-
-    // GET api/<controller>/5
-    public WaypointsProvider.WaypointsBundle Get(int id)
+    /// <summary>
+    /// If a user might change a page's underlying data after it's loaded (as it happens on this page), then 
+    /// when the page is loaded from the cache it should re-request the data through ajax calls - because the
+    /// cached data is not the one that the user has entered and then saved (through ajax put/post/etc calls)
+    /// using the page controls.
+    /// </summary>
+    /// <param name="id">event id</param>
+    /// <returns>All data required to refresh the page changeable state</returns>
+    public WaypointsProvider.WaypointsBundle Get(int id) // GET api/<controller>/5
     {
       var waypointsProvider = new WaypointsProvider();
 
