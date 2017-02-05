@@ -344,10 +344,11 @@ namespace FlyTrace
 
     protected void Page_PreRender(object sender, EventArgs e)
     {
-      // See also WaypointsController.Get. The data injected here might be cached by the browser, in this case 
-      // same data is requested from WaypointsController. But so far it's returned back as a part of the page,
-      // saving network roundtrips which (really) can be critical on low broken connections during a morning 
-      // briefing for the comp day in the middle of nowhere. 
+      // See also WaypointsController.Get.The data injected here might be cached by the browser,  
+      // in this case same data is requested from WaypointsController.But when the page is requests, 
+      // the data is still returned too as a part of the page, saving network roundtrips which
+      // (really) can be critical on low broken connections during morning briefings for a comp in 
+      // the middle of nowhere.
       string eventWaypointsJsArr =
         string.Join(
           ", ",
@@ -368,10 +369,9 @@ namespace FlyTrace
       Page.ClientScript.RegisterArrayDeclaration("_taskWaypoints", taskWaypointsJsArr);
 
       // The code below can't be in Page_Load because uploadBtn_Click is fired after that, and 
-      // we need all the just inserted wpts when we fill comboboxes and decide whether to show taskPanel or not.
-      // At the same time, we can't do that in uploadBtn_Click because we need the same stuff every time page loads.
-      // So do it here, after all other events has fired.
-
+      // we need all the just inserted wpts when we fill comboboxes and decide whether to show 
+      // taskPanel or not. At the same time, we can't do that in uploadBtn_Click because we need 
+      // the same stuff every time page loads. So do it here, after all other events has fired:
       loadWaypointsPanel.Visible = noWaypointsInfoPanel.Visible = AllEventWptsCount == 0;
       taskPanel.Visible = !loadWaypointsPanel.Visible;
     }
