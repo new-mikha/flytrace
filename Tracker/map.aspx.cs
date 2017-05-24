@@ -19,11 +19,6 @@
  *****************************************************************************/
 
 using System;
-using System.Collections.Generic;
-using System.Web;
-using System.Web.UI;
-using System.Web.UI.WebControls;
-using System.Text;
 using System.Globalization;
 using System.Web.Security;
 
@@ -31,10 +26,6 @@ namespace FlyTrace
 {
   public partial class MapForm : System.Web.UI.Page
   {
-    private const string GroupDef = "groupDef";
-
-    private const string GoogleMapDef = "googleMapDef";
-
     protected int GroupId;
 
     protected Guid OwnerId;
@@ -112,11 +103,13 @@ namespace FlyTrace
             if ( taskArrayDeclaration != "" )
               taskArrayDeclaration += ",";
 
+            string sanitisedName = (row.Name ?? "").Replace("\r\n", " ").Replace("\n", " ").Trim();
+
             taskArrayDeclaration +=
               string.Format(
                 CultureInfo.GetCultureInfo( "en-US" ),
-                "'{0}',{1},{2},{3}",
-                row.Name, row.Lat, row.Lon, row.Radius );
+                "'{0}',{1},{2},{3}", 
+                sanitisedName, row.Lat, row.Lon, row.Radius );
           }
         }
         catch
