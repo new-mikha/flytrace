@@ -13,7 +13,9 @@ where {
 where {
     $_.FullName -notlike "*log4net.xml" -and
     $_.FullName -notlike "*dev.config" -and
-    $_.FullName -notlike "*\obj\*" 
+    $_.FullName -notlike "*\obj\*" -and
+    $_.FullName -notlike "*\.idea\*" -and
+    $_.FullName -notlike "*\node_modules\*" 
 } |
 where {
     $_.FullName -like "*.dll" -or
