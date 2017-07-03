@@ -46,7 +46,7 @@ function showAjaxError(message, err, xhr) {
 
 var React = require('react');
 var ReactDOM = require('react-dom');
-var ReactCSSTransitionGroup = require('react-addons-css-transition-group');
+var ReactCSSTransitionGroup = require('react-transition-group/CSSTransitionGroup');
 
 //noinspection JSUnresolvedVariable
 var ErrorLines = React.createClass({
@@ -687,8 +687,6 @@ if (typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
             let looksLikeCache = cacheTrackCookieValue !== "0";
             setCookie(cacheTrackCookieName, "1");
 
-            console.log('looksLikeCache: ' + looksLikeCache);
-
             return looksLikeCache;
         }
 
@@ -698,19 +696,23 @@ if (typeof _ie8_or_less === 'undefined' || !_ie8_or_less) {
         let oldTaskCleanupControlsElement = document.getElementById('react-old-task-clean-up-controls');
 
         function waypointsBundleReady(waypointsBundle) {
-            ReactDOM.render(
-                <div className="task">
-                    <WaypointsTable allWaypoints={waypointsBundle.eventWaypoints}
-                                    taskWaypoints={waypointsBundle.taskWaypoints}
-                    />
-                </div>,
-                waypointsElement
-            );
+            if(waypointsElement) {
+                ReactDOM.render(
+                    <div className="task">
+                        <WaypointsTable allWaypoints={waypointsBundle.eventWaypoints}
+                                        taskWaypoints={waypointsBundle.taskWaypoints}
+                        />
+                    </div>,
+                    waypointsElement
+                );
+            }
 
-            ReactDOM.render(
-                <OldTaskCleanUpControls initialStartTs={waypointsBundle.startTsMilliseconds}/>,
-                oldTaskCleanupControlsElement
-            );
+            if(oldTaskCleanupControlsElement) {
+                ReactDOM.render(
+                    <OldTaskCleanUpControls initialStartTs={waypointsBundle.startTsMilliseconds}/>,
+                    oldTaskCleanupControlsElement
+                );
+            }
         }
 
         if (!checkIfCachedPage()) {
