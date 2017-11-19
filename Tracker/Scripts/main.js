@@ -1336,8 +1336,8 @@ function getContent(marker) {
 
             var tsString =
                 ts.getDate() + " " + getMonthStr(ts.getMonth()) + " " + ts.getHours() + ":" + padInteger(ts.getMinutes(), 2);
-
-            coordsTableStr =
+             
+            var coordsTableStr =
                 "<table style=\"width: 100%; font-family: 'courier New' , Courier, monospace;\"><tr><td>"
                     + coordsStr + "</td><td style=\"text-align: center;\">" +
                     "<a href='javascript: copyToClipboard(\"" + escape(coordsStrFlat) + "\");'>Copy<br />coords</a>" +
@@ -1358,7 +1358,8 @@ function getContent(marker) {
                     formattedUserMessage +
                     coordsTableStr +
                     errAddOn +
-                    getTrackControlStr(trackerHolder);
+                    getTrackControlStr(trackerHolder) + "<br/>" +
+                    getGoogleMapLink(trackerHolder);
         }
 
         return content;
@@ -1366,6 +1367,15 @@ function getContent(marker) {
         return exc.message;
     }
 }
+
+function getGoogleMapLink(trackerHolder) {
+    return "<div style='text-align: right'>" +
+        "<a target='_blank' href='http://maps.google.com.au/maps?q=" +
+        trackerHolder.NetTrackerData.Lat + "," +
+        trackerHolder.NetTrackerData.Lon +
+        "'>Google map</a></div>";
+}
+
 
 function getTsString(ts) {
     return ts.getDate() + " " + getMonthStr(ts.getMonth()) + " " + ts.getHours() + ":" + padInteger(ts.getMinutes(), 2);
