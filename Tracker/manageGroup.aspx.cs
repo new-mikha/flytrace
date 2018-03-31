@@ -44,7 +44,7 @@ namespace FlyTrace
     protected string UpdateGroupMsg = "";
 
     private const string spotIdPattern =
-      @"^\s*((http://)?share.findmespot.com/shared/faces/viewspots.jsp\?glId=)?[^\s\\/\?=&]{20,50}\s*$";
+      @"^\s*(((http|https)://)?share.findmespot.com/shared/faces/viewspots.jsp\?glId=)?[^\s\\/\?=&]{20,50}\s*$";
 
     protected string SpotIdJScriptPattern
     {
