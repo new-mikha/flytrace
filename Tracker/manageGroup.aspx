@@ -366,7 +366,13 @@
                                                 </td>
                                             </tr>
                                         </table>
-                                        <asp:Button ID="InsertButton" runat="server" CausesValidation="True" ValidationGroup="formView" CommandName="Insert" Text="Add Tracker" OnClientClick="document.getElementById('addProgressLbl').style.display = '';document.getElementById('insertTrackerLbl').style.display = 'none'" />
+                                        <asp:Button ID="InsertButton" 
+                                            runat="server" 
+                                            CausesValidation="True" 
+                                            ValidationGroup="formView" 
+                                            CommandName="Insert" 
+                                            Text="Add Tracker" 
+                                            OnClientClick="document.getElementById('addProgressLbl').style.display = '';document.getElementById('insertTrackerLbl').style.display = 'none';" />
                                     </InsertItemTemplate>
                                 </asp:FormView>
                             </td>
@@ -527,4 +533,17 @@
     </div>
     </form>
 </body>
+<script type="text/javascript">
+    var originalValidationFunction = Page_ClientValidate;
+    if (originalValidationFunction && typeof (originalValidationFunction) == "function") {
+        Page_ClientValidate = function (validationGroup) {
+            originalValidationFunction(validationGroup);
+
+            if (!Page_IsValid) {
+                document.getElementById('addProgressLbl').style.display = 'none';
+            }
+        };
+    }
+</script>
+
 </html>
