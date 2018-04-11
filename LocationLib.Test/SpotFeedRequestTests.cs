@@ -88,6 +88,8 @@ namespace LocationLib.Test
 
           if(shouldHaveMessage)
             Assert.Equal("Need beer and retrieve", pointData.UserMessage);
+          else
+            Assert.Null(pointData.UserMessage);
         }
         catch
         {
@@ -99,8 +101,7 @@ namespace LocationLib.Test
 
     private static TrackerState Req(string resourceName)
     {
-
-      string xml = GetResourceAsString(resourceName);
+      string xml = ProcessTestXml(resourceName);
       var request = new SpotFeedRequest("test", xml, 1);
 
       TrackerState result = null;
@@ -135,10 +136,9 @@ namespace LocationLib.Test
 
 
     // Utility method to make date-time in test XML going backwards properly with each message
-    [Fact]
-    private void ProcessTestXml()
+    private static string ProcessTestXml(string resourceName)
     {
-      string xml = GetResourceAsString("Combinations.xml");
+      string xml = GetResourceAsString(resourceName);
       XDocument doc = XDocument.Load(new StringReader(xml));
       IEnumerable<XElement> messageElements = doc.XPathSelectElements("/response/feedMessageResponse/messages/message");
 
@@ -163,7 +163,7 @@ namespace LocationLib.Test
         reference = reference.Value.AddMinutes(-10);
       }
 
-      _output.WriteLine(doc.ToString());
+      return doc.ToString();
     }
 
     private static void ProcessXmlDateTime(XElement messageElement, ref DateTime? xmlTime, ref DateTime? reference)
