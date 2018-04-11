@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<response>
+  <feedMessageResponse>
+    <messages>
+      <message clientUnixTime="0"> 
+        <id>111111111</id>
+        <messengerId>0-11111</messengerId>
+        <messengerName>Mikha</messengerName>
+        <unixTime>1523341871</unixTime>
+        <messageType>OK</messageType>
+        <latitude>1</latitude>
+        <longitude>2</longitude>
+        <modelId>SPOT2</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2018-04-10T06:31:11+0000</dateTime>
+        <messageDetail/>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+        <messageContent>Michael has landed, needs retrieve</messageContent>
+        <altitude>0</altitude>
+      </message>
+      <message clientUnixTime="0"> 
+        <id>111111111</id>
+        <messengerId>0-11111</messengerId>
+        <messengerName>Mikha</messengerName>
+        <unixTime>1523341271</unixTime>
+        <messageType>TRACK</messageType>
+        <latitude>3</latitude>
+        <longitude>4</longitude>
+        <modelId>SPOT2</modelId>
+        <showCustomMsg>N</showCustomMsg>
+        <dateTime>2018-04-10T06:21:11+0000</dateTime>
+        <messageDetail/>
+        <batteryState>GOOD</batteryState>
+        <hidden>0</hidden>
+        <altitude>0</altitude>
+      </message>
+    </messages>
+  </feedMessageResponse>
+</response>

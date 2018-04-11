@@ -564,6 +564,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       string locationType = null;
       double? lat = null;
       double? lon = null;
+      double? alt = null;
       DateTime? ts = null;
       string userMessage = null;
 
@@ -598,6 +599,12 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         {
           xmlReader.ReadStartElement( );
           lon = xmlReader.ReadContentAsDouble( );
+        }
+
+        if (xmlReader.Name == "altitude" && xmlReader.NodeType == XmlNodeType.Element)
+        {
+          xmlReader.ReadStartElement();
+          alt = xmlReader.ReadContentAsDouble();
         }
 
         if ( xmlReader.Name == messageTypeElementName && xmlReader.NodeType == XmlNodeType.Element )
@@ -705,8 +712,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           // either we have userMessage or not, create a result:
           result = new Data.TrackPointData( locationType, lat.Value, lon.Value, ts.Value, userMessage );
 
-          if ( this.unexpectedForeignErrorsCounter != null )
-            this.unexpectedForeignErrorsCounter.Reset( );
+          this.unexpectedForeignErrorsCounter?.Reset( );
 
           break;
         }
@@ -740,7 +746,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       return XmlConvert.ToDateTime( timeValue, XmlDateTimeSerializationMode.Utc );
     }
 
-    private static DateTime BasePosixDateTime = new DateTime( 1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc );
+    public static DateTime BasePosixDateTime = new DateTime( 1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc );
 
     public static DateTime ParsePosixTime( double posixTime )
     {
