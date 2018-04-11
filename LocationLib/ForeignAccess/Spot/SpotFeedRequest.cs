@@ -709,6 +709,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
               break;
           }
 
+          if (userMessage != null && userMessage.Trim() == "")
+            userMessage = null;
+
           // either we have userMessage or not, create a result:
           result = new Data.TrackPointData(locationType, lat.Value, lon.Value, ts.Value, userMessage);
 
