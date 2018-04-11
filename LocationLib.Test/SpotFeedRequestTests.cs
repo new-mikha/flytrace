@@ -52,7 +52,8 @@ namespace LocationLib.Test
 
       TrackerState trackerState = Req(resourceName);
 
-      Assert.Equal(messagesCount, trackerState.Position.FullTrack.Length);
+      // Some of the elements are intentionally not valid in the test XML:
+      Assert.Equal(messagesCount - 3, trackerState.Position.FullTrack.Length);
 
       DateTime? time = null;
       for (var iMessage = 0; iMessage < trackerState.Position.FullTrack.Length; iMessage++)
@@ -66,7 +67,7 @@ namespace LocationLib.Test
           }
 
           double latitude = pointData.Latitude;
-          Assert.True((int)latitude == 1 || (int)latitude == 2);
+          Assert.True((int)latitude == 1 || (int)latitude == 2 || (int)latitude == 11 || (int)latitude == 12);
 
           double longitude = pointData.Longitude;
           Assert.True((int)longitude == 20 || (int)longitude == 21);
@@ -74,19 +75,25 @@ namespace LocationLib.Test
           Assert.Equal(DateTimeKind.Utc, pointData.ForeignTime.Kind);
           Assert.Equal(time, pointData.ForeignTime);
 
-          bool shouldHaveMessage = (int)latitude == 1;
+          bool shouldHaveMessage = (int)latitude == 1 || (int)latitude == 11;
+          bool shouldHaveAltitude = (int)latitude == 11 || (int)latitude == 12;
           bool isOk = (int)longitude == 20;
           bool isTrack = (int)longitude == 21;
 
           time = time.Value.AddMinutes(-10);
 
+          if (shouldHaveAltitude)
+            Assert.Equal(123.0, pointData.Altitude);
+          else
+            Assert.Null(pointData.Altitude);
+
           if (isTrack)
             Assert.Equal("TRACK", pointData.LocationType);
 
-          if(isOk)
+          if (isOk)
             Assert.Equal("OK", pointData.LocationType);
 
-          if(shouldHaveMessage)
+          if (shouldHaveMessage)
             Assert.Equal("Need beer and retrieve", pointData.UserMessage);
           else
             Assert.Null(pointData.UserMessage);
@@ -135,6 +142,13 @@ namespace LocationLib.Test
     private readonly ITestOutputHelper _output;
 
 
+    //[Fact]
+    public void ReplaceTestXml()
+    {
+      _output.WriteLine(ProcessTestXml("Combinations.xml"));
+    }
+
+
     // Utility method to make date-time in test XML going backwards properly with each message
     private static string ProcessTestXml(string resourceName)
     {
@@ -146,12 +160,17 @@ namespace LocationLib.Test
 
       foreach (XElement messageElement in messageElements)
       {
+        if (messageElement.Element("id")?.Value == "wrong data")
+          continue;
+
         DateTime? unixTime = null;
         DateTime? xmlTime = null;
 
         ProcessUnixTime(messageElement, ref unixTime, ref reference);
 
         ProcessXmlDateTime(messageElement, ref xmlTime, ref reference);
+
+        Assert.True(unixTime != null || xmlTime != null);
 
         if (unixTime != null && xmlTime != null)
         {

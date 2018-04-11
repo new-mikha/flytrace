@@ -556,10 +556,11 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       Data.TrackPointData result = null;
 
-      string messageTypeElementName = "messageType";
-      string posixTimeElementName = "unixTime";
-      string dateTimeElementName = "dateTime";
-      string messageContentElementName = "messageContent";
+      const string messageTypeElementName = "messageType";
+      const string posixTimeElementName = "unixTime";
+      const string dateTimeElementName = "dateTime";
+      const string messageContentElementName = "messageContent";
+      const string altitudeElementName = "altitude";
 
       string locationType = null;
       double? lat = null;
@@ -601,7 +602,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           lon = xmlReader.ReadContentAsDouble();
         }
 
-        if (xmlReader.Name == "altitude" && xmlReader.NodeType == XmlNodeType.Element)
+        if (xmlReader.Name == altitudeElementName && xmlReader.NodeType == XmlNodeType.Element)
         {
           xmlReader.ReadStartElement();
           alt = xmlReader.ReadContentAsDouble();
@@ -696,24 +697,39 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
           while (!(xmlReader.Name == "message" && xmlReader.NodeType == XmlNodeType.EndElement))
           {
-            // if userMessage hasn't been read yet, try to catch it:
+            bool shouldAdvance = true;
 
+            // if userMessage and altitude hasn't been read yet, try to catch it:
             if (xmlReader.Name == messageContentElementName && xmlReader.NodeType == XmlNodeType.Element)
             {
               userMessage = xmlReader.ReadElementContentAsString();
+
+              // ReadElementContent* moves the reader past the end </messageContent> tag. I.e. now it can be
+              // on </message> tag, if <messageContent> was ending for the <message>. 
+              // So avoid xmlReader.Read after the call to ReadElementContentAsString above:
+              shouldAdvance = false;
             }
-            // ReadElementContent* moves the reader past the end </messageContent> tag. I.e. now it can be
-            // on </message> tag, if <messageContent> was ending for the <message>. 
-            // So avoid xmlReader.Read after the call to ReadElementContentAsString above:
-            else if (!xmlReader.Read())
-              break;
+            else if (xmlReader.Name == altitudeElementName && xmlReader.NodeType == XmlNodeType.Element)
+            {
+              xmlReader.ReadStartElement();
+              alt = xmlReader.ReadContentAsDouble();
+            }
+
+            if (shouldAdvance)
+            {
+              xmlReader.Read();
+            }
           }
 
           if (userMessage != null && userMessage.Trim() == "")
             userMessage = null;
 
+          // ReSharper disable once CompareOfFloatsByEqualityOperator
+          if (alt == 0)
+            alt = null;
+
           // either we have userMessage or not, create a result:
-          result = new Data.TrackPointData(locationType, lat.Value, lon.Value, ts.Value, userMessage);
+          result = new Data.TrackPointData(locationType, lat.Value, lon.Value, alt, ts.Value, userMessage);
 
           this.unexpectedForeignErrorsCounter?.Reset();
 

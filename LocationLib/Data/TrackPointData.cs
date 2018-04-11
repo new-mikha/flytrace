@@ -31,6 +31,7 @@ namespace FlyTrace.LocationLib.Data
       string locationType,
       double latitude,
       double longitude,
+      double? altitude,
       DateTime foreignTime,
       string userMessage
     )
@@ -38,6 +39,7 @@ namespace FlyTrace.LocationLib.Data
       LocationType = locationType;
       Latitude = latitude;
       Longitude = longitude;
+      Altitude = altitude;
       ForeignTime = foreignTime;
       UserMessage = userMessage;
       // If adding new field/property - don't forget to add it to:
@@ -48,6 +50,7 @@ namespace FlyTrace.LocationLib.Data
     public readonly string LocationType;
     public readonly double Latitude;
     public readonly double Longitude;
+    public readonly double? Altitude;
     public readonly DateTime ForeignTime;
     public readonly string UserMessage;
 
@@ -60,6 +63,7 @@ namespace FlyTrace.LocationLib.Data
           x.Latitude == y.Latitude &&
           x.Longitude == y.Longitude &&
           // ReSharper restore CompareOfFloatsByEqualityOperator
+          Nullable.Equals(x.Altitude, y.Altitude) &&
           x.ForeignTime == y.ForeignTime &&
           x.UserMessage == y.UserMessage
       );
