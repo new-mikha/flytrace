@@ -113,7 +113,7 @@
 
         Response.Write(
             string.Format(
-                "<script type=\"text/javascript\" src=\"http://maps.googleapis.com/maps/api/js?key=AIzaSyBQjcGGONlL8Ppv0qFJTBiJeqZSMrwaH8g&sensor={0}\">\n</script>",
+                "<script type=\"text/javascript\" src=\"//maps.googleapis.com/maps/api/js?key=AIzaSyBQjcGGONlL8Ppv0qFJTBiJeqZSMrwaH8g&sensor={0}\">\n</script>",
                 sensor ? "true" : "false" ) );
 
         Response.Write(

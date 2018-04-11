@@ -192,6 +192,7 @@ function initialize() {
         showLogos();
     }
     catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 }
@@ -362,6 +363,7 @@ function showTask() {
         _taskPolyline.setMap(_map);
     }
     catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 
@@ -433,6 +435,7 @@ function gotPosition(pos) {
         }
     }
     catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 }
@@ -558,6 +561,7 @@ function addInfoWindowHandler(marker) {
                 _isInfoWindowOpen = true;
             }
         } catch (exc) {
+            console.log(exc);
             alert(exc.message);
         }
     });
@@ -1403,6 +1407,7 @@ function hideTrack(name) {
         }
         syncAllTracksButton();
     } catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 }
@@ -1415,6 +1420,7 @@ function hideAllTracks() {
         }
         syncAllTracksButton();
     } catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 }
@@ -1444,6 +1450,7 @@ function showTrack(name) {
         checkFullTracks(true);
         syncAllTracksButton();
     } catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 }
@@ -1466,6 +1473,7 @@ function showAllTracks() {
 
         syncAllTracksButton();
     } catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 }
@@ -1636,6 +1644,7 @@ function checkFullTracks(firstPriorityOnly) {
 }
 
 function log(msg) {
+    console.log(msg);
     if (_shouldLog) {
         var logElement = document.getElementById('logDiv');
         var d = new Date();
@@ -1936,6 +1945,7 @@ function centerAndZoom(name) {
             _map.setCenter(trackerHolder.marker.getPosition());
         }
     } catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 }
@@ -2214,6 +2224,7 @@ function fitAllTrackers(showAlertForNoCoords) {
         }
     }
     catch (exc) {
+        console.log(exc);
         alert(exc.message);
     }
 }
