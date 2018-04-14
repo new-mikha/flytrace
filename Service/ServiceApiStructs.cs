@@ -45,6 +45,9 @@ namespace FlyTrace.Service
     /// means "no coordinates at the moment"</summary>
     public double Lon;
 
+    /// <summary>Altitude. Might be zero even if Lat and Lon are set to non-zero values</summary>
+    public double Alt;
+
     /// <summary>Type of the position: null, "TRACK", "OK", "CUSTOM", "wait", 
     /// or anything else as "HELP"</summary>
     public string Type;
@@ -95,9 +98,14 @@ namespace FlyTrace.Service
       return Lat != 0.0;
     }
 
-    public bool ShouldSerializeLon( )
+    public bool ShouldSerializeLon()
     {
       return Lon != 0.0;
+    }
+
+    public bool ShouldSerializeAlt()
+    {
+      return Alt != 0.0;
     }
 
     public bool ShouldSerializeIsOfficial( )

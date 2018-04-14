@@ -585,6 +585,11 @@ namespace FlyTrace.Service.Internals.Subservices
         {
           result.Lat = snapshot.Position.CurrPoint.Latitude;
           result.Lon = snapshot.Position.CurrPoint.Longitude;
+
+          double? currPointAltitude = snapshot.Position.CurrPoint.Altitude;
+          if (currPointAltitude.HasValue && currPointAltitude.Value != 0)
+            result.Alt = currPointAltitude.Value;
+
           result.Type = snapshot.Position.Type;
           result.Ts = snapshot.Position.CurrPoint.ForeignTime;
           result.IsOfficial = false; // obsolete field
