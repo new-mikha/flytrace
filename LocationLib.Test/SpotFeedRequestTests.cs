@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using FlyTrace.LocationLib;
@@ -15,16 +16,22 @@ namespace LocationLib.Test
 {
   public class SpotFeedRequestTests
   {
+    private readonly ITestOutputHelper _output;
+
     public SpotFeedRequestTests(ITestOutputHelper output)
     {
       _output = output;
     }
 
-    [Fact]
-    public void BasicTest()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BasicTest(bool squeezeXml)
     {
-      TrackerState trackerState = Req("BasicRequest.xml");
+      _output.WriteLine("squeezeXml: " + squeezeXml);
+      TrackerState trackerState = Req("BasicRequest.xml", squeezeXml);
 
+      Assert.Null(trackerState.Error);
       Assert.Equal(2, trackerState.Position.FullTrack.Length);
 
       Assert.Equal("OK", trackerState.Position.CurrPoint.LocationType);
@@ -41,16 +48,22 @@ namespace LocationLib.Test
       Assert.True(trackerState.Position.CurrPoint.ForeignTime > trackerState.Position.PreviousPoint.ForeignTime);
     }
 
-    [Fact]
-    public void CombinationsTest()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CombinationsTest(bool squeezeXml)
     {
+      _output.WriteLine("squeezeXml: " + squeezeXml);
+
       const string resourceName = "Combinations.xml";
       string xml = GetResourceAsString(resourceName);
       XDocument doc = XDocument.Load(new StringReader(xml));
       IEnumerable<XElement> messageElements = doc.XPathSelectElements("/response/feedMessageResponse/messages/message");
       int messagesCount = messageElements.Count();
 
-      TrackerState trackerState = Req(resourceName);
+      TrackerState trackerState = Req(resourceName, squeezeXml);
+
+      Assert.Null(trackerState.Error);
 
       // Some of the elements are intentionally not valid in the test XML:
       Assert.Equal(messagesCount - 4, trackerState.Position.FullTrack.Length);
@@ -106,9 +119,9 @@ namespace LocationLib.Test
       }
     }
 
-    private static TrackerState Req(string resourceName)
+    private static TrackerState Req(string resourceName, bool squeezeXml)
     {
-      string xml = ProcessTestXml(resourceName);
+      string xml = ProcessTestXml(resourceName, squeezeXml);
       var request = new SpotFeedRequest("test", xml, 1);
 
       TrackerState result = null;
@@ -139,21 +152,26 @@ namespace LocationLib.Test
       }
     }
 
-    private readonly ITestOutputHelper _output;
-
-
-    //[Fact]
+    [Fact]
     public void ReplaceTestXml()
     {
-      _output.WriteLine(ProcessTestXml("Combinations.xml"));
+      _output.WriteLine(ProcessTestXml("Combinations.xml", true));
     }
 
 
     // Utility method to make date-time in test XML going backwards properly with each message
-    private static string ProcessTestXml(string resourceName)
+    private static string ProcessTestXml(string resourceName, bool squeezeXml)
     {
+      XmlReaderSettings readerSettings = new XmlReaderSettings();
+      if (squeezeXml)
+      {
+        readerSettings.IgnoreComments = true;
+        readerSettings.IgnoreWhitespace = true;
+      }
+
       string xml = GetResourceAsString(resourceName);
-      XDocument doc = XDocument.Load(new StringReader(xml));
+      XDocument doc = XDocument.Load(XmlReader.Create(new StringReader(xml), readerSettings));
+      //XDocument doc = XDocument.Load(new StringReader(xml));
       IEnumerable<XElement> messageElements = doc.XPathSelectElements("/response/feedMessageResponse/messages/message");
 
       DateTime? reference = null;
@@ -182,7 +200,28 @@ namespace LocationLib.Test
         reference = reference.Value.AddMinutes(-10);
       }
 
-      return doc.ToString();
+      if (!squeezeXml)
+        return doc.ToString();
+
+      var xmlWriterSettings = new XmlWriterSettings
+      {
+        Indent = false,
+        OmitXmlDeclaration = true,
+        NewLineHandling = NewLineHandling.None,
+      };
+
+      using (var stringWriter = new StringWriter())
+      {
+        using (var xmlWriter = XmlWriter.Create(stringWriter, xmlWriterSettings))
+        {
+          doc.WriteTo(xmlWriter);
+          xmlWriter.Flush();
+        }
+
+        stringWriter.Flush();
+
+        return stringWriter.ToString();
+      }
     }
 
     private static void ProcessXmlDateTime(XElement messageElement, ref DateTime? xmlTime, ref DateTime? reference)

@@ -20,6 +20,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Net;
@@ -569,7 +570,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       DateTime? ts = null;
       string userMessage = null;
 
-
       while (xmlReader.Read())
       {
         if (xmlReader.Name == "message")
@@ -691,7 +691,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         // Even then it could be absent.
         if (xmlReader.Name == messageContentElementName && xmlReader.NodeType == XmlNodeType.Element)
         {
-          userMessage = xmlReader.ReadElementContentAsString();
+          xmlReader.ReadStartElement();
+          userMessage = xmlReader.ReadContentAsString();
         }
 
         if (lat.HasValue && lon.HasValue && ts.HasValue && locationType != null)
@@ -700,29 +701,22 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
           while (!(xmlReader.Name == "message" && xmlReader.NodeType == XmlNodeType.EndElement))
           {
-            bool shouldAdvance = true;
-
             // if userMessage and altitude hasn't been read yet, try to catch it:
             if (xmlReader.Name == messageContentElementName && xmlReader.NodeType == XmlNodeType.Element)
             {
-              userMessage = xmlReader.ReadElementContentAsString();
-
-              // ReadElementContent* moves the reader past the end </messageContent> tag. I.e. now it can be
-              // on </message> tag, if <messageContent> was ending for the <message>. 
-              // So avoid xmlReader.Read after the call to ReadElementContentAsString above:
-              shouldAdvance = false;
+              xmlReader.ReadStartElement();
+              userMessage = xmlReader.ReadContentAsString();
             }
             else if (xmlReader.Name == altitudeElementName && xmlReader.NodeType == XmlNodeType.Element)
             {
               xmlReader.ReadStartElement();
+
               // Don't use ReadContentAsInt to ensure it doesn't error on fractional values:
               alt = (int)xmlReader.ReadContentAsDouble();
             }
 
-            if (shouldAdvance)
-            {
-              xmlReader.Read();
-            }
+            if (!xmlReader.Read())
+              break;
           }
 
           if (userMessage != null && userMessage.Trim() == "")
