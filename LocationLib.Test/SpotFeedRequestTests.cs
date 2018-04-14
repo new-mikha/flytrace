@@ -152,10 +152,12 @@ namespace LocationLib.Test
       }
     }
 
-    [Fact]
+    [Fact(
+      Skip = "Utility feature, don't need it for normal unit tests check"
+      )]
     public void ReplaceTestXml()
     {
-      _output.WriteLine(ProcessTestXml("Combinations.xml", true));
+      _output.WriteLine(ProcessTestXml("Combinations.xml", false));
     }
 
 
