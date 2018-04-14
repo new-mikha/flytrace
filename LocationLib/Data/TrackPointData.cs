@@ -31,7 +31,7 @@ namespace FlyTrace.LocationLib.Data
       string locationType,
       double latitude,
       double longitude,
-      double? altitude,
+      int? altitude,
       DateTime foreignTime,
       string userMessage
     )
@@ -50,7 +50,7 @@ namespace FlyTrace.LocationLib.Data
     public readonly string LocationType;
     public readonly double Latitude;
     public readonly double Longitude;
-    public readonly double? Altitude;
+    public readonly int? Altitude;
     public readonly DateTime ForeignTime;
     public readonly string UserMessage;
 

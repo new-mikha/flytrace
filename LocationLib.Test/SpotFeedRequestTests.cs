@@ -53,7 +53,7 @@ namespace LocationLib.Test
       TrackerState trackerState = Req(resourceName);
 
       // Some of the elements are intentionally not valid in the test XML:
-      Assert.Equal(messagesCount - 3, trackerState.Position.FullTrack.Length);
+      Assert.Equal(messagesCount - 4, trackerState.Position.FullTrack.Length);
 
       DateTime? time = null;
       for (var iMessage = 0; iMessage < trackerState.Position.FullTrack.Length; iMessage++)
@@ -83,7 +83,7 @@ namespace LocationLib.Test
           time = time.Value.AddMinutes(-10);
 
           if (shouldHaveAltitude)
-            Assert.Equal(123.0, pointData.Altitude);
+            Assert.Equal(123, pointData.Altitude);
           else
             Assert.Null(pointData.Altitude);
 

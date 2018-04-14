@@ -42,7 +42,6 @@
         <messageDetail />
         <batteryState>GOOD</batteryState>
         <hidden>0</hidden>
-        <altitude>0</altitude>
         <messageContent>Need beer and retrieve</messageContent>
       </message>
       <message clientUnixTime="0">
@@ -94,7 +93,6 @@
         <messageDetail />
         <batteryState>GOOD</batteryState>
         <hidden>0</hidden>
-        <altitude>0</altitude>
       </message>
       <message clientUnixTime="0">
         <messageContent>Need beer and retrieve</messageContent>
@@ -399,6 +397,24 @@
         <modelId>SPOT2</modelId>
         <altitude>123</altitude>
       </message>
+      
+      <!-- This is an empty one to ensure that altitude is reset -->
+      <message clientUnixTime="0">
+        <altitude>25</altitude>
+        <id>wrong data</id>
+      </message>
+
+      <!-- This is one does not have an altitude - it should be zero as result, not 25 from the previous wrong one -->
+      <message clientUnixTime="0">
+        <latitude>2</latitude>
+        <unixTime>1523327471</unixTime>
+        <messageType>OK</messageType>
+        <longitude>20</longitude>
+        <modelId>SPOT2</modelId>
+      </message>
+
+
+
       <!-- And this is an empty one in at the end - should always be at the end -->
       <message clientUnixTime="0">
         <id>wrong data</id>

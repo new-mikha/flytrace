@@ -565,7 +565,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       string locationType = null;
       double? lat = null;
       double? lon = null;
-      double? alt = null;
+      int? alt = null;
       DateTime? ts = null;
       string userMessage = null;
 
@@ -577,6 +577,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           locationType = null;
           lat = null;
           lon = null;
+          alt = null;
           ts = null;
           userMessage = null;
 
@@ -605,7 +606,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         if (xmlReader.Name == altitudeElementName && xmlReader.NodeType == XmlNodeType.Element)
         {
           xmlReader.ReadStartElement();
-          alt = xmlReader.ReadContentAsDouble();
+
+          // Don't use ReadContentAsInt to ensure it doesn't error on fractional values:
+          alt = (int)xmlReader.ReadContentAsDouble();
         }
 
         if (xmlReader.Name == messageTypeElementName && xmlReader.NodeType == XmlNodeType.Element)
@@ -712,7 +715,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             else if (xmlReader.Name == altitudeElementName && xmlReader.NodeType == XmlNodeType.Element)
             {
               xmlReader.ReadStartElement();
-              alt = xmlReader.ReadContentAsDouble();
+              // Don't use ReadContentAsInt to ensure it doesn't error on fractional values:
+              alt = (int)xmlReader.ReadContentAsDouble();
             }
 
             if (shouldAdvance)
@@ -724,7 +728,6 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           if (userMessage != null && userMessage.Trim() == "")
             userMessage = null;
 
-          // ReSharper disable once CompareOfFloatsByEqualityOperator
           if (alt == 0)
             alt = null;
 
