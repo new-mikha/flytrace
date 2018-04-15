@@ -46,7 +46,7 @@ namespace FlyTrace.Service
     public double Lon;
 
     /// <summary>Altitude. Might be zero even if Lat and Lon are set to non-zero values</summary>
-    public double Alt;
+    public int Alt;
 
     /// <summary>Type of the position: null, "TRACK", "OK", "CUSTOM", "wait", 
     /// or anything else as "HELP"</summary>

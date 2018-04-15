@@ -586,7 +586,7 @@ namespace FlyTrace.Service.Internals.Subservices
           result.Lat = snapshot.Position.CurrPoint.Latitude;
           result.Lon = snapshot.Position.CurrPoint.Longitude;
 
-          double? currPointAltitude = snapshot.Position.CurrPoint.Altitude;
+          int? currPointAltitude = snapshot.Position.CurrPoint.Altitude;
           if (currPointAltitude.HasValue && currPointAltitude.Value != 0)
             result.Alt = currPointAltitude.Value;
 

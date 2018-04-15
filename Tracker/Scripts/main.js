@@ -2079,6 +2079,10 @@ function showAge(trackerHolder) {
 
         if (trackerHolder.marker != null) {
             var newTitle = trackerHolder.Name + ": " + ageStr + " ago";
+
+            if (trackerHolder.NetTrackerData.Alt)
+                newTitle += ", alt " + (Math.round(trackerHolder.NetTrackerData.Alt / 100) / 10) + "km";
+
             if (trackerHolder.marker.getTitle() != newTitle)
                 trackerHolder.marker.setTitle(newTitle);
         }
