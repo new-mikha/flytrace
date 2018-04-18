@@ -32,6 +32,17 @@
     background-color: yellow;
 }
 
+.marker-text-row {
+    display: block;
+    text-align: center;
+    position: relative;
+}
+
+.marker-text-cell {
+    display: inline-block;
+}
+
+
 .TrackerNameCtl
 {
 }

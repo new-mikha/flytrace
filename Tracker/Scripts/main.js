@@ -605,7 +605,7 @@ function setupMarkerAndLabel(netTrackerData) {
         '1px solid green'
     );
     label.bindTo('position', marker, 'position');
-    label.bindTo('text', marker, 'title');
+    label.setText([marker.title]);
 
     marker.label = label;
 
@@ -772,7 +772,7 @@ function checkTrackers() {
             }
         }
 
-        showAge(trackerHolder);
+        setAgeAndAltitude(trackerHolder);
     }
 }
 
@@ -1433,7 +1433,7 @@ function hideTrackForHolder(trackerHolder) {
     }
 
     syncTrackLine(trackerHolder, 0);
-    showAge(trackerHolder);
+    setAgeAndAltitude(trackerHolder);
 }
 
 function showTrack(name) {
@@ -1576,7 +1576,7 @@ function showTrackForHolder(trackerHolder) {
         _infoWindow.setContent(getContent(trackerHolder.marker));
     }
 
-    showAge(trackerHolder);
+    setAgeAndAltitude(trackerHolder);
 }
 
 var _getTracksCallStartTs = null;
@@ -2054,7 +2054,7 @@ function updateTrackersDisplay() {
             SetStatusControlInnerHtml(trackerHolder.StatusControlsSet.StatusCtl, displayType + formattedUserMessage);
         }
 
-        showAge(trackerHolder);
+        setAgeAndAltitude(trackerHolder);
 
         // Error could be null, and it's Ok to call SetStatusControlInnerHtml with that:
         SetStatusControlInnerHtml(trackerHolder.StatusControlsSet.ErrorCtl, trackerHolder.NetTrackerData.Error);
@@ -2070,21 +2070,32 @@ function updateTrackersDisplay() {
         $('#hiddenHint').hide();
 }
 
-function showAge(trackerHolder) {
+function setAgeAndAltitude(trackerHolder) {
     var ageStr;
     var utcTsAndTrack;
 
     if (isHavingCoordinates(trackerHolder.NetTrackerData)) {
         ageStr = getAgeStr(trackerHolder.UpdateTs, trackerHolder.NetTrackerData.Age);
 
-        if (trackerHolder.marker != null) {
+        var marker = trackerHolder.marker;
+
+        if (marker) {
             var newTitle = trackerHolder.Name + ": " + ageStr + " ago";
 
-            if (trackerHolder.NetTrackerData.Alt)
-                newTitle += ", alt " + (Math.round(trackerHolder.NetTrackerData.Alt / 100) / 10) + "km";
+            //if (trackerHolder.NetTrackerData.Alt)
+            //    newTitle += ", alt " + (Math.round(trackerHolder.NetTrackerData.Alt / 100) / 10) + "km";
 
-            if (trackerHolder.marker.getTitle() != newTitle)
-                trackerHolder.marker.setTitle(newTitle);
+            if (marker.getTitle() != newTitle)
+                marker.setTitle(newTitle);
+
+            if (marker.label) {
+                if (trackerHolder.NetTrackerData.Alt) {
+                    var altStr = 'alt ' + (Math.round(trackerHolder.NetTrackerData.Alt / 100) / 10) + "km";
+                    marker.label.setText([newTitle, altStr]);
+                } else {
+                    marker.label.setText([newTitle]);
+                }
+            }
         }
 
         utcTsAndTrack = dateFormat(trackerHolder.NetTrackerData.Ts, "default", false);

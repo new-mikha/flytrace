@@ -19,67 +19,156 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // Define the overlay, derived from google.maps.OverlayView
-function LabelMapControl(opt_options, fgColor, bckgColor, border)
-{
+function LabelMapControl(opt_options, fgColor, bckgColor, border) {
     // Initialization
     this.setValues(opt_options);
 
-    // LabelMapControl specific
-    var span = this.span_ = document.createElement('span');
-    span.style.cssText = 'position: relative; left: -50%; top: 5px;' +
-                      'white-space: nowrap; ' +
-                      'padding: 2px; background-color: ' + bckgColor + '; color: ' + fgColor + '; border:' + border;
+    this._rowDivs = [];
+    this._lineDivs = [];
 
-    var div = this.div_ = document.createElement('div');
-    div.appendChild(span);
-    div.style.cssText = 'position: absolute; display: none';
+    var visibleControlRootDiv = this._visibleControlRootDiv = document.createElement('div');
+    visibleControlRootDiv.style.cssText = 'position: relative; left: -50%; top: 5px;' +
+                      'white-space: nowrap;  ' +
+                      'padding: 2px; background-color: transparent; color: ' + fgColor;
 
-    this.GetSpan = function ()
-    {
-        return this.span_;
-    };
+
+    var wrapperDiv = this.wrapperDiv_ = document.createElement('div');
+    wrapperDiv.appendChild(visibleControlRootDiv);
+    wrapperDiv.style.cssText = 'position: absolute; display: none';
+
+    this._bckgColor = bckgColor;
+    this._border = border;
+
+    //this.GetSpan = function ()
+    //{
+    //    return this.span_;
+    //};
 };
 LabelMapControl.prototype = new google.maps.OverlayView;
 
 // Implement onAdd
-LabelMapControl.prototype.onAdd = function ()
-{
+LabelMapControl.prototype.onAdd = function () {
     var pane = this.getPanes().overlayLayer;
-    pane.appendChild(this.div_);
+    pane.appendChild(this.wrapperDiv_);
 
     // Ensures the label is redrawn if the text or position is changed.
     var me = this;
     this.listeners_ = [
-   google.maps.event.addListener(this, 'position_changed',
-       function () { me.draw(); }),
-   google.maps.event.addListener(this, 'text_changed',
-       function () { me.draw(); })
- ];
+       google.maps.event.addListener(this, 'position_changed',
+           function () { me.draw(); }),
+    ];
 };
 
 // Implement onRemove
-LabelMapControl.prototype.onRemove = function ()
-{
-    this.div_.parentNode.removeChild(this.div_);
+LabelMapControl.prototype.onRemove = function () {
+    this.wrapperDiv_.parentNode.removeChild(this.wrapperDiv_);
 
     // LabelMapControl is removed from the map, stop updating its position/text.
-    for (var i = 0, I = this.listeners_.length; i < I; ++i)
-    {
+    for (var i = 0, I = this.listeners_.length; i < I; ++i) {
         google.maps.event.removeListener(this.listeners_[i]);
     }
 };
 
+
+
+LabelMapControl.prototype.setText = function (lines) {
+
+    function areArraysSame(arr1, arr2) {
+        if (arr1 == null || arr2 == null)
+            return false;
+
+        if (arr1.length !== arr2.length)
+            return false;
+
+        for (var i = 0; i < arr1.length; i++) {
+            if (arr1[i] !== arr2[i])
+                return false;
+        }
+
+        return true;
+    }
+
+
+    if (this._linesCopy != null && areArraysSame(this._linesCopy, lines))
+        return;
+
+    this._linesCopy = lines.slice();
+
+    if (lines.length > this._rowDivs.length) {
+        this.appendRowDivs(lines.length);
+    } else {
+        this.removeRowDivs(lines.length);
+    }
+
+    for (var iLine = 0; iLine < lines.length; iLine++) {
+        this._lineDivs[iLine].innerHTML = lines[iLine];
+    }
+
+    //// LabelMapControl specific
+    //var line1Div = this.line1Div_ = document.createElement('div');
+    //line1Div.style.cssText = 'background-color: ' + bckgColor + '; border:' + border + ';' +
+    //    'padding: 2px';
+
+    //var line2Div = this.line2Div_ = document.createElement('div');
+    //line2Div.style.cssText = 'background-color: ' + bckgColor + '; display: inline-block; ' +
+    //    'position: relative; top: -1px; padding: 2px 2px 0 2px;' +
+    //    'border-left:' + border + ';' +
+    //    'border-right:' + border + ';' +
+    //    'border-bottom:' + border + ';';
+
+    //visibleControlRootDiv.appendChild(line1Div);
+    //visibleControlRootDiv.appendChild(line2Div);
+}
+
+
+LabelMapControl.prototype.appendRowDivs = function (targetCount) {
+    while (this._rowDivs.length < targetCount) {
+        var rowDiv = document.createElement('div');
+        rowDiv.className = 'marker-text-row';
+
+        // The class got relative position, so shifting DIV's up so they ovelap by 1px:
+        rowDiv.style.cssText = 'top:-' + this._rowDivs.length.toString() + 'px;';
+        this._visibleControlRootDiv.appendChild(rowDiv);
+        this._rowDivs.push(rowDiv);
+
+        var lineDiv = document.createElement('div');
+        lineDiv.className = 'marker-text-cell';
+        lineDiv.style.cssText = 'background-color: ' + this._bckgColor + '; border:' + this._border + ';' +
+            'padding: 2px';
+        rowDiv.appendChild(lineDiv);
+        this._lineDivs.push(lineDiv);
+    }
+}
+
+LabelMapControl.prototype.removeRowDivs = function (targetCount) {
+    while (this._rowDivs.length > targetCount) {
+        var div = this._rowDivs.pop();
+        this._lineDivs.pop();
+        div.parentNode.removeChild(div);
+    }
+}
+
+
 // Implement draw
-LabelMapControl.prototype.draw = function ()
-{
+LabelMapControl.prototype.draw = function () {
     var projection = this.getProjection();
     var position = projection.fromLatLngToDivPixel(this.get('position'));
 
-    var div = this.div_;
+    var div = this.wrapperDiv_;
     div.style.left = position.x + 'px';
     div.style.top = position.y + 'px';
-
-    var contents = this.get('text').toString();
     div.style.display = 'block';
-    this.span_.innerHTML = contents;
+
+    //var text = this.get('text').toString();
+
+    //this.line1Div_.innerHTML = line1Contents;
+
+    //var line2Contents = this.get('line2').toString();
+    //if (line2Contents == null || line2Contents === '') {
+    //    this.line2Div_.style.display = 'none';
+    //} else {
+    //    this.line2Div_.style.display = 'inline-block';
+    //    this.line1Div_.innerHTML = line2Contents;
+    //}
+
 };
