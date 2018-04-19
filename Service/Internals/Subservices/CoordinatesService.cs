@@ -21,6 +21,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Web;
@@ -575,6 +576,12 @@ namespace FlyTrace.Service.Internals.Subservices
 
       result.Name = trackerName;
 
+      const string debugLinesPath = @"c:\temp\debuglines.txt";
+      if ( File.Exists( debugLinesPath ) )
+      {
+        result.DebugLines = File.ReadAllLines( debugLinesPath ).Where( line => line.Trim( ) != "" ).ToArray( );
+      }
+
       if ( snapshot == null )
       {
         result.Type = "wait";
@@ -587,7 +594,7 @@ namespace FlyTrace.Service.Internals.Subservices
           result.Lon = snapshot.Position.CurrPoint.Longitude;
 
           int? currPointAltitude = snapshot.Position.CurrPoint.Altitude;
-          if (currPointAltitude.HasValue && currPointAltitude.Value != 0)
+          if ( currPointAltitude.HasValue && currPointAltitude.Value != 0 )
             result.Alt = currPointAltitude.Value;
 
           result.Type = snapshot.Position.Type;

@@ -19,7 +19,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 // Define the overlay, derived from google.maps.OverlayView
-function LabelMapControl(opt_options, fgColor, bckgColor, border) {
+function LabelMapControl(opt_options, fgColor, bckgColor, borderSizePx, borderStyleAndColor) {
     // Initialization
     this.setValues(opt_options);
 
@@ -37,7 +37,8 @@ function LabelMapControl(opt_options, fgColor, bckgColor, border) {
     wrapperDiv.style.cssText = 'position: absolute; display: none';
 
     this._bckgColor = bckgColor;
-    this._border = border;
+    this._borderSizePx = borderSizePx;
+    this._border = borderSizePx + 'px ' + borderStyleAndColor;
 
     //this.GetSpan = function ()
     //{
@@ -88,7 +89,6 @@ LabelMapControl.prototype.setText = function (lines) {
         return true;
     }
 
-
     if (this._linesCopy != null && areArraysSame(this._linesCopy, lines))
         return;
 
@@ -104,20 +104,9 @@ LabelMapControl.prototype.setText = function (lines) {
         this._lineDivs[iLine].innerHTML = lines[iLine];
     }
 
-    //// LabelMapControl specific
-    //var line1Div = this.line1Div_ = document.createElement('div');
-    //line1Div.style.cssText = 'background-color: ' + bckgColor + '; border:' + border + ';' +
-    //    'padding: 2px';
+    this.arrangeLineBorders();
 
-    //var line2Div = this.line2Div_ = document.createElement('div');
-    //line2Div.style.cssText = 'background-color: ' + bckgColor + '; display: inline-block; ' +
-    //    'position: relative; top: -1px; padding: 2px 2px 0 2px;' +
-    //    'border-left:' + border + ';' +
-    //    'border-right:' + border + ';' +
-    //    'border-bottom:' + border + ';';
-
-    //visibleControlRootDiv.appendChild(line1Div);
-    //visibleControlRootDiv.appendChild(line2Div);
+    this._needsUpdate = true;
 }
 
 
@@ -126,15 +115,17 @@ LabelMapControl.prototype.appendRowDivs = function (targetCount) {
         var rowDiv = document.createElement('div');
         rowDiv.className = 'marker-text-row';
 
+        var shiftPx = this._borderSizePx * this._rowDivs.length;
+
         // The class got relative position, so shifting DIV's up so they ovelap by 1px:
-        rowDiv.style.cssText = 'top:-' + this._rowDivs.length.toString() + 'px;';
+        rowDiv.style.cssText = 'top:-' + shiftPx + 'px;';
         this._visibleControlRootDiv.appendChild(rowDiv);
         this._rowDivs.push(rowDiv);
 
         var lineDiv = document.createElement('div');
         lineDiv.className = 'marker-text-cell';
-        lineDiv.style.cssText = 'background-color: ' + this._bckgColor + '; border:' + this._border + ';' +
-            'padding: 2px';
+        lineDiv.style.cssText = 'background-color: ' + this._bckgColor + '; border:' +
+            this._border + ';' + 'padding: 2px; padding-bottom: 1px';
         rowDiv.appendChild(lineDiv);
         this._lineDivs.push(lineDiv);
     }
@@ -159,16 +150,74 @@ LabelMapControl.prototype.draw = function () {
     div.style.top = position.y + 'px';
     div.style.display = 'block';
 
-    //var text = this.get('text').toString();
+    if (this._needsUpdate) {
+        this.arrangeLineBorders();
 
-    //this.line1Div_.innerHTML = line1Contents;
-
-    //var line2Contents = this.get('line2').toString();
-    //if (line2Contents == null || line2Contents === '') {
-    //    this.line2Div_.style.display = 'none';
-    //} else {
-    //    this.line2Div_.style.display = 'inline-block';
-    //    this.line1Div_.innerHTML = line2Contents;
-    //}
-
+        this._needsUpdate = false;
+    }
 };
+
+LabelMapControl.prototype.arrangeLineBorders = function () {
+    if (!this._borderSizePx)
+        return;
+
+    if (!this._lineDivs || this._lineDivs.length === 0)
+        return;
+
+    var lineDivsOrderedByWidthDesc = this._lineDivs.slice();
+    lineDivsOrderedByWidthDesc.sort(function (div1, div2) {
+        return div2.clientWidth - div1.clientWidth;
+    });
+
+
+    var i;
+    
+    for (i = 0; i < lineDivsOrderedByWidthDesc.length; i++) {
+        var rowDiv = lineDivsOrderedByWidthDesc[i].parentElement;
+        rowDiv.style.zIndex = i;
+    }
+
+    var prevWidth;
+    var thisWidth;
+    var nextWidth = this._lineDivs[0].clientWidth;
+    for (i = 0; i < this._lineDivs.length; i++) {
+        thisWidth = nextWidth;
+
+        nextWidth = (i < (this._lineDivs.length - 1)) ? this._lineDivs[i + 1].clientWidth : null;
+
+        var hasTopBorder = prevWidth == null || prevWidth < thisWidth;
+        var hasBottomBorder = nextWidth == null || nextWidth <= thisWidth;
+
+       // console.log(i, hasTopBorder, hasBottomBorder);
+
+        var div = this._lineDivs[i];
+
+        if (hasTopBorder && hasBottomBorder) {
+            div.style.borderLeft = '';
+            div.style.borderRight = '';
+            div.style.borderTop = '';
+            div.style.borderBottom = '';
+            div.style.border = this._border;
+        } else if (hasTopBorder) {
+            div.style.border = '';
+            div.style.borderLeft = this._border;
+            div.style.borderRight = this._border;
+            div.style.borderTop = this._border;
+            div.style.borderBottom = '';
+        } else if (hasBottomBorder) {
+            div.style.border = '';
+            div.style.borderLeft = this._border;
+            div.style.borderRight = this._border;
+            div.style.borderTop = '';
+            div.style.borderBottom = this._border;
+        } else {
+            div.style.border = '';
+            div.style.borderLeft = this._border;
+            div.style.borderRight = this._border;
+            div.style.borderTop = '';
+            div.style.borderBottom = '';
+        }
+
+        prevWidth = thisWidth;
+    }
+}

@@ -25,7 +25,7 @@
     <title>
         <%=GroupName %>
         - Multi Tracker View</title>
-    <meta name="viewport" content="width=device-width; initial-scale=1.0; maximum-scale=1.0; user-scalable=0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
 
     <!-- Google Analytics -->
     <script type="text/javascript">
@@ -99,27 +99,11 @@
                 
     %>
     <% 
-        bool sensor;
-        if ( !bool.TryParse( this.Request.Params["sensor"], out sensor ) )
-        {
-            sensor = true;
-        }
-
         bool shouldLog;
         if ( !bool.TryParse( this.Request.Params["log"], out shouldLog ) )
         {
             shouldLog = false;
         }
-
-        Response.Write(
-            string.Format(
-                "<script type=\"text/javascript\" src=\"//maps.googleapis.com/maps/api/js?key=AIzaSyBQjcGGONlL8Ppv0qFJTBiJeqZSMrwaH8g&sensor={0}\">\n</script>",
-                sensor ? "true" : "false" ) );
-
-        Response.Write(
-            string.Format(
-                "\n\n<script type=\"text/javascript\">\nvar _useLocationSensor={0};\n</script>\n",
-                sensor ? "true" : "false" ) );
 
         Response.Write( "\n<script type=\"text/javascript\">" );
         Response.Write( string.Format( "var _groupId = {0}\n", GroupId ) );
@@ -134,6 +118,7 @@
             Response.Write( "</script>\n" );
         }
     %>
+    <script type="text/javascript" src="//maps.googleapis.com/maps/api/js?key=AIzaSyBQjcGGONlL8Ppv0qFJTBiJeqZSMrwaH8g"></script>
     <script type="text/javascript">
         var _reloadLatId = '<%= reloadLat.ClientID %>';
         var _reloadLonId = '<%= reloadLon.ClientID %>';

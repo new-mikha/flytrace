@@ -85,6 +85,8 @@ namespace FlyTrace.Service
     /// <summary>true when the tracker should be hidden, false otherwise</summary>
     public bool IsHidden;
 
+    public string[] DebugLines;
+
     #region ShouldSerializeXXX methods
     // looks like undocumented feature, or I didn't find the proper doc in MSDN. But it works (found on net)
 

@@ -181,9 +181,7 @@ function initialize() {
 
         setInterval("clock()", 1000);
 
-        if (_useLocationSensor) {
-            addUserLocationMarker();
-        }
+        addUserLocationMarker();
 
         syncAllTracksButton();
 
@@ -227,7 +225,7 @@ function setPreFormatLink() {
 
 
 function showLogos() {
-    if (_logoSource == "" && _smallLogoSource == "" ) return;
+    if (_logoSource == "" && _smallLogoSource == "") return;
 
     var logoToUse;
 
@@ -345,7 +343,7 @@ function showTask() {
                 },
                 '#FF0000',
                 'rgba(0,0,0,0)',
-                '0px'
+                0
             );
             label.bindTo('position', fooMarker, 'position');
             label.bindTo('text', fooMarker, 'title');
@@ -602,7 +600,8 @@ function setupMarkerAndLabel(netTrackerData) {
         },
         'black',
         lblBackColor,
-        '1px solid green'
+        1,
+        'solid green'
     );
     label.bindTo('position', marker, 'position');
     label.setText([marker.title]);
@@ -1340,7 +1339,7 @@ function getContent(marker) {
 
             var tsString =
                 ts.getDate() + " " + getMonthStr(ts.getMonth()) + " " + ts.getHours() + ":" + padInteger(ts.getMinutes(), 2);
-             
+
             var coordsTableStr =
                 "<table style=\"width: 100%; font-family: 'courier New' , Courier, monospace;\"><tr><td>"
                     + coordsStr + "</td><td style=\"text-align: center;\">" +
@@ -1644,8 +1643,8 @@ function checkFullTracks(firstPriorityOnly) {
 }
 
 function log(msg) {
-    console.log(msg);
     if (_shouldLog) {
+        console.log(msg);
         var logElement = document.getElementById('logDiv');
         var d = new Date();
         var tsString = d.getHours() + ":" + padInteger(d.getMinutes(), 2);
@@ -2089,8 +2088,13 @@ function setAgeAndAltitude(trackerHolder) {
                 marker.setTitle(newTitle);
 
             if (marker.label) {
+                //if (trackerHolder.NetTrackerData.DebugLines != null) {
+                //    var lines = trackerHolder.NetTrackerData.DebugLines.slice();
+                //   // lines.splice(0, 0, newTitle);
+                //    marker.label.setText(lines);
+                //} else
                 if (trackerHolder.NetTrackerData.Alt) {
-                    var altStr = 'alt ' + (Math.round(trackerHolder.NetTrackerData.Alt / 100) / 10) + "km";
+                    var altStr = 'alt ' + (Math.round(trackerHolder.NetTrackerData.Alt / 100) / 10) + " km";
                     marker.label.setText([newTitle, altStr]);
                 } else {
                     marker.label.setText([newTitle]);
