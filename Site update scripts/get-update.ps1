@@ -42,8 +42,8 @@ where {
     $_ -like "*.Master" -or
     $_ -like "*.sitemap" -or
     $_ -like "*.xml" -or
-    $_ -like "*\EmailTemplates\*.txt" -or
-    $_ -like "*\App_Themes\Default\*" -or
+    $_ -like "*/EmailTemplates/*.txt" -or
+    $_ -like "*/App_Themes/Default/*" -or
     $_ -like "*.sql"
 } | 
 where {
