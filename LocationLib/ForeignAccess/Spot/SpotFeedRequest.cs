@@ -725,6 +725,9 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           if (alt == 0)
             alt = null;
 
+          if (alt.HasValue && alt < 0)
+            alt = 0;
+
           // either we have userMessage or not, create a result:
           result = new Data.TrackPointData(locationType, lat.Value, lon.Value, alt, ts.Value, userMessage);
 
