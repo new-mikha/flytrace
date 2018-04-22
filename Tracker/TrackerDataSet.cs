@@ -30,7 +30,7 @@ namespace FlyTrace
       /// <summary>
       /// Leaves only Name column as a key
       /// </summary>
-      public void SetNameKeyOnly()
+      public void SetNameKeyOnly( )
       {
         DataColumn[] nameKey = new DataColumn[] { NameColumn };
         PrimaryKey = nameKey;

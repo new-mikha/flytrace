@@ -48,6 +48,8 @@ namespace FlyTrace.Service.Internals
     public bool ShowUserMessages;
 
     public DateTime? StartTs;
+
+    public string AltitudeUnits;
   }
 
   internal class GroupFacade
@@ -123,6 +125,9 @@ namespace FlyTrace.Service.Internals
         SqlParameter startTsPar = this.sqlCmd.Parameters.Add( "@StartTs", System.Data.SqlDbType.DateTime );
         startTsPar.Direction = System.Data.ParameterDirection.Output;
 
+        SqlParameter altitudeDisplayFormatPar = this.sqlCmd.Parameters.Add( "@AltitudeDisplayFormat", System.Data.SqlDbType.NVarChar, 20 );
+        altitudeDisplayFormatPar.Direction = System.Data.ParameterDirection.Output;
+
         this.sqlCmd.Parameters[0].Value = group;
         this.groupId = group;
 
@@ -197,6 +202,17 @@ namespace FlyTrace.Service.Internals
         else
           result.ShowUserMessages = Convert.ToBoolean( objValue );
 
+        {
+          objValue = this.sqlCmd.Parameters["@AltitudeDisplayFormat"].Value;
+          if (objValue == null || objValue == DBNull.Value)
+            result.AltitudeUnits = null;
+          else
+            result.AltitudeUnits = objValue.ToString().Trim();
+
+          if (result.AltitudeUnits != null && result.AltitudeUnits == "")
+            result.AltitudeUnits = null;
+        }
+
         try
         {
           object objStartTs = this.sqlCmd.Parameters["@StartTs"].Value;
@@ -240,6 +256,7 @@ namespace FlyTrace.Service.Internals
 
       result.VersionInDb = 1;
       result.ShowUserMessages = true;
+      result.AltitudeUnits = "ft";
 
       result.TrackerNames =
         ( from n in names

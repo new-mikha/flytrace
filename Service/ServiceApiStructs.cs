@@ -46,7 +46,7 @@ namespace FlyTrace.Service
     public double Lon;
 
     /// <summary>Altitude. Might be zero even if Lat and Lon are set to non-zero values</summary>
-    public int Alt;
+    public int? Alt;
 
     /// <summary>Type of the position: null, "TRACK", "OK", "CUSTOM", "wait", 
     /// or anything else as "HELP"</summary>
@@ -103,11 +103,6 @@ namespace FlyTrace.Service
     public bool ShouldSerializeLon()
     {
       return Lon != 0.0;
-    }
-
-    public bool ShouldSerializeAlt()
-    {
-      return Alt != 0.0;
     }
 
     public bool ShouldSerializeIsOfficial( )
@@ -178,6 +173,8 @@ namespace FlyTrace.Service
     /// of <see cref="ServiceFacade.GetCoordinates"/> for an incremental update.
     /// </summary>
     public string Res;
+
+    public string AltitudeUnits;
 
     /// <summary>
     /// Threshold time for the group. Trackers with timestamps less than this should be hidden.

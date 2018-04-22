@@ -125,13 +125,13 @@
         var _reloadZoomId = '<%= reloadZoom.ClientID %>';
     </script>
     <script type="text/javascript" src="Scripts/jquery-1.11.3.min.js"></script>
-    <script type="text/javascript" src="Scripts/labelMapControl.js?ver=3">
+    <script type="text/javascript" src="Scripts/labelMapControl.js?ver=4">
     </script>
     <script type="text/javascript" src="Scripts/buttonMapControl.js?ver=3">
     </script>
     <script type="text/javascript" src="Scripts/date.format.js">
     </script>
-    <script type="text/javascript" src="Scripts/main.js?ver=75">
+    <script type="text/javascript" src="Scripts/main.js?ver=76">
     </script>
 </head>
 <body onload="initialize()">

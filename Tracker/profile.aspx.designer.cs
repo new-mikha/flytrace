@@ -148,6 +148,60 @@ namespace FlyTrace {
         protected global::System.Web.UI.WebControls.RadioButton multipleEventsMode;
         
         /// <summary>
+        /// altitudeModeWizard control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Wizard altitudeModeWizard;
+        
+        /// <summary>
+        /// WizardStep3 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.WizardStep WizardStep3;
+        
+        /// <summary>
+        /// hideAltitudeRadioButton control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton hideAltitudeRadioButton;
+        
+        /// <summary>
+        /// showAltitudeAsFeetRadioButton control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton showAltitudeAsFeetRadioButton;
+        
+        /// <summary>
+        /// showAltitudeAsMeterstRadioButton control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.RadioButton showAltitudeAsMeterstRadioButton;
+        
+        /// <summary>
+        /// WizardStep4 control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.WizardStep WizardStep4;
+        
+        /// <summary>
         /// Image5 control.
         /// </summary>
         /// <remarks>

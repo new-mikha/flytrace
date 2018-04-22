@@ -39,6 +39,8 @@ namespace FlyTrace
 {
   public enum CoordFormat { Deg, DegMin, DegMinSec }
 
+  public enum AltitudeDisplayFormat { None, Meters, Feet }
+
   public class Global : System.Web.HttpApplication
   {
     public const string UserIdSessionKey = "UserId";
@@ -115,6 +117,8 @@ namespace FlyTrace
       public bool ShowUserMessagesByDefault;
 
       public bool UserMessagesSettingIsNew;
+
+      public AltitudeDisplayFormat AltitudeDisplayFormat;
     }
 
     private static Dictionary<Guid, UserProfileData> UserProfiles = new Dictionary<Guid, UserProfileData>( );
@@ -141,6 +145,7 @@ namespace FlyTrace
         string tempCoordFormat = null;
         string defHemisphereNS = null;
         string defHemisphereEW = null;
+        string altitudeDisplayFormatString = null;
 
         procAdapters.GetUserProfile(
           UserId,
@@ -150,7 +155,8 @@ namespace FlyTrace
           ref defHemisphereNS,
           ref defHemisphereEW,
           ref showUserMessagesByDefault,
-          ref userMessagesSettingIsNew
+          ref userMessagesSettingIsNew,
+          ref altitudeDisplayFormatString
         );
 
         userProfile = new UserProfileData( );
@@ -160,6 +166,15 @@ namespace FlyTrace
         userProfile.DefHemisphereEW = defHemisphereEW[0];
         userProfile.ShowUserMessagesByDefault = showUserMessagesByDefault.Value;
         userProfile.UserMessagesSettingIsNew = userMessagesSettingIsNew.Value;
+
+        userProfile.AltitudeDisplayFormat =
+          altitudeDisplayFormatString == null
+            ? AltitudeDisplayFormat.None
+            : (
+              altitudeDisplayFormatString.ToLower( ) == "m"
+              ? AltitudeDisplayFormat.Meters
+              : AltitudeDisplayFormat.Feet
+            );
 
         lock ( UserProfiles )
         {
@@ -176,6 +191,42 @@ namespace FlyTrace
       }
 
       return userProfile;
+    }
+
+    public static AltitudeDisplayFormat AltitudeDisplayFormat
+    {
+      get
+      {
+        UserProfileData userProfile = GetUserProfile( );
+
+        return userProfile.AltitudeDisplayFormat;
+      }
+
+      set
+      {
+        {
+          TrackerDataSetTableAdapters.ProcsAdapter procAdapters = new FlyTrace.TrackerDataSetTableAdapters.ProcsAdapter( );
+
+          string altitudeDisplayFormatString;
+          if ( value == AltitudeDisplayFormat.None )
+            altitudeDisplayFormatString = null;
+          else if ( value == AltitudeDisplayFormat.Meters )
+            altitudeDisplayFormatString = "m";
+          else
+            altitudeDisplayFormatString = "ft";
+
+          procAdapters.SetAltitudeDisplayMode( UserId, altitudeDisplayFormatString );
+        }
+
+        lock ( UserProfiles )
+        {
+          UserProfileData existingProfile;
+          if ( UserProfiles.TryGetValue( UserId, out existingProfile ) )
+            existingProfile.AltitudeDisplayFormat = value;
+        }
+
+        Service.ServiceFacade.ResetGroupsDefCache( );
+      }
     }
 
     public static bool IsSimpleEventsModel
@@ -450,7 +501,7 @@ namespace FlyTrace
 
       try
       {
-        GlobalConfiguration.Configure(WebApiConfig.Register);
+        GlobalConfiguration.Configure( WebApiConfig.Register );
 
         CultureInfo.DefaultThreadCurrentCulture = DefaultCulture;
         CultureInfo.DefaultThreadCurrentUICulture = DefaultCulture;
@@ -458,7 +509,7 @@ namespace FlyTrace
         string dataFolderPath = System.Web.Hosting.HostingEnvironment.MapPath( @"~/App_Data/" );
         Service.ServiceFacade.Init( dataFolderPath );
 
-        SetupJsonFormatting();
+        SetupJsonFormatting( );
 
         // SystemEvents needs message pump, so start it
         new Thread( RunMessagePump ).Start( );
@@ -472,10 +523,10 @@ namespace FlyTrace
       }
     }
 
-    private static void SetupJsonFormatting()
+    private static void SetupJsonFormatting( )
     {
       JsonMediaTypeFormatter formatter = GlobalConfiguration.Configuration.Formatters.JsonFormatter;
-      formatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+      formatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver( );
       formatter.SerializerSettings.Formatting = Formatting.None;
       formatter.UseDataContractJsonSerializer = false;
     }
@@ -558,8 +609,8 @@ namespace FlyTrace
       // location/authorisation elements in web.config specify that default.aspx should be allowed for anonymous 
       // access, however when just "www.flytrace.com" is typed in address bar, it assumes it as secured page and
       // offers login page. To prevent that, redirect from empty path to the specific page:
-      if (Request.AppRelativeCurrentExecutionFilePath == "~/")
-        HttpContext.Current.Response.Redirect("~/default.aspx");
+      if ( Request.AppRelativeCurrentExecutionFilePath == "~/" )
+        HttpContext.Current.Response.Redirect( "~/default.aspx" );
     }
 
     protected void Application_AuthenticateRequest( object sender, EventArgs e )
@@ -597,7 +648,7 @@ namespace FlyTrace
     protected void Application_End( object sender, EventArgs e )
     {
       // sometimes it got to be called, sometimes not.
-      
+
       try
       {
         Service.ServiceFacade.Deinit( );

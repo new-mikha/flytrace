@@ -166,6 +166,8 @@ namespace FlyTrace.Service.Internals.Subservices
 
       result.Trackers = resultTrackers.Count > 0 ? resultTrackers : null;
 
+      result.AltitudeUnits = groupConfig.AltitudeUnits;
+
       result.IncrSurr = isDebugFullGroup;
 
       if ( isFullGroup )
@@ -345,7 +347,9 @@ namespace FlyTrace.Service.Internals.Subservices
                 nullableSnapshot,
                 includeByNormalIncrLogic,
                 groupConfig.ShowUserMessages,
-                groupConfig.StartTs
+                groupConfig.StartTs,
+                groupConfig.AltitudeUnits != null
+
               );
 
           resultTrackers.Add( coordResponseItem );
@@ -569,7 +573,8 @@ namespace FlyTrace.Service.Internals.Subservices
       TrackerState snapshot,
       bool incrTest,
       bool showUserMessage,
-      DateTime? startTs
+      DateTime? startTs,
+      bool showAltitude
     )
     {
       CoordResponseItem result = default( CoordResponseItem );
@@ -593,9 +598,8 @@ namespace FlyTrace.Service.Internals.Subservices
           result.Lat = snapshot.Position.CurrPoint.Latitude;
           result.Lon = snapshot.Position.CurrPoint.Longitude;
 
-          int? currPointAltitude = snapshot.Position.CurrPoint.Altitude;
-          if ( currPointAltitude.HasValue && currPointAltitude.Value != 0 )
-            result.Alt = currPointAltitude.Value;
+          if(showAltitude)
+            result.Alt = snapshot.Position.CurrPoint.Altitude;
 
           result.Type = snapshot.Position.Type;
           result.Ts = snapshot.Position.CurrPoint.ForeignTime;

@@ -895,6 +895,8 @@ function onLookupComplete(result) {
 
 var _startTs = null;
 
+var _altitudeUnits;
+
 function processResult(result, isIncremental) {
     showStatus("Processing retrieved data...");
     if (_trackerHolders == null) {
@@ -918,6 +920,7 @@ function processResult(result, isIncremental) {
     }
 
     if (result.Trackers != null) {
+        _altitudeUnits = result.AltitudeUnits;
         var addedRow = false;
         for (var iResult = 0; iResult < result.Trackers.length; iResult++) {
             var netTrackerData = result.Trackers[iResult];
@@ -2081,9 +2084,6 @@ function setAgeAndAltitude(trackerHolder) {
         if (marker) {
             var newTitle = trackerHolder.Name + ": " + ageStr + " ago";
 
-            //if (trackerHolder.NetTrackerData.Alt)
-            //    newTitle += ", alt " + (Math.round(trackerHolder.NetTrackerData.Alt / 100) / 10) + "km";
-
             if (marker.getTitle() != newTitle)
                 marker.setTitle(newTitle);
 
@@ -2093,8 +2093,18 @@ function setAgeAndAltitude(trackerHolder) {
                 //   // lines.splice(0, 0, newTitle);
                 //    marker.label.setText(lines);
                 //} else
-                if (trackerHolder.NetTrackerData.Alt) {
-                    var altStr = 'alt ' + (Math.round(trackerHolder.NetTrackerData.Alt / 100) / 10) + " km";
+                if (trackerHolder.NetTrackerData.Alt != null
+                    && isTrackType(trackerHolder.NetTrackerData)
+                    && !!_altitudeUnits
+                    ) {
+                    var altStr;
+                    var alt = trackerHolder.NetTrackerData.Alt;
+                    if (_altitudeUnits === 'm') {
+                        altStr = 'alt ' + (Math.round(alt / 100) / 10) + " km";
+                    } else {
+                        alt *= 3.28084;
+                        altStr = 'alt ' + formatThousandsSeparator(Math.round(alt / 100) * 100) + " ft";
+                    }
                     marker.label.setText([newTitle, altStr]);
                 } else {
                     marker.label.setText([newTitle]);
@@ -2110,6 +2120,13 @@ function setAgeAndAltitude(trackerHolder) {
 
     SetStatusControlInnerHtml(trackerHolder.StatusControlsSet.AgeCtl, ageStr);
     SetStatusControlInnerHtml(trackerHolder.StatusControlsSet.TimestampCtl, utcTsAndTrack);
+}
+
+function formatThousandsSeparator(num) {
+    if (!num)
+        return num;
+
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 function copyToClipboard(text) {

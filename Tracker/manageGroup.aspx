@@ -238,6 +238,16 @@
                     </table>
                 </td>
             </tr>
+            
+            <tr>
+                <td>
+                    <br/>
+                    <b>Altitude display mode: <%= AltitudeDisplayModeString %></b> (change it for all groups in your profile <a href="profile.aspx">Settings</a>)<br/>
+                    <span style="font-size: smaller">Altitude is available only for selected models. E.g SPOT Gen3 can send it, but <br/>
+                    sometimes the altitude is missing for the points received even from this tracker model.</span>
+                </td>
+            </tr>
+
             <tr>
                 <td>
                     <br />

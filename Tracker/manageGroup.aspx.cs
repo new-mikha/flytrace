@@ -666,5 +666,19 @@ namespace FlyTrace
         UpdateGroupMsg = exc.Message;
       }
     }
+
+    protected string AltitudeDisplayModeString
+    {
+      get
+      {
+        if (Global.AltitudeDisplayFormat == AltitudeDisplayFormat.None)
+          return "HIDDEN";
+
+        if ( Global.AltitudeDisplayFormat == AltitudeDisplayFormat.Meters )
+          return "METERS";
+
+        return "FEET";
+      }
+    }
   }
 }

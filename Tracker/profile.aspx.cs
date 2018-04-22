@@ -47,14 +47,19 @@ namespace FlyTrace
         this.showOwnerMessagesRadioButton.Checked = Global.ShowUserMessagesByDefault;
         this.hideOwnerMessagesRadioButton.Checked = !this.showOwnerMessagesRadioButton.Checked;
 
-        this.Email.Text = Membership.GetUser().Email;
+        var altitudeDisplayFormat = Global.AltitudeDisplayFormat;
+        hideAltitudeRadioButton.Checked = altitudeDisplayFormat == AltitudeDisplayFormat.None;
+        showAltitudeAsMeterstRadioButton.Checked = altitudeDisplayFormat == AltitudeDisplayFormat.Meters;
+        showAltitudeAsFeetRadioButton.Checked = altitudeDisplayFormat == AltitudeDisplayFormat.Feet;
+
+        this.Email.Text = Membership.GetUser( ).Email;
       }
     }
 
     protected void SignOutLinkButton_Click( object sender, EventArgs e )
     {
-      Response.Clear();
-      FormsAuthentication.SignOut();
+      Response.Clear( );
+      FormsAuthentication.SignOut( );
       Response.Redirect( "~/default.aspx", true );
     }
 
@@ -83,6 +88,18 @@ namespace FlyTrace
       Global.ShowUserMessagesByDefault = this.showOwnerMessagesRadioButton.Checked;
     }
 
+
+    protected void altitudeModeWizard_NextButtonClick( object sender, WizardNavigationEventArgs e )
+    {
+      if ( hideAltitudeRadioButton.Checked )
+        Global.AltitudeDisplayFormat = AltitudeDisplayFormat.None;
+      else if ( showAltitudeAsMeterstRadioButton.Checked )
+        Global.AltitudeDisplayFormat = AltitudeDisplayFormat.Meters;
+      else
+        Global.AltitudeDisplayFormat = AltitudeDisplayFormat.Feet;
+    }
+
+
     public static bool IsValidEmail( string strIn )
     {
       // Return true if strIn is in valid e-mail format.
@@ -101,7 +118,7 @@ namespace FlyTrace
           throw new ApplicationException( "Please provide a valid email." );
         }
 
-        MembershipUser user = Membership.GetUser();
+        MembershipUser user = Membership.GetUser( );
         userName = user.UserName;
         if ( !Membership.ValidateUser( userName, PasswordForEmail.Text ) )
         {
@@ -130,7 +147,7 @@ namespace FlyTrace
       string userName = null;
       try
       {
-        MembershipUser user = Membership.GetUser();
+        MembershipUser user = Membership.GetUser( );
         email = user.Email;
         userName = user.UserName;
 
@@ -146,7 +163,7 @@ namespace FlyTrace
         mailMessage.Body = messageText;
         mailMessage.IsBodyHtml = false;
 
-        SmtpClient smtpClient = new SmtpClient();
+        SmtpClient smtpClient = new SmtpClient( );
         smtpClient.Send( mailMessage );
 
         this.testEmailSendResult.Text = string.Format( "<br />Email sent to <b>{0}</b>", email );
