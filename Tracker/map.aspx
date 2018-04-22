@@ -55,7 +55,7 @@
         _ie8_or_less = true;
     </script>
     <![endif]-->
-    <link href="App_Themes/Default/site2.css" type="text/css" rel="stylesheet" />
+    <link href="App_Themes/Default/site2.css?v=2" type="text/css" rel="stylesheet" />
     <style type="text/css">
         #listPanel tr:nth-child(even) {
             background: #CCC;
