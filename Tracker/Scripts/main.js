@@ -347,6 +347,7 @@ function showTask() {
             );
             label.bindTo('position', fooMarker, 'position');
             label.bindTo('text', fooMarker, 'title');
+            label.setText([title]);;
         }
 
         _taskPolyline =
