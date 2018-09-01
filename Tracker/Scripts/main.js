@@ -79,14 +79,14 @@ function initialize() {
             _tracksEnabled = false;
 
         _stdShadow = new google.maps.MarkerImage(
-            'http://maps.google.com.au/mapfiles/ms/micons/msmarker.shadow.png',
+            'App_Themes/Default/msmarker.shadow.png',
             new google.maps.Size(59, 32), // size
             new google.maps.Point(0, 0), // origin
             new google.maps.Point(15, 32)	// anchor
         );
 
         _arrowShadow = new google.maps.MarkerImage(
-            'http://maps.google.com/mapfiles/arrowshadow.png',
+            'App_Themes/Default/arrowshadow.png',
             new google.maps.Size(39, 34), // size
             new google.maps.Point(0, 0), // origin
             new google.maps.Point(11, 34)	// anchor
@@ -492,13 +492,13 @@ function getMarkerImageAndShadow(netTrackerData) {
     var trackerName = netTrackerData.Name;
 
     if (isTrackType(netTrackerData)) {
-        iconPath = 'http://maps.google.com.au/intl/en_us/mapfiles/ms/micons/red-dot.png';
+        iconPath = 'App_Themes/Default/red-dot.png';
 
         var anchor = new google.maps.Point(15, 32); // seems that Google icons have differen anchors.
         if (trackerName != null && trackerName != "") {
             var firstChar = trackerName.toUpperCase().charAt(0);
             if (firstChar >= 'A' && firstChar <= 'Z') {
-                iconPath = 'http://maps.google.com.au/mapfiles/marker' + firstChar + '.png';
+                iconPath = 'App_Themes/Default/named-markers/marker' + firstChar + '.png';
 
                 anchor = new google.maps.Point(9, 32);
             }
@@ -519,7 +519,7 @@ function getMarkerImageAndShadow(netTrackerData) {
             } else if (isCustomType(netTrackerData)) {
                 iconPath = 'App_Themes/Default/finish-custom.png';
             } else {
-                iconPath = 'http://maps.google.com/mapfiles/arrow.png';
+                iconPath = 'App_Themes/Default/arrow.png';
             }
 
             result.image = new google.maps.MarkerImage(

@@ -131,7 +131,7 @@
     </script>
     <script type="text/javascript" src="Scripts/date.format.js">
     </script>
-    <script type="text/javascript" src="Scripts/main.js?ver=77">
+    <script type="text/javascript" src="Scripts/main.js?ver=78">
     </script>
 </head>
 <body onload="initialize()">
