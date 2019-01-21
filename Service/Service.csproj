@@ -90,6 +90,7 @@
     </Compile>
     <Compile Include="Internals\TrackerStateHolder.cs" />
     <Compile Include="Internals\Tuple2.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

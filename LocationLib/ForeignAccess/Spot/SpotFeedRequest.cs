@@ -60,6 +60,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       this.callId = callId;
       this.unexpectedForeignErrorsCounter = unexpectedForeignErrorsCounter;
       Page = page;
+      _log = LogManager.GetLogger("TDM.FeedReq." + trackerForeignId);
     }
 
     private readonly string testXml;
@@ -77,7 +78,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
     private int bufferedDataLength;
 
-    private static readonly ILog Log = LogManager.GetLogger("TDM.FeedReq");
+    private readonly ILog _log;
 
     public IAsyncResult BeginRequest(AsyncCallback callback, object state)
     {
@@ -120,8 +121,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       this.webRequest = WebRequest.Create(url);
 
-      if (Log.IsDebugEnabled)
-        Log.Debug(string.Format("Request created for {0}, lrid {1}", this.trackerForeignId, this.callId));
+      if (_log.IsDebugEnabled)
+        _log.Debug(string.Format("Request created for {0}, lrid {1}", this.trackerForeignId, this.callId));
 
       // needed for undocumented url, otherwise returns JSON:
       ((HttpWebRequest)this.webRequest).Accept = "text/html,application/xhtml+xml,application/xml";
@@ -133,14 +134,14 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       try
       {
-        if (Log.IsDebugEnabled)
-          Log.Debug(string.Format("Initiating BeginRequest for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId));
+        if (_log.IsDebugEnabled)
+          _log.Debug(string.Format("Initiating BeginRequest for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId));
         this.webRequest.BeginGetResponse(GetResponseCallback, asyncChainedState);
       }
       catch (Exception exc)
       {
         SetAsCompletedAndCloseRequest(asyncChainedState, new TrackerState(exc.Message, Page.ToString()));
-        Log.ErrorFormat("BeginRequest throwed an error for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId, exc.Message);
+        _log.ErrorFormat("BeginRequest throwed an error for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId, exc.Message);
       }
 
       return asyncChainedState.FinalAsyncResult;
@@ -150,7 +151,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       if (asyncChainedState == null)
       {
-        Log.ErrorFormat(
+        _log.ErrorFormat(
           "asyncChainedState is null for {0}, {1}, lrid {2} and result {3}",
           this.trackerForeignId,
           Page,
@@ -164,7 +165,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         {
           if (asyncChainedState.FinalAsyncResult.IsCompleted)
           {
-            Log.WarnFormat("Discarding result for {0}, {1}, lrid {2} because the result is already completed. The discarding result is: {3}",
+            _log.WarnFormat("Discarding result for {0}, {1}, lrid {2} because the result is already completed. The discarding result is: {3}",
               this.trackerForeignId,
               Page,
               this.callId,
@@ -173,12 +174,15 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           }
           else
           {
+            if(result.Position != null && result.Position.FullTrack != null && _log.IsDebugEnabled)
+              _log.Debug("Completed result with points in the track:\r\n\t" + 
+                         string.Join("\r\n\t", result.Position.FullTrack.Select(point => point.ToString()).ToArray()));
             asyncChainedState.SetAsCompleted(result);
           }
         }
         catch (Exception exc)
         { // Catch to prevent throwing "you can set result only once" error - we don't need it out.
-          Log.Error("SetAsCompletedAndCloseRequest", exc);
+          _log.Error("SetAsCompletedAndCloseRequest", exc);
         }
       }
 
@@ -206,8 +210,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
       try
       {
-        if (Log.IsDebugEnabled)
-          Log.Debug(string.Format("In GetResponseCallback for {0}, {1}, lrid {2}...", trackerForeignId, Page, this.callId));
+        if (_log.IsDebugEnabled)
+          _log.Debug(string.Format("In GetResponseCallback for {0}, {1}, lrid {2}...", trackerForeignId, Page, this.callId));
 
         asyncChainedState.CheckSynchronousFlag(ar.CompletedSynchronously);
 
@@ -217,20 +221,20 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
         this.webResponse = localWebRequest.EndGetResponse(ar);
 
-        if (Log.IsDebugEnabled)
-          Log.Debug(string.Format("Got WebResponse for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId));
+        if (_log.IsDebugEnabled)
+          _log.Debug(string.Format("Got WebResponse for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId));
 
         this.responseStream = this.webResponse.GetResponseStream();
 
-        if (Log.IsDebugEnabled)
-          Log.Debug(string.Format("Got Stream for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId));
+        if (_log.IsDebugEnabled)
+          _log.Debug(string.Format("Got Stream for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId));
 
         ReadNextResponseChunk(asyncChainedState);
       }
       catch (Exception exc)
       {
-        Log.InfoFormat("GetResponseCallback fail for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId,
-          Log.IsDebugEnabled ? exc.ToString() : exc.Message);
+        _log.InfoFormat("GetResponseCallback fail for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId,
+          _log.IsDebugEnabled ? exc.ToString() : exc.Message);
 
         SetAsCompletedAndCloseRequest(asyncChainedState, new TrackerState(exc.Message, Page.ToString()));
       }
@@ -242,7 +246,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       this.isClosed = true;
 
-      ILog logToUse = specialLog ?? Log;
+      ILog logToUse = specialLog ?? _log;
 
       // don't want to use locks anywhere in this class to minimize a risk of deadlock
 
@@ -350,8 +354,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       if (localResponseStream == null)
         throw new OperationCanceledException();
 
-      if (Log.IsDebugEnabled)
-        Log.DebugFormat("Starting reading the next chunk for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId);
+      if (_log.IsDebugEnabled)
+        _log.DebugFormat("Starting reading the next chunk for {0}, {1}, lrid {2}...", this.trackerForeignId, Page, this.callId);
 
       localResponseStream.BeginRead(
         this.bufferStream.GetBuffer(),
@@ -382,8 +386,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             this.bufferedDataLength += bytesRead;
             this.bufferStream.SetLength(bufferedDataLength);
 
-            if (Log.IsDebugEnabled)
-              Log.DebugFormat(
+            if (_log.IsDebugEnabled)
+              _log.DebugFormat(
                 "Read {0} bytes just now for {1}, {2}, lrid {3}, read {4} bytes in total, reading next chunk...",
                 bytesRead,
                 this.trackerForeignId,
@@ -398,8 +402,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             this.bufferStream.SetLength(bufferedDataLength);
             TrackerState parseResult = AnalyzeCurrentBuffer();
 
-            if (Log.IsDebugEnabled)
-              Log.DebugFormat("Result for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId, parseResult);
+            if (_log.IsDebugEnabled)
+              _log.DebugFormat("Result for {0}, {1}, lrid {2}: {3}", this.trackerForeignId, Page, this.callId, parseResult);
 
             // Note that parseResult can actually be just an error message (see Tracker.Error)
             SetAsCompletedAndCloseRequest(asyncChainedState, parseResult);
@@ -457,7 +461,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
     {
       // RandomError( );
 
-      Log.DebugFormat("Analyzing buffer for {0}, {1}, lrid {2}", this.trackerForeignId, Page, this.callId);
+      _log.DebugFormat("Analyzing buffer for {0}, {1}, lrid {2}", this.trackerForeignId, Page, this.callId);
 
       TrackerState result;
 
@@ -497,7 +501,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
             shouldBreak = message.ForeignTime <= threshold;
 
-            Log.Debug("Point ForeignTime: " + message.ForeignTime.ToString() + ", shouldBreak: " + shouldBreak.ToString());
+            _log.Debug("Point ForeignTime: " + message.ForeignTime.ToString() + ", shouldBreak: " + shouldBreak.ToString());
           }
 
           if (shouldBreak) break;
@@ -508,7 +512,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
       catch (XmlException exc)
       {
         // This could happen only in case of a bad response from the server. Normally should not happen.
-        Log.ErrorFormat(
+        _log.ErrorFormat(
           "Parsing server response: found {0} message(s) for {1}, {2}, lrid {3}, and encountered parsing error: {4}",
           messages.Count,
           this.trackerForeignId,
@@ -642,17 +646,17 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             xmlReader.ReadStartElement();
             string timeValue = xmlReader.ReadContentAsString();
 
-            if (Log.IsDebugEnabled)
-              Log.DebugFormat("Parsing XML date/time: {0} for {1}, {2}, lrid {3}", timeValue, this.trackerForeignId, Page, this.callId);
+            if (_log.IsDebugEnabled)
+              _log.DebugFormat("Parsing XML date/time: {0} for {1}, {2}, lrid {3}", timeValue, this.trackerForeignId, Page, this.callId);
 
             ts = ParseXmlDateTime(timeValue);
 
-            if (Log.IsDebugEnabled)
-              Log.DebugFormat("XML date/time parsed: {0} for {1}, {2}, lrid {3}", ts, this.trackerForeignId, Page, this.callId);
+            if (_log.IsDebugEnabled)
+              _log.DebugFormat("XML date/time parsed: {0} for {1}, {2}, lrid {3}", ts, this.trackerForeignId, Page, this.callId);
           }
           catch (Exception exc)
           {
-            Log.ErrorFormat("Can't parse date/time: {0} for {1}, {2}, lrid {3}", exc.Message, this.trackerForeignId, Page, this.callId);
+            _log.ErrorFormat("Can't parse date/time: {0} for {1}, {2}, lrid {3}", exc.Message, this.trackerForeignId, Page, this.callId);
           }
         }
 
@@ -666,8 +670,8 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             xmlReader.ReadStartElement();
             double posixTime = xmlReader.ReadContentAsDouble();
 
-            if (Log.IsDebugEnabled)
-              Log.DebugFormat
+            if (_log.IsDebugEnabled)
+              _log.DebugFormat
               (
                 "Parsing POSIX date/time: {0} for {1}, {2}, lrid {3}",
                 posixTime,
@@ -678,12 +682,12 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
 
             ts = ParsePosixTime(posixTime);
 
-            if (Log.IsDebugEnabled)
-              Log.DebugFormat("POSIX date/time parsed: {0} for {1}, {2}, lrid {3}", ts, this.trackerForeignId, Page, this.callId);
+            if (_log.IsDebugEnabled)
+              _log.DebugFormat("POSIX date/time parsed: {0} for {1}, {2}, lrid {3}", ts, this.trackerForeignId, Page, this.callId);
           }
           catch (Exception exc)
           {
-            Log.ErrorFormat("Can't parse date/time: {0} for {1}, {2}, lrid {3}", exc.Message, this.trackerForeignId, Page, this.callId);
+            _log.ErrorFormat("Can't parse date/time: {0} for {1}, {2}, lrid {3}", exc.Message, this.trackerForeignId, Page, this.callId);
           }
         }
 
@@ -799,7 +803,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
           if (this.unexpectedForeignErrorsCounter != null)
             this.unexpectedForeignErrorsCounter.Reset();
 
-          Log.InfoFormat("No data message for {0}: {1}", this.trackerForeignId, errorDescr);
+          _log.InfoFormat("No data message for {0}: {1}", this.trackerForeignId, errorDescr);
           // do nothing, the well-formed XML without data will be processed as ResponseHadNoData later.
         }
         else if (errorDescr.Contains(wrongTrackerIdMsg) ||
@@ -808,7 +812,7 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
         {
           if (this.unexpectedForeignErrorsCounter != null)
             this.unexpectedForeignErrorsCounter.Reset();
-          Log.InfoFormat("Consider {0} as a \"bad tracker\": {1}", this.trackerForeignId, errorDescr);
+          _log.InfoFormat("Consider {0} as a \"bad tracker\": {1}", this.trackerForeignId, errorDescr);
           isBadTrackerId = true;
         }
         else
@@ -831,15 +835,15 @@ namespace FlyTrace.LocationLib.ForeignAccess.Spot
             this.unexpectedForeignErrorsCounter.Increment(out shouldReportAsError);
 
           if (shouldReportAsError)
-            Log.Error(msg);
+            _log.Error(msg);
           else
-            Log.Info(msg);
+            _log.Info(msg);
 
         }
       }
       catch (Exception exc)
       {
-        Log.FatalFormat("Exception during processing an error message for a call to {0}, {1}, lrid {2}: {3}",
+        _log.FatalFormat("Exception during processing an error message for a call to {0}, {1}, lrid {2}: {3}",
           this.trackerForeignId,
           Page,
           this.callId,

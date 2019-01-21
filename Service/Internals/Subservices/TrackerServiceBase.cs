@@ -24,6 +24,7 @@ using System.Linq;
 using System.Threading;
 
 using FlyTrace.LocationLib;
+using log4net;
 
 namespace FlyTrace.Service.Internals.Subservices
 {
@@ -32,9 +33,12 @@ namespace FlyTrace.Service.Internals.Subservices
     protected readonly int Group;
     protected readonly DateTime CallStartTime = TimeService.Now;
 
+    protected readonly ILog _groupLog;
+
     protected TrackerServiceBase( int group )
     {
       Group = group;
+      _groupLog = LogManager.GetLogger("TDM." + group);
     }
 
     private readonly GroupFacade groupFacade = new GroupFacade( );

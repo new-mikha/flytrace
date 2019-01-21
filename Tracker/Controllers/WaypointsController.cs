@@ -2,13 +2,17 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Web.Http;
+using FlyTrace.Service;
 using FlyTrace.Tools;
 using FlyTrace.TrackerDataSetTableAdapters;
+using log4net;
 
 namespace FlyTrace.Controllers
 {
   public class WaypointsController : ApiController
   {
+    private readonly ILog _infoLog = LogManager.GetLogger("InfoLog");
+
 
     /// <summary>
     /// If a user might change a page's underlying data after it's loaded (as it happens on this page), then 
@@ -65,6 +69,8 @@ namespace FlyTrace.Controllers
     {
       DateTime utcThreshold = DateTime.UtcNow.AddHours(-hoursThreshold);
 
+      _infoLog.Info($"Hiding old points for event {eventId} with {hoursThreshold} hrs threshold, i.e. from {utcThreshold} UTC == {utcThreshold.ToLocalTime()} local time == {Utils.ToAdminTimezone(utcThreshold)} admin time");
+
       TrackerDataSetTableAdapters.EventTableAdapter adapter = new TrackerDataSetTableAdapters.EventTableAdapter();
       adapter.UpdateEventStartTs(eventId, utcThreshold);
 
@@ -80,6 +86,8 @@ namespace FlyTrace.Controllers
     [Route("api/Waypoints/RestoreOldPoints/{eventId:int}")]
     public void RestoreOldPoints(int eventId)
     {
+      _infoLog.Info($"Restoring old points for event {eventId}");
+
       TrackerDataSetTableAdapters.EventTableAdapter adapter = new TrackerDataSetTableAdapters.EventTableAdapter();
       adapter.UpdateEventStartTs(eventId, null);
 

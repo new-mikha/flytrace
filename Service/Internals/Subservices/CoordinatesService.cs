@@ -608,6 +608,9 @@ namespace FlyTrace.Service.Internals.Subservices
             result.UsrMsg = snapshot.Position.UserMessage;
           result.Age = CalcAgeInSeconds( snapshot.Position.CurrPoint.ForeignTime );
 
+          if(_groupLog.IsDebugEnabled)
+            _groupLog.DebugFormat("PreviousPoint for {0}: {1}", trackerName, snapshot.Position.PreviousPoint.ToString());
+
           if ( snapshot.Position.PreviousPoint != null )
           {
             if ( startTs == null ||
@@ -617,6 +620,15 @@ namespace FlyTrace.Service.Internals.Subservices
               result.PrevLon = snapshot.Position.PreviousPoint.Longitude;
               result.PrevTs = snapshot.Position.PreviousPoint.ForeignTime;
               result.PrevAge = CalcAgeInSeconds( snapshot.Position.PreviousPoint.ForeignTime );
+
+              if (_groupLog.IsDebugEnabled)
+                _groupLog.DebugFormat("Prev* result fields for {0}: {1}, {2}, {3}, {4}", trackerName,
+                  result.PrevLat,
+                  result.PrevLon,
+                  result.PrevTs,
+                  result.PrevAge);
+
+
             }
           }
 

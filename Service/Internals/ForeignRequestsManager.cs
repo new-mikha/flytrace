@@ -548,19 +548,8 @@ namespace FlyTrace.Service.Internals
       string errName = "";
       try
       {
-        string destTimeString;
-        try
-        {
-          DateTime destTime =
-            TimeZoneInfo.ConvertTimeBySystemTimeZoneId( DateTime.Now, Settings.Default.AdminTimezone );
-
-          destTimeString = destTime + " (admin TZ time)";
-        }
-        catch ( Exception exc )
-        {
-          Log.Warn( "Can't convert to the admin time zone", exc );
-          destTimeString = DateTime.Now + " (server time)";
-        }
+        DateTime adminNow = Utils.ToAdminTimezone(DateTime.Now);
+        string destTimeString = adminNow + " (admin TZ time)";
 
         ILoggerRepository defaultRepository = LogManager.GetRepository( );
 
