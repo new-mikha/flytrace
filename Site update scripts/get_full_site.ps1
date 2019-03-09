@@ -2,11 +2,20 @@ param($dest_folder)
 
 $ErrorActionPreference = "Stop"
 
-cd ..
+if([System.String]::IsNullOrEmpty($dest_folder)) {
+	$dest_folder = ".\Full";
+}
 
-$src_dir = $(get-location).Path + "\Tracker\"
+[System.IO.Directory]::SetCurrentDirectory((Get-Location).Path)
 
-Get-ChildItem -Recurse |
+$parent_path = ([System.IO.DirectoryInfo]((get-location).Path)).Parent.FullName
+$src_dir = $parent_path + '\Tracker\'
+
+
+Write-Host Copying full stuff to $dest_folder
+    
+	
+Get-ChildItem .. -Recurse |
 where {
     $_.FullName -like $src_dir + "*"
 } |
@@ -39,17 +48,20 @@ where {
     $_.FullName -like "*\App_Themes\Default\*"
 } | 
 Foreach-Object { 
-    #Write-Host $_.FullName
-    
-    $rel_path = $_.FullName.Substring( $src_dir.Length  )
+    Write-Host $_.FullName
+	
+	if(-not [System.IO.Directory]::Exists($_.FullName)) {    
+		$rel_path = $_.FullName.Substring( $src_dir.Length  )
 
-    $dest_file_path = [System.IO.Path]::Combine($dest_folder,$rel_path)
-    $dest_dir_path = [System.IO.Path]::GetDirectoryName($dest_file_path)
-    
-    
-    if( -not [System.IO.Directory]::Exists($dest_dir_path)) {
-        [System.IO.Directory]::CreateDirectory($dest_dir_path)
-    }
-    
-    [System.IO.File]::Copy($_.FullName, $dest_file_path,$True)
+		$dest_file_path = [System.IO.Path]::Combine($dest_folder,$rel_path)
+		$dest_dir_path = [System.IO.Path]::GetDirectoryName($dest_file_path)
+		
+		
+		if( -not [System.IO.Directory]::Exists($dest_dir_path)) {
+			$dir_info = [System.IO.Directory]::CreateDirectory($dest_dir_path)
+		}
+		
+		Write-Host $_.FullName
+		[System.IO.File]::Copy($_.FullName, $dest_file_path,$True)
+	}
 }
