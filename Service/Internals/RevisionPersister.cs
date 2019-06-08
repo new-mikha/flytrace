@@ -37,9 +37,13 @@ namespace FlyTrace.Service.Internals
 
     private readonly Encoding fileEncoding = Encoding.UTF8;
 
-    private const string ClosedAck = "closed";
+    private int threadUnsafeRevision;
 
-    public int ThreadUnsafeRevision;
+    public int ThreadUnsafeRevision
+    {
+      get { return this.threadUnsafeRevision; }
+      set { SetRevision(value); }
+    }
 
     /// <summary>
     /// Initializes revision generator. If false returned, it's initialised but revision hasn't been restored from the file
@@ -62,16 +66,13 @@ namespace FlyTrace.Service.Internals
           // parse & check the file
           StreamReader sr = new StreamReader( persistingFileStream, fileEncoding );
           string line1 = sr.ReadLine( );
-          string line2 = sr.ReadLine( );
           string rest = sr.ReadToEnd( );
 
           result =
             line1 != null &&
-            line2 != null &&
-            rest.Trim( ) == "" &&
-            int.TryParse( line1, out ThreadUnsafeRevision ) &&
-            ThreadUnsafeRevision >= 0 &&
-            line2 == ClosedAck;
+            rest.Trim() == "" &&
+            int.TryParse(line1, out this.threadUnsafeRevision) &&
+            this.threadUnsafeRevision >= 0;
 
           if ( result )
             initWarnings = null;
@@ -89,7 +90,7 @@ namespace FlyTrace.Service.Internals
         }
 
         StreamWriter sw = new StreamWriter( persistingFileStream, fileEncoding );
-        sw.Write( ThreadUnsafeRevision );
+        sw.Write( this.threadUnsafeRevision );
         sw.Flush( );
         persistingFileStream.Flush( );
 
@@ -99,7 +100,6 @@ namespace FlyTrace.Service.Internals
       }
       catch ( Exception exc )
       {
-        log.Error( "Can't initialize revision persister", exc );
         if ( persistingFileStream != null )
         {
           try
@@ -112,6 +112,7 @@ namespace FlyTrace.Service.Internals
           }
           persistingFileStream = null;
         }
+        log.Error("Can't initialize revision persister", exc);
 
         throw;
       }
@@ -128,13 +129,6 @@ namespace FlyTrace.Service.Internals
       {
         try
         {
-          persistingFileStream.Seek( 0, SeekOrigin.Begin );
-
-          StreamWriter sw = new StreamWriter( persistingFileStream, fileEncoding );
-          sw.WriteLine( ThreadUnsafeRevision );
-          sw.Write( ClosedAck );
-          sw.Flush( );
-
           persistingFileStream.Close( );
         }
         catch ( Exception excClose )
@@ -148,7 +142,12 @@ namespace FlyTrace.Service.Internals
         }
       }
 
-      return ThreadUnsafeRevision;
+      return this.threadUnsafeRevision;
+    }
+
+    private void SetRevision(int value)
+    {
+      this.threadUnsafeRevision = value;
     }
   }
 }
